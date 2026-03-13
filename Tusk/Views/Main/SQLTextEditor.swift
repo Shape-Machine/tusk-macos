@@ -28,6 +28,7 @@ struct SQLTextEditor: NSViewRepresentable {
             textView.string = text
             SQLHighlighter.highlight(storage, font: editorFont)
         }
+        textView.typingAttributes = baseTypingAttributes
 
         return scrollView
     }
@@ -39,6 +40,7 @@ struct SQLTextEditor: NSViewRepresentable {
         let sel = textView.selectedRange()
         textView.string = text
         SQLHighlighter.highlight(storage, font: editorFont)
+        textView.typingAttributes = baseTypingAttributes
         let safeLocation = min(sel.location, (text as NSString).length)
         textView.setSelectedRange(NSRange(location: safeLocation, length: 0))
     }
@@ -61,13 +63,20 @@ struct SQLTextEditor: NSViewRepresentable {
             // Re-apply highlighting, preserving caret position
             let sel = textView.selectedRange()
             SQLHighlighter.highlight(storage, font: parent.editorFont)
+            // Always restore base typing attributes so the next inserted
+            // character never inherits stale colour from a deleted token.
+            textView.typingAttributes = parent.baseTypingAttributes
             textView.setSelectedRange(sel)
         }
     }
 
     // MARK: - Helpers
 
-    private var editorFont: NSFont {
+    var editorFont: NSFont {
         NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+    }
+
+    var baseTypingAttributes: [NSAttributedString.Key: Any] {
+        [.font: editorFont, .foregroundColor: NSColor.labelColor]
     }
 }
