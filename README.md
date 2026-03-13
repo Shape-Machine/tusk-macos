@@ -1,5 +1,9 @@
 # Tusk
 
+<p align="center">
+  <img src="icon.svg" width="160" alt="Tusk icon" />
+</p>
+
 A minimal macOS PostgreSQL client built with SwiftUI.
 
 ## Requirements
