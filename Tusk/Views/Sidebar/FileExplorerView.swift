@@ -22,7 +22,15 @@ struct FileItem: Identifiable {
 struct FileExplorerView: View {
     @Environment(AppState.self) private var appState
 
-    @State private var currentDirectory = FileManager.default.homeDirectoryForCurrentUser
+    @State private var currentDirectory: URL = {
+        if let path = UserDefaults.standard.string(forKey: "fileExplorerDirectory") {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+    }()
     @State private var items: [FileItem] = []
 
     private var homeDirectory: URL { FileManager.default.homeDirectoryForCurrentUser }
@@ -35,6 +43,9 @@ struct FileExplorerView: View {
             fileList
         }
         .task(id: currentDirectory) { loadItems() }
+        .onChange(of: currentDirectory) { _, newValue in
+            UserDefaults.standard.set(newValue.path, forKey: "fileExplorerDirectory")
+        }
     }
 
     // MARK: - Header
