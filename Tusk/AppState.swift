@@ -127,6 +127,22 @@ final class AppState {
 
     // MARK: - Query tabs
 
+    func openFileInEditor(url: URL) {
+        // Associate with the active connection, falling back to the first connected one.
+        guard let connID = selectedConnectionID ?? clients.keys.first,
+              clients[connID] != nil,
+              let connection = connections.first(where: { $0.id == connID })
+        else { return }
+
+        let sql = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        var tab = QueryTab(connectionID: connID, connectionName: connection.name)
+        tab.title = url.deletingPathExtension().lastPathComponent
+        tab.sql = sql
+        queryTabs.append(tab)
+        activeTabID = tab.id
+        selectedSidebarItem = .queryEditor(tab.id)
+    }
+
     func openQueryTab(for connection: Connection) {
         let tab = QueryTab(connectionID: connection.id, connectionName: connection.name)
         queryTabs.append(tab)

@@ -1,0 +1,151 @@
+import SwiftUI
+
+// MARK: - File item model
+
+struct FileItem: Identifiable {
+    let id = UUID()
+    let url: URL
+    let isDirectory: Bool
+
+    var name: String { url.lastPathComponent }
+    var isSql: Bool { !isDirectory && url.pathExtension.lowercased() == "sql" }
+    var isInteractable: Bool { isDirectory || isSql }
+    var icon: String {
+        if isDirectory { return "folder" }
+        if isSql { return "doc.text" }
+        return "doc"
+    }
+}
+
+// MARK: - File explorer view
+
+struct FileExplorerView: View {
+    @Environment(AppState.self) private var appState
+
+    @State private var currentDirectory = FileManager.default.homeDirectoryForCurrentUser
+    @State private var items: [FileItem] = []
+
+    private var homeDirectory: URL { FileManager.default.homeDirectoryForCurrentUser }
+    private var isAtHome: Bool { currentDirectory.standardized == homeDirectory.standardized }
+    private var hasActiveConnection: Bool { !appState.clients.isEmpty }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+            fileList
+            if !hasActiveConnection {
+                noConnectionBanner
+            }
+        }
+        .task(id: currentDirectory) { loadItems() }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button {
+                currentDirectory = currentDirectory.deletingLastPathComponent()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.caption)
+            }
+            .disabled(isAtHome)
+            .buttonStyle(.borderless)
+            .foregroundStyle(isAtHome ? .tertiary : .secondary)
+
+            Image(systemName: "folder.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(isAtHome ? "Home" : currentDirectory.lastPathComponent)
+                .font(.caption)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+
+    // MARK: - File list
+
+    @ViewBuilder
+    private var fileList: some View {
+        if items.isEmpty {
+            Text("Empty folder")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List {
+                ForEach(items) { item in
+                    Button {
+                        if item.isDirectory {
+                            currentDirectory = item.url
+                        } else if item.isSql && hasActiveConnection {
+                            appState.openFileInEditor(url: item.url)
+                        }
+                    } label: {
+                        Label {
+                            Text(item.name)
+                                .font(.system(size: 12))
+                                .foregroundStyle(item.isInteractable ? .primary : .tertiary)
+                                .lineLimit(1)
+                        } icon: {
+                            Image(systemName: item.icon)
+                                .foregroundStyle(item.isInteractable ? .secondary : .quaternary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!item.isInteractable)
+                }
+            }
+            .listStyle(.sidebar)
+        }
+    }
+
+    // MARK: - No connection banner
+
+    private var noConnectionBanner: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.circle")
+            Text("Connect to a database to open files")
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+    }
+
+    // MARK: - Load directory contents
+
+    private func loadItems() {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: currentDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: .skipsHiddenFiles
+        ) else {
+            items = []
+            return
+        }
+
+        items = contents
+            .compactMap { url -> FileItem? in
+                guard let isDir = try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory
+                else { return nil }
+                return FileItem(url: url, isDirectory: isDir ?? false)
+            }
+            .sorted {
+                // Folders first, then alphabetical within each group
+                if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+}
