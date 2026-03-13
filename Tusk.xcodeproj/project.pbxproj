@@ -24,6 +24,7 @@
 		D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */; };
 		DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */; };
 		DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAC42E3023CAE6227191B992 /* TuskApp.swift */; };
+		EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */; };
 		EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84F6197423F6B815DCFF5EC /* TableDetailView.swift */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +36,7 @@
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHTunnel.swift; sourceTree = "<group>"; };
 		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
 		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
 		94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -78,6 +80,7 @@
 				E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */,
 				BA3E61CFF0505201909FC54F /* DatabaseClient.swift */,
 				0031996A15573BA8334CAB25 /* KeychainManager.swift */,
+				6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */,
 			);
 			path = Database;
 			sourceTree = "<group>";
@@ -235,6 +238,7 @@
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
 				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
 				2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */,
+				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
 				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
 				DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */,

@@ -52,12 +52,14 @@ enum TuskError: LocalizedError {
     case notConnected
     case queryFailed(String)
     case connectionFailed(String)
+    case sshTunnelFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .notConnected:              return "Not connected to a database."
         case .queryFailed(let msg):      return "Query failed: \(msg)"
         case .connectionFailed(let msg): return "Connection failed: \(msg)"
+        case .sshTunnelFailed(let msg):  return "SSH tunnel failed: \(msg)"
         }
     }
 }
