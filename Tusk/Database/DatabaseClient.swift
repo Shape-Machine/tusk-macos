@@ -189,7 +189,15 @@ actor DatabaseClient {
         guard let conn = box?.connection else { throw TuskError.notConnected }
 
         let start = Date()
-        let pgRows = try await conn.query(PostgresQuery(unsafeSQL: sql), logger: logger)
+        let pgRows: PostgresRowSequence
+        do {
+            pgRows = try await conn.query(PostgresQuery(unsafeSQL: sql), logger: logger)
+        } catch let psql as PSQLError {
+            let msg = psql.serverInfo?[.message]
+                ?? psql.serverInfo?[.detail]
+                ?? "PSQLError code \(psql.code)"
+            throw TuskError.queryFailed(msg)
+        }
 
         var columns: [QueryColumn] = []
         var rows: [[QueryCell]] = []
