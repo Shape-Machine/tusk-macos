@@ -155,6 +155,34 @@ actor DatabaseClient {
         }
     }
 
+    func incomingReferences(schema: String, table: String) async throws -> [IncomingReference] {
+        let result = try await query("""
+            SELECT
+                tc.constraint_name,
+                tc.table_name   AS from_table,
+                kcu.column_name AS from_column,
+                ccu.column_name AS to_column
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage AS ccu
+              ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND ccu.table_schema = '\(schema)'
+              AND ccu.table_name   = '\(table)'
+            ORDER BY tc.table_name
+            """)
+
+        return result.rows.map { row in
+            IncomingReference(
+                constraintName: row[safe: 0]?.displayValue ?? "",
+                fromTable:      row[safe: 1]?.displayValue ?? "",
+                fromColumn:     row[safe: 2]?.displayValue ?? "",
+                toColumn:       row[safe: 3]?.displayValue ?? ""
+            )
+        }
+    }
+
     // MARK: - Raw query
 
     func query(_ sql: String) async throws -> QueryResult {

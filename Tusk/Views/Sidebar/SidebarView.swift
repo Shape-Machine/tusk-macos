@@ -43,10 +43,6 @@ private struct ConnectionSection: View {
     var body: some View {
         Section {
             if isConnected {
-                // Schema node
-                Label("Schema", systemImage: "square.3.layers.3d")
-                    .tag(SidebarItem.schema(connectionID: connection.id))
-
                 // Tables — full-row click toggles expand
                 if !tablesToShow.isEmpty {
                     DisclosureGroup(isExpanded: $tablesExpanded) {
