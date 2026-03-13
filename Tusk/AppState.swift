@@ -103,6 +103,13 @@ final class AppState {
         if let tunnel = newTunnel { tunnels[connection.id] = tunnel }
         clients[connection.id] = newClient
         selectedConnectionID = connection.id
+
+        // Bind any file-based query tabs that were opened without a connection.
+        for idx in queryTabs.indices where queryTabs[idx].sourceURL != nil && queryTabs[idx].connectionID == nil {
+            queryTabs[idx].connectionID = connection.id
+            queryTabs[idx].connectionName = connection.name
+        }
+
         try await refreshSchema(for: connection)
     }
 
