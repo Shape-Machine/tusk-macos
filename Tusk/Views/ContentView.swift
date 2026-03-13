@@ -30,7 +30,7 @@ struct DetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if !appState.openTabs.isEmpty {
+            if appState.openTabs.count > 1 {
                 DetailTabBar()
                 Divider()
             }
