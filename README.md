@@ -1,8 +1,8 @@
-# Tusk
-
 <p align="center">
-  <img src="icon.svg" width="160" alt="Tusk icon" />
+  <img src="icon.svg" width="320" alt="Tusk icon" />
 </p>
+
+# Tusk
 
 A minimal, native macOS PostgreSQL client. No Electron, no telemetry, no subscription.
 
