@@ -11,6 +11,9 @@ final class AppState {
     // MARK: - Active DB clients (one per open connection)
     var clients: [UUID: DatabaseClient] = [:]
 
+    // MARK: - SSH tunnels (one per tunnelled connection)
+    var tunnels: [UUID: SSHTunnel] = [:]
+
     // MARK: - Sidebar selection
     var selectedSidebarItem: SidebarItem? = nil
 
@@ -52,26 +55,44 @@ final class AppState {
     func removeConnection(_ connection: Connection) {
         disconnect(connection)
         connections.removeAll { $0.id == connection.id }
+        KeychainManager.shared.deletePassword(for: connection.id)
+        KeychainManager.shared.deleteSshPassphrase(for: connection.id)
         ConnectionStore.shared.save(connections)
     }
 
     // MARK: - Connect / Disconnect
 
     func connect(_ connection: Connection) async throws {
-        // Disconnect any existing client first — prevents releasing a live
-        // PostgresConnection when we overwrite the clients dictionary entry.
+        // Tear down any existing client/tunnel first.
         if let existing = clients.removeValue(forKey: connection.id) {
             await existing.disconnect()
+        }
+        if let existingTunnel = tunnels.removeValue(forKey: connection.id) {
+            await existingTunnel.stop()
+        }
+
+        // Start SSH tunnel if enabled; the tunnel exposes a local port that
+        // PostgresNIO will connect to instead of the real host/port.
+        var effectiveConnection = connection
+        if connection.sshEnabled {
+            let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id)
+            let tunnel = SSHTunnel()
+            try await tunnel.start(connection: connection, passphrase: passphrase)
+            tunnels[connection.id] = tunnel
+            let localPort = await tunnel.localPort
+            effectiveConnection.host = "127.0.0.1"
+            effectiveConnection.port = localPort
         }
 
         let password = KeychainManager.shared.password(for: connection.id) ?? ""
         let client = DatabaseClient()
         do {
-            try await client.connect(to: connection, password: password)
+            try await client.connect(to: effectiveConnection, password: password)
         } catch {
-            // Clean up the client before it goes out of scope and is released
-            // on the main thread with a live PostgresConnection inside.
             await client.disconnect()
+            if let tunnel = tunnels.removeValue(forKey: connection.id) {
+                await tunnel.stop()
+            }
             throw error
         }
         clients[connection.id] = client
@@ -82,6 +103,9 @@ final class AppState {
     func disconnect(_ connection: Connection) {
         let client = clients.removeValue(forKey: connection.id)
         Task { await client?.disconnect() }
+        if let tunnel = tunnels.removeValue(forKey: connection.id) {
+            Task { await tunnel.stop() }
+        }
         schemaTables.removeValue(forKey: connection.id)
         if selectedConnectionID == connection.id {
             selectedConnectionID = nil
