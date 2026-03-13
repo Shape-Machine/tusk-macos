@@ -14,6 +14,13 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var color: ConnectionColor = .blue
     var groupLabel: String = ""
 
+    // SSH tunnel
+    var sshEnabled: Bool = false
+    var sshHost: String = ""
+    var sshPort: Int = 22
+    var sshUser: String = ""
+    var sshKeyPath: String = ""
+
     // Password is NOT stored here — lives in Keychain only.
 
     var displayHost: String { "\(host):\(port)" }
