@@ -165,7 +165,7 @@ private struct ConnectionHeader: View {
                 Button("Refresh Schema") {
                     Task { try? await appState.refreshSchema(for: connection) }
                 }
-            } else {
+            } else if !isConnecting {
                 Button("Connect") {
                     Task {
                         do { try await appState.connect(connection) }

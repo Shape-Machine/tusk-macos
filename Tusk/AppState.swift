@@ -67,6 +67,9 @@ final class AppState {
     // MARK: - Connect / Disconnect
 
     func connect(_ connection: Connection) async throws {
+        // Prevent overlapping connect attempts for the same connection.
+        // A second call while one is already in flight is silently dropped.
+        guard !connectingIDs.contains(connection.id) else { return }
         connectingIDs.insert(connection.id)
         defer { connectingIDs.remove(connection.id) }
 
