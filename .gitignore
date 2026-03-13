@@ -6,6 +6,7 @@ xcuserdata/
 # Derived data and build output
 DerivedData/
 build/
+dist/
 *.o
 *.d
 
