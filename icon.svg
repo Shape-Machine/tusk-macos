@@ -3,6 +3,9 @@
   <!-- Background -->
   <rect width="1024" height="1024" fill="#1C2333"/>
 
+  <!-- Tusk group shifted down 71px to vertically centre within the 1024×1024 canvas -->
+  <g transform="translate(0, 71)">
+
   <!-- Tusk: a single curved ivory tusk, thick at the base, tapering to a fine point -->
   <path
     d="
@@ -40,5 +43,7 @@
     fill="#F5EDD8"
     opacity="0.5"
   />
+
+  </g>
 
 </svg>
