@@ -3,8 +3,8 @@ import SwiftUI
 // MARK: - File item model
 
 struct FileItem: Identifiable {
-    let id = UUID()
     let url: URL
+    var id: URL { url }
     let isDirectory: Bool
 
     var name: String { url.lastPathComponent }
