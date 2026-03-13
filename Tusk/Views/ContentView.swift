@@ -37,8 +37,6 @@ struct DetailView: View {
                 QueryEditorView(tab: tab, client: client)
                     .id(tab.id)
             }
-        case .schema:
-            SchemaView()
         case nil:
             WelcomeView()
         }
