@@ -4,7 +4,18 @@
   <img src="icon.svg" width="160" alt="Tusk icon" />
 </p>
 
-A minimal, privacy-first PostgreSQL client.
+A minimal, native macOS PostgreSQL client. No Electron, no telemetry, no subscription.
+
+Built in SwiftUI for macOS 14+. Tusk is for developers who want a fast, no-nonsense way to explore databases and run queries — without handing their credentials or query history to a cloud service.
+
+**Features**
+
+- SQL query editor with syntax highlighting
+- Schema browser — tables, columns, indexes, foreign keys
+- Table data browser with filtering and CSV export
+- SSH tunnel support
+- Credentials stored in the system Keychain
+- Multiple simultaneous connections
 
 ## Requirements
 
@@ -15,13 +26,11 @@ A minimal, privacy-first PostgreSQL client.
 ## Setup
 
 ```sh
-git clone <repo>
-cd Tusk
-xcodegen generate   # regenerate Tusk.xcodeproj from project.yml
-make build          # build via xcodebuild
+git clone https://github.com/Shape-Machine/tusk-macos.git
+cd tusk-macos
+xcodegen generate
+open Tusk.xcodeproj
 ```
-
-Open `Tusk.xcodeproj` in Xcode to run and develop.
 
 ## Project structure
 
