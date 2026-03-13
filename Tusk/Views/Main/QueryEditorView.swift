@@ -1,0 +1,202 @@
+import SwiftUI
+
+struct QueryEditorView: View {
+    @Environment(AppState.self) private var appState
+    let tab: QueryTab
+    let client: DatabaseClient
+
+    @State private var sql: String = ""
+    @State private var result: QueryResult? = nil
+    @State private var error: String? = nil
+    @State private var isRunning = false
+
+    var body: some View {
+        VSplitView {
+            // Editor pane
+            editorPane
+                .frame(minHeight: 120)
+
+            // Results pane
+            resultsPane
+                .frame(minHeight: 100)
+        }
+        .onAppear { sql = tab.sql }
+        .onChange(of: sql) { _, newValue in
+            guard let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) else { return }
+            appState.queryTabs[index].sql = newValue
+        }
+    }
+
+    // MARK: - Editor pane
+
+    private var editorPane: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text(tab.connectionName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if isRunning {
+                    ProgressView().controlSize(.small)
+                }
+                Button {
+                    Task { await runQuery() }
+                } label: {
+                    Label("Run", systemImage: "play.fill")
+                        .font(.callout)
+                }
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.bar)
+
+            Divider()
+
+            TextEditor(text: $sql)
+                .font(.system(.body, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .background(Color(nsColor: .textBackgroundColor))
+        }
+    }
+
+    // MARK: - Results pane
+
+    private var resultsPane: some View {
+        VStack(spacing: 0) {
+            HStack {
+                if let result {
+                    Text("\(result.rows.count) row\(result.rows.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(String(format: "%.3fs", result.duration))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let error {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if let result, !result.rows.isEmpty {
+                    Button {
+                        exportCSV(result)
+                    } label: {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.bar)
+
+            Divider()
+
+            if let result {
+                ResultsGrid(result: result)
+            } else {
+                Color(nsColor: .textBackgroundColor)
+            }
+        }
+    }
+
+    // MARK: - Run query
+
+    private func runQuery() async {
+        let trimmed = sql.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        isRunning = true
+        error = nil
+        result = nil
+
+        do {
+            result = try await client.query(trimmed)
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        isRunning = false
+    }
+
+    // MARK: - Export
+
+    private func exportCSV(_ result: QueryResult) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.nameFieldStringValue = "query_result.csv"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        var lines = [result.columns.map(\.name).joined(separator: ",")]
+        for row in result.rows {
+            lines.append(row.map { cell in
+                let val = cell.displayValue
+                return val.contains(",") || val.contains("\n") ? "\"\(val)\"" : val
+            }.joined(separator: ","))
+        }
+
+        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+    }
+}
+
+// MARK: - Results grid
+
+struct ResultsGrid: View {
+    let result: QueryResult
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView([.horizontal, .vertical]) {
+                Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 0) {
+                    // Header row
+                    GridRow {
+                        ForEach(result.columns) { col in
+                            Text(col.name)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                .background(Color(nsColor: .controlBackgroundColor))
+                                .border(Color(nsColor: .separatorColor), width: 0.5)
+                        }
+                    }
+
+                    // Data rows
+                    ForEach(Array(result.rows.enumerated()), id: \.offset) { rowIndex, row in
+                        GridRow {
+                            ForEach(Array(row.enumerated()), id: \.offset) { colIndex, cell in
+                                Text(cell.displayValue)
+                                    .foregroundStyle(cell.isNull ? .tertiary : .primary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                    .background(rowIndex.isMultiple(of: 2)
+                                        ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
+                                        : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
+                                    .border(Color(nsColor: .separatorColor), width: 0.5)
+                            }
+                        }
+                    }
+                }
+                .frame(
+                    minWidth: geo.size.width,
+                    minHeight: geo.size.height,
+                    alignment: .topLeading
+                )
+            }
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+}
