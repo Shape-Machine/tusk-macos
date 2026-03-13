@@ -1,0 +1,451 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C24CBF79542FE8350DC6AA4 /* SchemaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A51130EE7F4E090621CBFA /* SchemaView.swift */; };
+		166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3E61CFF0505201909FC54F /* DatabaseClient.swift */; };
+		16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */; };
+		19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */; };
+		2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EBD0E0FCEF86AA688735504 /* QueryResult.swift */; };
+		43CD2524047CB484084FE904 /* PostgresNIO in Frameworks */ = {isa = PBXBuildFile; productRef = FEBBCC182C5C88B35790CB9D /* PostgresNIO */; };
+		4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */; };
+		5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0031996A15573BA8334CAB25 /* KeychainManager.swift */; };
+		62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */; };
+		7DAB39642DDB974C9033D770 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F317DCA7625AA05FB8810169 /* WelcomeView.swift */; };
+		7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */; };
+		8579F3571057CAD4338D6EB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */; };
+		88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B49B9D6360FE850DD93363 /* AppState.swift */; };
+		B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A2CA1E506E6FDF0786437 /* Connection.swift */; };
+		D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */; };
+		DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */; };
+		DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAC42E3023CAE6227191B992 /* TuskApp.swift */; };
+		EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84F6197423F6B815DCFF5EC /* TableDetailView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0031996A15573BA8334CAB25 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		15B49B9D6360FE850DD93363 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tusk.entitlements; sourceTree = "<group>"; };
+		32A51130EE7F4E090621CBFA /* SchemaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaView.swift; sourceTree = "<group>"; };
+		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
+		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
+		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
+		94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9EBD0E0FCEF86AA688735504 /* QueryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryResult.swift; sourceTree = "<group>"; };
+		A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskCommands.swift; sourceTree = "<group>"; };
+		B48A2CA1E506E6FDF0786437 /* Connection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connection.swift; sourceTree = "<group>"; };
+		BA3E61CFF0505201909FC54F /* DatabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseClient.swift; sourceTree = "<group>"; };
+		D84F6197423F6B815DCFF5EC /* TableDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDetailView.swift; sourceTree = "<group>"; };
+		DAC42E3023CAE6227191B992 /* TuskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskApp.swift; sourceTree = "<group>"; };
+		E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
+		EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F317DCA7625AA05FB8810169 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		FD715CA4A0206BED53DC1586 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B8E72777631B57C06D8A41D5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				43CD2524047CB484084FE904 /* PostgresNIO in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0D775FE5E72B4A9EDB86D900 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */,
+				C26728883657235882AE0D7B /* Main */,
+				FD7123F93B469D46524BFEC5 /* Sidebar */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		0D7AFB5F0A0865F521CDB1B0 /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */,
+				BA3E61CFF0505201909FC54F /* DatabaseClient.swift */,
+				0031996A15573BA8334CAB25 /* KeychainManager.swift */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		33C48E36B5F6A1CF81A700F4 /* Tusk */ = {
+			isa = PBXGroup;
+			children = (
+				15B49B9D6360FE850DD93363 /* AppState.swift */,
+				DAC42E3023CAE6227191B992 /* TuskApp.swift */,
+				0D7AFB5F0A0865F521CDB1B0 /* Database */,
+				6845995598C4ED58DFA37640 /* Models */,
+				EC7B16A32ABF772E1931BCB4 /* Resources */,
+				0D775FE5E72B4A9EDB86D900 /* Views */,
+			);
+			path = Tusk;
+			sourceTree = "<group>";
+		};
+		6845995598C4ED58DFA37640 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B48A2CA1E506E6FDF0786437 /* Connection.swift */,
+				9EBD0E0FCEF86AA688735504 /* QueryResult.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		8832BAA17D9CBDC0B350235E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				615C3C512A905EBC9A2F5662 /* Tusk.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C26728883657235882AE0D7B /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
+				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
+				32A51130EE7F4E090621CBFA /* SchemaView.swift */,
+				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
+				A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */,
+				F317DCA7625AA05FB8810169 /* WelcomeView.swift */,
+			);
+			path = Main;
+			sourceTree = "<group>";
+		};
+		CC3CFC14CF2185617A440614 = {
+			isa = PBXGroup;
+			children = (
+				33C48E36B5F6A1CF81A700F4 /* Tusk */,
+				8832BAA17D9CBDC0B350235E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EC7B16A32ABF772E1931BCB4 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */,
+				FD715CA4A0206BED53DC1586 /* Info.plist */,
+				1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		FD7123F93B469D46524BFEC5 /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */,
+				09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4FFC3490151A5B65B535FBED /* Tusk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 88CD2D10C08B2091F7553563 /* Build configuration list for PBXNativeTarget "Tusk" */;
+			buildPhases = (
+				6BF53217975EBB1C00793ABB /* Sources */,
+				CCAE10D26F37514AA6FD9773 /* Resources */,
+				B8E72777631B57C06D8A41D5 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Tusk;
+			packageProductDependencies = (
+				FEBBCC182C5C88B35790CB9D /* PostgresNIO */,
+			);
+			productName = Tusk;
+			productReference = 615C3C512A905EBC9A2F5662 /* Tusk.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		88F12B563A6C60EB0A47D3D8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = F1B595B24B266B9BCB29C5EE /* Build configuration list for PBXProject "Tusk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = CC3CFC14CF2185617A440614;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				60CE8F140F4EABEADAA876B1 /* XCRemoteSwiftPackageReference "postgres-nio" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 8832BAA17D9CBDC0B350235E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4FFC3490151A5B65B535FBED /* Tusk */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CCAE10D26F37514AA6FD9773 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8579F3571057CAD4338D6EB4 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6BF53217975EBB1C00793ABB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */,
+				88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */,
+				B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */,
+				7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */,
+				62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */,
+				D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */,
+				166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */,
+				5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */,
+				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
+				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
+				0C24CBF79542FE8350DC6AA4 /* SchemaView.swift in Sources */,
+				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
+				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
+				DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */,
+				4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */,
+				7DAB39642DDB974C9033D770 /* WelcomeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0A777D60F7121A97E86A979E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		340318CDFCAD05BE5A477A14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tusk/Resources/Tusk.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Tusk/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tusk.app;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		6B7A0B3321C09BD858EC4206 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A85406C80F87B5693FD6104D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tusk/Resources/Tusk.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Tusk/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tusk.app;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		88CD2D10C08B2091F7553563 /* Build configuration list for PBXNativeTarget "Tusk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				340318CDFCAD05BE5A477A14 /* Debug */,
+				A85406C80F87B5693FD6104D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F1B595B24B266B9BCB29C5EE /* Build configuration list for PBXProject "Tusk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B7A0B3321C09BD858EC4206 /* Debug */,
+				0A777D60F7121A97E86A979E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		60CE8F140F4EABEADAA876B1 /* XCRemoteSwiftPackageReference "postgres-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/vapor/postgres-nio";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.21.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FEBBCC182C5C88B35790CB9D /* PostgresNIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60CE8F140F4EABEADAA876B1 /* XCRemoteSwiftPackageReference "postgres-nio" */;
+			productName = PostgresNIO;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 88F12B563A6C60EB0A47D3D8 /* Project object */;
+}

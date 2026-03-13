@@ -1,0 +1,23 @@
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+
+# Derived data and build output
+DerivedData/
+build/
+*.o
+*.d
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+*.resolved
+
+# Xcode auto-generated
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3

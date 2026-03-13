@@ -1,0 +1,45 @@
+name: Tusk
+
+options:
+  bundleIdPrefix: com.tusk
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  PostgresNIO:
+    url: https://github.com/vapor/postgres-nio
+    from: "1.21.0"
+
+targets:
+  Tusk:
+    type: application
+    platform: macOS
+    sources: Tusk
+    resources:
+      - Tusk/Resources
+    info:
+      path: Tusk/Resources/Info.plist
+      properties:
+        CFBundleName: Tusk
+        CFBundleDisplayName: Tusk
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        NSHumanReadableDescription: A minimal, privacy-first PostgreSQL client for macOS.
+        NSPrincipalClass: NSApplication
+    entitlements:
+      path: Tusk/Resources/Tusk.entitlements
+      properties:
+        com.apple.security.network.client: true
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.tusk.app
+        SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_HARDENED_RUNTIME: true
+    dependencies:
+      - package: PostgresNIO
+        product: PostgresNIO
