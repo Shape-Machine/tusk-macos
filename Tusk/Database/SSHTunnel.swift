@@ -40,9 +40,10 @@ actor SSHTunnel {
             env["SSH_ASKPASS_REQUIRE"] = "force"
             env["DISPLAY"]             = ":0"
         }
+        let stderrPipe   = Pipe()
         p.environment    = env
         p.standardOutput = FileHandle.nullDevice
-        p.standardError  = FileHandle.nullDevice
+        p.standardError  = stderrPipe
 
         try p.run()
         process = p
@@ -55,7 +56,13 @@ actor SSHTunnel {
             p.terminate()
             process = nil
             if let url = askpassURL { try? FileManager.default.removeItem(at: url) }
-            throw error
+            // Read whatever SSH wrote to stderr for a useful error message.
+            let stderrOutput = String(
+                data: stderrPipe.fileHandleForReading.availableData,
+                encoding: .utf8
+            )?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let detail = stderrOutput.isEmpty ? error.localizedDescription : stderrOutput
+            throw TuskError.sshTunnelFailed(detail)
         }
         if let url = askpassURL { try? FileManager.default.removeItem(at: url) }
     }
