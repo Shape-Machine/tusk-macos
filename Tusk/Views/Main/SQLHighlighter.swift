@@ -47,11 +47,14 @@ enum SQLHighlighter {
 
     static func highlight(_ textStorage: NSTextStorage, font: NSFont) {
         let text = textStorage.string
-        guard !text.isEmpty else { return }
         let fullRange = NSRange(location: 0, length: (text as NSString).length)
 
+        // Always bracket with beginEditing/endEditing so the layout manager is
+        // notified and the text view can update its insertion-point attributes
+        // even when the buffer is empty.
         textStorage.beginEditing()
 
+        if !text.isEmpty {
         // 1. Reset everything to base style
         textStorage.setAttributes([.font: font, .foregroundColor: NSColor.labelColor], range: fullRange)
 
@@ -73,6 +76,7 @@ enum SQLHighlighter {
         // 5. Comments — highest priority, override everything
         colorMatches(of: lineCommentRE,  in: text, range: fullRange, color: commentColour, to: textStorage)
         colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage)
+        } // end if !text.isEmpty
 
         textStorage.endEditing()
     }
