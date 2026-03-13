@@ -27,7 +27,7 @@ actor SSHTunnel {
             "-L", "\(localPort):\(connection.host):\(connection.port)",
             "-p", "\(connection.sshPort)",
             "-i", connection.sshKeyPath,
-            "-o", "StrictHostKeyChecking=no",
+            "-o", "StrictHostKeyChecking=accept-new",
             "-o", "ExitOnForwardFailure=yes",
             "-o", "BatchMode=\(passphrase == nil || passphrase!.isEmpty ? "yes" : "no")",
             "-o", "ServerAliveInterval=30",
