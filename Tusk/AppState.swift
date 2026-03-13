@@ -168,6 +168,19 @@ final class AppState {
         let connID = selectedConnectionID
         let connName = connID.flatMap { id in connections.first(where: { $0.id == id }) }?.name ?? ""
 
+        // If this file is already open, update its connection to reflect the
+        // current selection (handles gaining or losing a connection) and activate.
+        if let existingIdx = queryTabs.firstIndex(where: { $0.sourceURL == url }),
+           let detailTab = openTabs.first(where: {
+               if case .queryEditor(let qid) = $0.kind { return qid == queryTabs[existingIdx].id }
+               return false
+           }) {
+            queryTabs[existingIdx].connectionID = connID
+            queryTabs[existingIdx].connectionName = connName
+            activateDetailTab(detailTab)
+            return
+        }
+
         let sql = await Task.detached(priority: .userInitiated) {
             (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         }.value
