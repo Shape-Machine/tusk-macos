@@ -102,41 +102,47 @@ private struct DetailTabItem: View {
     }
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: tab.icon)
-                .font(.caption)
-                .foregroundStyle(isActive ? .primary : .secondary)
-            Text(tab.title)
-                .font(.system(size: 12))
-                .lineLimit(1)
-                .foregroundStyle(isActive ? .primary : .secondary)
+        // Use a Button for tab activation so it doesn't compete with the
+        // close button the way .onTapGesture does on macOS.
+        Button {
+            appState.activateDetailTab(tab)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: tab.icon)
+                    .font(.caption)
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                Text(tab.title)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                // Reserve space so the title doesn't shift when close button overlaps
+                Color.clear.frame(width: 22)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(isActive ? Color(nsColor: .windowBackgroundColor) : .clear)
+            .overlay(alignment: .bottom) {
+                if isActive {
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(height: 2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+        // Close button overlaid at full tab height — always wins hit-testing
+        .overlay(alignment: .trailing) {
             Button {
                 appState.closeDetailTab(tab.id)
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.tertiary)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 28, height: 34)
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
             .help("Close tab")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 0)
-        .frame(height: 34)
-        .background(isActive ? Color(nsColor: .windowBackgroundColor) : .clear)
-        .overlay(alignment: .bottom) {
-            if isActive {
-                Rectangle()
-                    .fill(Color.accentColor)
-                    .frame(height: 2)
-            }
-        }
-        .contentShape(Rectangle())
-        .help(tooltip)
-        .onTapGesture {
-            appState.activateDetailTab(tab)
         }
     }
 }
