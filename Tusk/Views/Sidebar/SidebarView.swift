@@ -33,33 +33,73 @@ private struct ConnectionSection: View {
     @Environment(AppState.self) private var appState
     let connection: Connection
 
-    @State private var tablesExpanded = true
-
     var isConnected: Bool { appState.isConnected(connection) }
-    var tablesToShow: [TableInfo] {
-        (appState.schemaTables[connection.id] ?? []).filter { $0.type == .table }
+
+    /// All schemas present in the cache, public first then alphabetical.
+    /// Each entry pairs a schema name with its BASE TABLE items only.
+    var schemas: [(name: String, tables: [TableInfo])] {
+        let all = appState.schemaTables[connection.id] ?? []
+        let uniqueSchemas = Array(Set(all.map { $0.schema })).sorted {
+            if $0 == "public" { return true }
+            if $1 == "public" { return false }
+            return $0 < $1
+        }
+        let tables = all.filter { $0.type == .table }
+        return uniqueSchemas.map { schema in
+            (name: schema, tables: tables.filter { $0.schema == schema })
+        }
     }
 
     var body: some View {
         Section {
             if isConnected {
-                // Tables — full-row click toggles expand
-                if !tablesToShow.isEmpty {
-                    DisclosureGroup(isExpanded: $tablesExpanded) {
-                        ForEach(tablesToShow) { table in
-                            Label(table.name, systemImage: "tablecells")
-                                .tag(SidebarItem.table(connectionID: connection.id, schema: table.schema, tableName: table.name))
-                        }
-                    } label: {
-                        Text("Tables")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture { tablesExpanded.toggle() }
-                    }
+                ForEach(schemas, id: \.name) { schema in
+                    SchemaRow(schema: schema.name, tables: schema.tables, connection: connection)
                 }
             }
         } header: {
             ConnectionHeader(connection: connection)
+        }
+    }
+}
+
+// MARK: - Schema row (collapsed by default)
+
+private struct SchemaRow: View {
+    let schema: String
+    let tables: [TableInfo]
+    let connection: Connection
+
+    @State private var isExpanded = false
+
+    var isEmpty: Bool { tables.isEmpty }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            ForEach(tables) { table in
+                Label(table.name, systemImage: "tablecells")
+                    .tag(SidebarItem.table(
+                        connectionID: connection.id,
+                        schema: table.schema,
+                        tableName: table.name
+                    ))
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(schema)
+                    .foregroundStyle(isEmpty ? .tertiary : .primary)
+                if isEmpty {
+                    Text("empty")
+                        .font(.caption2)
+                        .foregroundStyle(.quaternary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(.quinary, in: Capsule())
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { isExpanded.toggle() }
         }
     }
 }
