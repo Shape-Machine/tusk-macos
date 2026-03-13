@@ -42,7 +42,7 @@ struct FileExplorerView: View {
             Divider()
             fileList
         }
-        .task(id: currentDirectory) { loadItems() }
+        .task(id: currentDirectory) { await loadItems() }
         .onChange(of: currentDirectory) { _, newValue in
             UserDefaults.standard.set(newValue.path, forKey: "fileExplorerDirectory")
         }
@@ -95,7 +95,7 @@ struct FileExplorerView: View {
                         if item.isDirectory {
                             currentDirectory = item.url
                         } else if item.isSql {
-                            appState.openFileInEditor(url: item.url)
+                            Task { await appState.openFileInEditor(url: item.url) }
                         }
                     } label: {
                         Label {
@@ -118,26 +118,27 @@ struct FileExplorerView: View {
 
     // MARK: - Load directory contents
 
-    private func loadItems() {
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: currentDirectory,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: .skipsHiddenFiles
-        ) else {
-            items = []
-            return
-        }
+    private func loadItems() async {
+        let directory = currentDirectory
+        let loaded = await Task.detached(priority: .userInitiated) {
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: .skipsHiddenFiles
+            ) else { return [FileItem]() }
 
-        items = contents
-            .compactMap { url -> FileItem? in
-                guard let isDir = try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory
-                else { return nil }
-                return FileItem(url: url, isDirectory: isDir ?? false)
-            }
-            .sorted {
-                // Folders first, then alphabetical within each group
-                if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
-                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
+            return contents
+                .compactMap { url -> FileItem? in
+                    guard let isDir = try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory
+                    else { return nil }
+                    return FileItem(url: url, isDirectory: isDir ?? false)
+                }
+                .sorted {
+                    // Folders first, then alphabetical within each group
+                    if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+        }.value
+        items = loaded
     }
 }
