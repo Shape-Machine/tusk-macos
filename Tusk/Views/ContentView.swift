@@ -29,19 +29,101 @@ struct DetailView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        switch appState.selectedSidebarItem {
-        case .table(let connID, let schema, let tableName):
-            if let client = appState.clients[connID] {
-                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+        VStack(spacing: 0) {
+            if !appState.openTabs.isEmpty {
+                DetailTabBar()
+                Divider()
             }
-        case .queryEditor(let tabID):
-            if let tab = appState.queryTabs.first(where: { $0.id == tabID }),
-               let client = appState.clients[tab.connectionID] {
-                QueryEditorView(tab: tab, client: client)
-                    .id(tab.id)
+            activeContent
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var activeContent: some View {
+        if let tabID = appState.activeDetailTabID,
+           let tab = appState.openTabs.first(where: { $0.id == tabID }) {
+            switch tab.kind {
+            case .table(let connID, let schema, let tableName):
+                if let client = appState.clients[connID] {
+                    TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+                }
+            case .queryEditor(let queryTabID):
+                if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }),
+                   let client = appState.clients[queryTab.connectionID] {
+                    QueryEditorView(tab: queryTab, client: client)
+                        .id(queryTab.id)
+                }
             }
-        case nil:
+        } else {
             WelcomeView()
+        }
+    }
+}
+
+// MARK: - Tab bar
+
+private struct DetailTabBar: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(appState.openTabs) { tab in
+                    DetailTabItem(tab: tab)
+                    Divider().frame(height: 34)
+                }
+            }
+        }
+        .frame(height: 34)
+        .background(.bar)
+    }
+}
+
+private struct DetailTabItem: View {
+    @Environment(AppState.self) private var appState
+    let tab: DetailTab
+
+    var isActive: Bool { appState.activeDetailTabID == tab.id }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: tab.icon)
+                .font(.caption)
+                .foregroundStyle(isActive ? .primary : .secondary)
+            Text(tab.title)
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .foregroundStyle(isActive ? .primary : .secondary)
+            Button {
+                appState.closeDetailTab(tab.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .help("Close tab")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 0)
+        .frame(height: 34)
+        .background(isActive ? Color(nsColor: .windowBackgroundColor) : .clear)
+        .overlay(alignment: .bottom) {
+            if isActive {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(height: 2)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            appState.activeDetailTabID = tab.id
+            if case .table(let cid, let s, let n) = tab.kind {
+                appState.selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
+            } else {
+                appState.selectedSidebarItem = nil
+            }
         }
     }
 }
