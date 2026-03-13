@@ -91,10 +91,20 @@ struct QueryEditorView: View {
 
             Divider()
 
-            TextEditor(text: $sql)
-                .font(.system(.body, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .background(Color(nsColor: .textBackgroundColor))
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $sql)
+                    .font(.system(.body, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+                    .background(Color(nsColor: .textBackgroundColor))
+                if sql.isEmpty {
+                    Text("-- Write SQL here · ⌘↵ to run")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+            }
         }
     }
 
@@ -222,6 +232,12 @@ struct ResultsGrid: View {
                                         ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
                                         : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
                                     .border(Color(nsColor: .separatorColor), width: 0.5)
+                                    .contextMenu {
+                                        Button("Copy") {
+                                            NSPasteboard.general.clearContents()
+                                            NSPasteboard.general.setString(cell.displayValue, forType: .string)
+                                        }
+                                    }
                             }
                         }
                     }
