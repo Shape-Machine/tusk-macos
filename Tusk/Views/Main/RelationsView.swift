@@ -10,6 +10,7 @@ struct RelationsView: View {
     @State private var outgoing: [ForeignKeyInfo] = []    // this table → other
     @State private var incoming: [IncomingReference] = [] // other table → this table
     @State private var isLoading = true
+    @State private var loadError: String? = nil
 
     // MARK: - Edge model
 
@@ -41,6 +42,13 @@ struct RelationsView: View {
             if isLoading {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = loadError {
+                ContentUnavailableView(
+                    "Failed to Load Relationships",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if edges.isEmpty {
                 ContentUnavailableView(
                     "No Relationships",
@@ -52,7 +60,7 @@ struct RelationsView: View {
                 diagram
             }
         }
-        .task(id: tableName) { await loadRelations() }
+        .task(id: "\(schemaName).\(tableName)") { await loadRelations() }
     }
 
     // MARK: - Diagram
@@ -224,10 +232,17 @@ struct RelationsView: View {
 
     private func loadRelations() async {
         isLoading = true
-        async let out = try? await client.foreignKeys(schema: schemaName, table: tableName)
-        async let inc = try? await client.incomingReferences(schema: schemaName, table: tableName)
-        outgoing = await out ?? []
-        incoming = await inc ?? []
+        loadError = nil
+        do {
+            async let out = try await client.foreignKeys(schema: schemaName, table: tableName)
+            async let inc = try await client.incomingReferences(schema: schemaName, table: tableName)
+            outgoing = try await out
+            incoming = try await inc
+        } catch {
+            outgoing = []
+            incoming = []
+            loadError = error.localizedDescription
+        }
         isLoading = false
     }
 }
