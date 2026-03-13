@@ -6,7 +6,7 @@ struct TableDetailView: View {
     let schemaName: String
     let tableName: String
 
-    enum Tab { case columns, keys, data }
+    enum Tab { case columns, keys, data, relations }
 
     @State private var selectedTab: Tab = .columns
     @State private var columns: [ColumnInfo] = []
@@ -55,6 +55,7 @@ struct TableDetailView: View {
                 Text("Columns").tag(Tab.columns)
                 Text("Keys").tag(Tab.keys)
                 Text("Data").tag(Tab.data)
+                Text("Relations").tag(Tab.relations)
             }
             .pickerStyle(.segmented)
             .fixedSize()
@@ -76,6 +77,8 @@ struct TableDetailView: View {
             columnsTab
         case .keys:
             keysTab
+        case .relations:
+            RelationsView(client: client, schemaName: schemaName, tableName: tableName)
         }
     }
 

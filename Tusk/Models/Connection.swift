@@ -82,6 +82,16 @@ struct ForeignKeyInfo: Identifiable, Sendable {
     let toColumn: String
 }
 
+// MARK: - Incoming FK reference (another table's FK points to this table)
+
+struct IncomingReference: Identifiable, Sendable {
+    var id: String { constraintName }
+    let constraintName: String
+    let fromTable: String   // the table that owns the FK
+    let fromColumn: String  // the FK column in that table
+    let toColumn: String    // the referenced column in the focal table
+}
+
 // MARK: - Full table schema
 
 struct TableSchema: Sendable {

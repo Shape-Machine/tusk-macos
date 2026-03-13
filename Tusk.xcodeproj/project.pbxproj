@@ -11,6 +11,7 @@
 		166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3E61CFF0505201909FC54F /* DatabaseClient.swift */; };
 		16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */; };
 		19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */; };
+		2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D55DC649CC6986737268922 /* RelationsView.swift */; };
 		2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EBD0E0FCEF86AA688735504 /* QueryResult.swift */; };
 		43CD2524047CB484084FE904 /* PostgresNIO in Frameworks */ = {isa = PBXBuildFile; productRef = FEBBCC182C5C88B35790CB9D /* PostgresNIO */; };
 		4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */; };
@@ -36,6 +37,7 @@
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
 		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
 		94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9EBD0E0FCEF86AA688735504 /* QueryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryResult.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 			children = (
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
+				7D55DC649CC6986737268922 /* RelationsView.swift */,
 				32A51130EE7F4E090621CBFA /* SchemaView.swift */,
 				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
 				A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */,
@@ -234,6 +237,7 @@
 				5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */,
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
 				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
+				2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */,
 				0C24CBF79542FE8350DC6AA4 /* SchemaView.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
 				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
