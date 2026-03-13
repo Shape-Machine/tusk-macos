@@ -9,7 +9,7 @@
     { "idiom" : "mac", "scale" : "1x", "size" : "256x256" },
     { "idiom" : "mac", "scale" : "2x", "size" : "256x256" },
     { "idiom" : "mac", "scale" : "1x", "size" : "512x512" },
-    { "idiom" : "mac", "scale" : "2x", "size" : "512x512" }
+    { "idiom" : "mac", "scale" : "2x", "size" : "512x512", "filename" : "AppIcon-1024.png" }
   ],
   "info" : {
     "author" : "xcode",

@@ -1,6 +1,10 @@
 # Tusk
 
-A minimal macOS PostgreSQL client built with SwiftUI.
+<p align="center">
+  <img src="icon.svg" width="160" alt="Tusk icon" />
+</p>
+
+A minimal, privacy-first PostgreSQL client.
 
 ## Requirements
 
