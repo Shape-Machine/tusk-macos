@@ -49,8 +49,8 @@ struct DetailView: View {
                     TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
                 }
             case .queryEditor(let queryTabID):
-                if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }),
-                   let client = appState.clients[queryTab.connectionID] {
+                if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
+                    let client = queryTab.connectionID.flatMap { appState.clients[$0] }
                     QueryEditorView(tab: queryTab, client: client)
                         .id(queryTab.id)
                 }
