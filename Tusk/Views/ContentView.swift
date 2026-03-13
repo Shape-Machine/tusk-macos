@@ -3,14 +3,17 @@ import SwiftUI
 struct ContentView: View {
     @Environment(AppState.self) private var appState
 
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+
     var body: some View {
         @Bindable var appState = appState
 
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView()
         } detail: {
             DetailView()
         }
+        .navigationSplitViewStyle(.balanced)
         .sheet(isPresented: $appState.isAddingConnection) {
             AddConnectionSheet(connection: nil)
         }
