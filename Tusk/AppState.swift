@@ -148,8 +148,7 @@ final class AppState {
             }
             return false
         }) {
-            activeDetailTabID = existing.id
-            selectedSidebarItem = .table(connectionID: connectionID, schema: schema, tableName: tableName)
+            activateDetailTab(existing)
             return
         }
         let tab = DetailTab(
@@ -159,12 +158,11 @@ final class AppState {
             kind: .table(connectionID: connectionID, schema: schema, tableName: tableName)
         )
         openTabs.append(tab)
-        activeDetailTabID = tab.id
-        selectedSidebarItem = .table(connectionID: connectionID, schema: schema, tableName: tableName)
+        activateDetailTab(tab)
     }
 
     func openFileInEditor(url: URL) {
-        let connID = selectedConnectionID ?? clients.keys.first
+        let connID = selectedConnectionID
         let connName = connID.flatMap { id in connections.first(where: { $0.id == id }) }?.name ?? ""
 
         let sql = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
@@ -183,8 +181,7 @@ final class AppState {
             kind: .queryEditor(queryTabID: queryTab.id)
         )
         openTabs.append(detailTab)
-        activeDetailTabID = detailTab.id
-        selectedSidebarItem = nil
+        activateDetailTab(detailTab)
     }
 
     func openQueryTab(for connection: Connection) {
@@ -200,8 +197,7 @@ final class AppState {
             kind: .queryEditor(queryTabID: queryTab.id)
         )
         openTabs.append(detailTab)
-        activeDetailTabID = detailTab.id
-        selectedSidebarItem = nil
+        activateDetailTab(detailTab)
     }
 
     func closeDetailTab(_ tabID: UUID) {
@@ -213,16 +209,29 @@ final class AppState {
         openTabs.remove(at: idx)
         if activeDetailTabID == tabID {
             if !openTabs.isEmpty {
-                let newTab = openTabs[min(idx, openTabs.count - 1)]
-                activeDetailTabID = newTab.id
-                if case .table(let cid, let s, let n) = newTab.kind {
-                    selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
-                } else {
-                    selectedSidebarItem = nil
-                }
+                activateDetailTab(openTabs[min(idx, openTabs.count - 1)])
             } else {
                 activeDetailTabID = nil
                 selectedSidebarItem = nil
+            }
+        }
+    }
+
+    // MARK: - Tab activation
+
+    /// Activates a detail tab and keeps `activeDetailTabID`, `selectedSidebarItem`,
+    /// and `selectedConnectionID` in sync. Only updates `selectedConnectionID` when
+    /// the tab has a definite connection (never clears it for connection-less file tabs).
+    func activateDetailTab(_ tab: DetailTab) {
+        activeDetailTabID = tab.id
+        switch tab.kind {
+        case .table(let cid, let s, let n):
+            selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
+            selectedConnectionID = cid
+        case .queryEditor(let qid):
+            selectedSidebarItem = nil
+            if let connID = queryTabs.first(where: { $0.id == qid })?.connectionID {
+                selectedConnectionID = connID
             }
         }
     }
