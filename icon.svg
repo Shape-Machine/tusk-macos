@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#1C2333"/>
+
+  <!-- Tusk: a single curved ivory tusk, thick at the base, tapering to a fine point -->
+  <path
+    d="
+      M 340 820
+      C 300 780, 280 700, 295 610
+      C 310 520, 360 450, 420 390
+      C 480 330, 540 280, 570 220
+      C 595 168, 590 118, 565 90
+      C 548 70, 525 62, 500 65
+      C 465 70, 445 95, 438 128
+      C 428 170, 445 210, 468 240
+      C 488 266, 505 278, 500 300
+      C 494 326, 468 345, 445 370
+      C 390 432, 340 510, 315 600
+      C 292 686, 298 768, 340 820
+      Z
+    "
+    fill="#E8DCC8"
+    stroke="#C8B898"
+    stroke-width="4"
+  />
+
+  <!-- Subtle inner highlight to give the tusk a rounded, ivory feel -->
+  <path
+    d="
+      M 370 790
+      C 340 755, 325 685, 338 600
+      C 350 520, 393 455, 448 398
+      C 500 345, 548 300, 572 248
+      C 560 270, 535 315, 510 355
+      C 474 410, 435 455, 408 520
+      C 378 592, 365 680, 370 790
+      Z
+    "
+    fill="#F5EDD8"
+    opacity="0.5"
+  />
+
+</svg>
