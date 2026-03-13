@@ -54,8 +54,8 @@ struct TableDetailView: View {
             Picker("", selection: $selectedTab) {
                 Text("Columns").tag(Tab.columns)
                 Text("Keys").tag(Tab.keys)
-                Text("Data").tag(Tab.data)
                 Text("Relations").tag(Tab.relations)
+                Text("Data").tag(Tab.data)
             }
             .pickerStyle(.segmented)
             .fixedSize()
