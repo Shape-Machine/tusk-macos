@@ -1,0 +1,40 @@
+Copyright (c) 2026 Sri Nair
+
+Source Available License — Non-Commercial, No Redistribution
+
+PERMISSIONS
+You are permitted to:
+  1. View, clone, and fork this source code for personal or
+     educational use.
+  2. Modify the source code for personal, non-commercial use.
+  3. Submit contributions (pull requests) to the original repository
+     at https://github.com/Shape-Machine/tusk-macos.
+
+RESTRICTIONS
+The following are NOT permitted without explicit written permission
+from the copyright holder:
+  1. Distributing this software or any derivative work in source or
+     binary form through any channel — including but not limited to
+     the Apple App Store, TestFlight, direct download, or any package
+     or software registry.
+  2. Using this software or any derivative work for commercial
+     purposes, including charging fees, embedding it in a paid
+     product, or offering it as a paid or monetised service.
+  3. Sublicensing or relicensing this software under any other terms.
+  4. Removing or altering this license notice.
+
+RESERVED RIGHTS
+The copyright holder retains the exclusive right to distribute,
+publish, and commercialise this software and any derivative works,
+including distribution via the Apple App Store.
+
+CONTRIBUTIONS
+By submitting a pull request or patch you agree that your
+contribution may be incorporated into this project under these same
+license terms, and you assign the copyright of that contribution to
+the copyright holder.
+
+NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED. THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THE SOFTWARE.
