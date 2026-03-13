@@ -139,6 +139,7 @@ struct FileExplorerView: View {
                     return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
                 }
         }.value
+        guard !Task.isCancelled else { return }
         items = loaded
     }
 }
