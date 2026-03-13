@@ -213,20 +213,44 @@ struct AddConnectionSheet: View {
         isTestingConnection = true
         testResult = nil
 
-        let info = Connection(
+        var info        = Connection(
             name: name, host: host, port: Int(port) ?? 5432,
             database: database, username: username, useSSL: useSSL
         )
+        info.sshEnabled = sshEnabled
+        info.sshHost    = sshHost
+        info.sshPort    = Int(sshPort) ?? 22
+        info.sshUser    = sshUser
+        info.sshKeyPath = sshKeyPath
 
-        let client = DatabaseClient()
+        var tunnel: SSHTunnel? = nil
+
         do {
-            try await client.connect(to: info, password: password)
-            await client.disconnect()
-            testResult = "✓ Connected successfully"
+            // Start SSH tunnel if enabled and patch host/port to the local end.
+            if sshEnabled {
+                let t = SSHTunnel()
+                try await t.start(
+                    connection: info,
+                    passphrase: sshPassphrase.isEmpty ? nil : sshPassphrase
+                )
+                tunnel    = t
+                info.host = "127.0.0.1"
+                info.port = await t.localPort
+            }
+
+            let client = DatabaseClient()
+            do {
+                try await client.connect(to: info, password: password)
+                await client.disconnect()
+                testResult = "✓ Connected successfully"
+            } catch {
+                testResult = "✗ \(friendlyError(error))"
+            }
         } catch {
             testResult = "✗ \(friendlyError(error))"
         }
 
+        if let tunnel { await tunnel.stop() }
         isTestingConnection = false
     }
 }
