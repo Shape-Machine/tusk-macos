@@ -1,0 +1,92 @@
+import Foundation
+import SwiftUI
+
+// MARK: - Connection
+
+struct Connection: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID = UUID()
+    var name: String
+    var host: String
+    var port: Int = 5432
+    var database: String
+    var username: String
+    var useSSL: Bool = false
+    var color: ConnectionColor = .blue
+    var groupLabel: String = ""
+
+    // Password is NOT stored here — lives in Keychain only.
+
+    var displayHost: String { "\(host):\(port)" }
+}
+
+// MARK: - Connection color (for visual tagging)
+
+enum ConnectionColor: String, Codable, CaseIterable, Sendable {
+    case blue, green, orange, red, purple, gray
+
+    var color: Color {
+        switch self {
+        case .blue:   return .blue
+        case .green:  return .green
+        case .orange: return .orange
+        case .red:    return .red
+        case .purple: return .purple
+        case .gray:   return .secondary
+        }
+    }
+}
+
+// MARK: - Table info (from information_schema)
+
+struct TableInfo: Identifiable, Equatable, Hashable, Sendable {
+    var id: String { "\(schema).\(name)" }
+    let schema: String
+    let name: String
+    let type: TableType
+
+    enum TableType: String, Sendable {
+        case table = "BASE TABLE"
+        case view  = "VIEW"
+        case other
+    }
+}
+
+// MARK: - Column info
+
+struct ColumnInfo: Identifiable, Sendable {
+    var id: String { name }
+    let name: String
+    let dataType: String
+    let isNullable: Bool
+    let defaultValue: String?
+    let isPrimaryKey: Bool
+}
+
+// MARK: - Index info
+
+struct IndexInfo: Identifiable, Sendable {
+    var id: String { name }
+    let name: String
+    let columns: [String]
+    let isUnique: Bool
+    let isPrimary: Bool
+}
+
+// MARK: - Foreign key info
+
+struct ForeignKeyInfo: Identifiable, Sendable {
+    var id: String { constraintName }
+    let constraintName: String
+    let fromColumn: String
+    let toTable: String
+    let toColumn: String
+}
+
+// MARK: - Full table schema
+
+struct TableSchema: Sendable {
+    let table: TableInfo
+    var columns: [ColumnInfo] = []
+    var indexes: [IndexInfo] = []
+    var foreignKeys: [ForeignKeyInfo] = []
+}

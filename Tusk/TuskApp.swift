@@ -1,0 +1,19 @@
+import SwiftUI
+
+@main
+struct TuskApp: App {
+    @State private var appState = AppState()
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environment(appState)
+                .frame(minWidth: 900, minHeight: 600)
+        }
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified)
+        .commands {
+            TuskCommands(appState: appState)
+        }
+    }
+}
