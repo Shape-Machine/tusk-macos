@@ -133,7 +133,6 @@ final class AppState {
 enum SidebarItem: Hashable {
     case table(connectionID: UUID, schema: String, tableName: String)
     case queryEditor(UUID)
-    case schema(connectionID: UUID)
 }
 
 // MARK: - Query tab model

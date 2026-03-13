@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0C24CBF79542FE8350DC6AA4 /* SchemaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A51130EE7F4E090621CBFA /* SchemaView.swift */; };
 		166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3E61CFF0505201909FC54F /* DatabaseClient.swift */; };
 		16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */; };
 		19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */; };
@@ -33,7 +32,6 @@
 		09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		15B49B9D6360FE850DD93363 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tusk.entitlements; sourceTree = "<group>"; };
-		32A51130EE7F4E090621CBFA /* SchemaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaView.swift; sourceTree = "<group>"; };
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -120,7 +118,6 @@
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
-				32A51130EE7F4E090621CBFA /* SchemaView.swift */,
 				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
 				A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */,
 				F317DCA7625AA05FB8810169 /* WelcomeView.swift */,
@@ -238,7 +235,6 @@
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
 				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
 				2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */,
-				0C24CBF79542FE8350DC6AA4 /* SchemaView.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
 				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
 				DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */,
