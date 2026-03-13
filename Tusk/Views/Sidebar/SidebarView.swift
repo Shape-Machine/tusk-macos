@@ -44,10 +44,8 @@ private struct ConnectionSection: View {
             if $1 == "public" { return false }
             return $0 < $1
         }
-        let tables = all.filter { $0.type == .table }
-        return uniqueSchemas.map { schema in
-            (name: schema, tables: tables.filter { $0.schema == schema })
-        }
+        let tablesBySchema = Dictionary(grouping: all.filter { $0.type == .table }, by: { $0.schema })
+        return uniqueSchemas.map { (name: $0, tables: tablesBySchema[$0] ?? []) }
     }
 
     var body: some View {
