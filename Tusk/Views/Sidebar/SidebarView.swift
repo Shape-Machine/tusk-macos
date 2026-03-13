@@ -139,32 +139,6 @@ private struct ConnectionHeader: View {
                 .lineLimit(1)
 
             Spacer()
-
-            Menu {
-                if isConnected {
-                    Button("New Query") { appState.openQueryTab(for: connection) }
-                    Button("Disconnect") { appState.disconnect(connection) }
-                    Divider()
-                    Button("Refresh Schema") {
-                        Task { try? await appState.refreshSchema(for: connection) }
-                    }
-                } else {
-                    Button("Connect") {
-                        Task {
-                            do { try await appState.connect(connection) }
-                            catch { print("Connection error: \(error)") }
-                        }
-                    }
-                }
-                Divider()
-                Button("Edit…") { appState.editingConnection = connection }
-                Button("Delete", role: .destructive) { appState.removeConnection(connection) }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(.secondary)
-            }
-            .menuStyle(.borderlessButton)
-            .frame(width: 20)
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -174,6 +148,26 @@ private struct ConnectionHeader: View {
                     catch { print("Connection error: \(error)") }
                 }
             }
+        }
+        .contextMenu {
+            if isConnected {
+                Button("New Query") { appState.openQueryTab(for: connection) }
+                Button("Disconnect") { appState.disconnect(connection) }
+                Divider()
+                Button("Refresh Schema") {
+                    Task { try? await appState.refreshSchema(for: connection) }
+                }
+            } else {
+                Button("Connect") {
+                    Task {
+                        do { try await appState.connect(connection) }
+                        catch { print("Connection error: \(error)") }
+                    }
+                }
+            }
+            Divider()
+            Button("Edit…") { appState.editingConnection = connection }
+            Button("Delete", role: .destructive) { appState.removeConnection(connection) }
         }
     }
 }
