@@ -17,9 +17,12 @@ final class AppState {
     // MARK: - Sidebar selection
     var selectedSidebarItem: SidebarItem? = nil
 
-    // MARK: - Query tabs
+    // MARK: - Detail tabs (one per open table or query editor)
+    var openTabs: [DetailTab] = []
+    var activeDetailTabID: UUID? = nil
+
+    // MARK: - Query tabs (stores editor state; paired with a DetailTab)
     var queryTabs: [QueryTab] = []
-    var activeTabID: UUID? = nil
 
     // MARK: - Schema cache  (connectionID → tables)
     var schemaTables: [UUID: [TableInfo]] = [:]
@@ -107,6 +110,17 @@ final class AppState {
             Task { await tunnel.stop() }
         }
         schemaTables.removeValue(forKey: connection.id)
+
+        // Close all detail tabs belonging to this connection
+        let tabsToClose = openTabs.filter { tab in
+            switch tab.kind {
+            case .table(let cid, _, _): return cid == connection.id
+            case .queryEditor(let qid):
+                return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
+            }
+        }
+        for tab in tabsToClose { closeDetailTab(tab.id) }
+
         if selectedConnectionID == connection.id {
             selectedConnectionID = nil
             selectedSidebarItem = nil
@@ -127,32 +141,87 @@ final class AppState {
 
     // MARK: - Query tabs
 
+    func openOrActivateTableTab(connectionID: UUID, schema: String, tableName: String) {
+        if let existing = openTabs.first(where: {
+            if case .table(let cid, let s, let n) = $0.kind {
+                return cid == connectionID && s == schema && n == tableName
+            }
+            return false
+        }) {
+            activeDetailTabID = existing.id
+            selectedSidebarItem = .table(connectionID: connectionID, schema: schema, tableName: tableName)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: tableName,
+            icon: "tablecells",
+            kind: .table(connectionID: connectionID, schema: schema, tableName: tableName)
+        )
+        openTabs.append(tab)
+        activeDetailTabID = tab.id
+        selectedSidebarItem = .table(connectionID: connectionID, schema: schema, tableName: tableName)
+    }
+
     func openFileInEditor(url: URL) {
-        // Associate with the active connection, falling back to the first connected one.
         guard let connID = selectedConnectionID ?? clients.keys.first,
               clients[connID] != nil,
               let connection = connections.first(where: { $0.id == connID })
         else { return }
 
         let sql = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        var tab = QueryTab(connectionID: connID, connectionName: connection.name)
-        tab.title = url.deletingPathExtension().lastPathComponent
-        tab.sql = sql
-        queryTabs.append(tab)
-        activeTabID = tab.id
-        selectedSidebarItem = .queryEditor(tab.id)
+        var queryTab = QueryTab(connectionID: connID, connectionName: connection.name)
+        queryTab.title = url.deletingPathExtension().lastPathComponent
+        queryTab.sql = sql
+        queryTabs.append(queryTab)
+
+        let detailTab = DetailTab(
+            id: UUID(),
+            title: queryTab.title,
+            icon: "doc.text",
+            kind: .queryEditor(queryTabID: queryTab.id)
+        )
+        openTabs.append(detailTab)
+        activeDetailTabID = detailTab.id
+        selectedSidebarItem = nil
     }
 
     func openQueryTab(for connection: Connection) {
-        let tab = QueryTab(connectionID: connection.id, connectionName: connection.name)
-        queryTabs.append(tab)
-        activeTabID = tab.id
-        selectedSidebarItem = .queryEditor(tab.id)
+        let queryTab = QueryTab(connectionID: connection.id, connectionName: connection.name)
+        queryTabs.append(queryTab)
+
+        let detailTab = DetailTab(
+            id: UUID(),
+            title: "Query",
+            icon: "terminal",
+            kind: .queryEditor(queryTabID: queryTab.id)
+        )
+        openTabs.append(detailTab)
+        activeDetailTabID = detailTab.id
+        selectedSidebarItem = nil
     }
 
-    func closeTab(_ tabID: UUID) {
-        queryTabs.removeAll { $0.id == tabID }
-        activeTabID = queryTabs.last?.id
+    func closeDetailTab(_ tabID: UUID) {
+        guard let idx = openTabs.firstIndex(where: { $0.id == tabID }) else { return }
+        let tab = openTabs[idx]
+        if case .queryEditor(let qid) = tab.kind {
+            queryTabs.removeAll { $0.id == qid }
+        }
+        openTabs.remove(at: idx)
+        if activeDetailTabID == tabID {
+            if !openTabs.isEmpty {
+                let newTab = openTabs[min(idx, openTabs.count - 1)]
+                activeDetailTabID = newTab.id
+                if case .table(let cid, let s, let n) = newTab.kind {
+                    selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
+                } else {
+                    selectedSidebarItem = nil
+                }
+            } else {
+                activeDetailTabID = nil
+                selectedSidebarItem = nil
+            }
+        }
     }
 
     // MARK: - Convenience
@@ -183,4 +252,21 @@ struct QueryTab: Identifiable {
     let connectionName: String
     var title: String = "Query"
     var sql: String = ""
+}
+
+// MARK: - Detail tab model
+
+struct DetailTab: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let icon: String
+    let kind: Kind
+
+    enum Kind: Hashable {
+        case table(connectionID: UUID, schema: String, tableName: String)
+        case queryEditor(queryTabID: UUID)
+    }
+
+    static func == (lhs: DetailTab, rhs: DetailTab) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

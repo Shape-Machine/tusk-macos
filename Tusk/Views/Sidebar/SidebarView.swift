@@ -8,7 +8,17 @@ struct SidebarView: View {
             // Top — connections + schema tree
             List(selection: Binding(
                 get: { appState.selectedSidebarItem },
-                set: { appState.selectedSidebarItem = $0 }
+                set: { newItem in
+                    appState.selectedSidebarItem = newItem
+                    if let item = newItem,
+                       case .table(let cid, let schema, let name) = item {
+                        appState.openOrActivateTableTab(
+                            connectionID: cid,
+                            schema: schema,
+                            tableName: name
+                        )
+                    }
+                }
             )) {
                 ForEach(appState.connections) { connection in
                     ConnectionSection(connection: connection)
