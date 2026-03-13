@@ -16,6 +16,8 @@ struct DataBrowserView: View {
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
     @State private var filterText = ""
+    @State private var filterDebounceTask: Task<Void, Never>? = nil
+    @State private var loadTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,10 +46,10 @@ struct DataBrowserView: View {
                 Color(nsColor: .textBackgroundColor)
             }
         }
-        .task { await load() }
+        .task { triggerLoad() }
         .onChange(of: tableName) { _, _ in
             offset = 0
-            Task { await load() }
+            triggerLoad()
         }
     }
 
@@ -60,10 +62,18 @@ struct DataBrowserView: View {
             TextField("Filter…", text: $filterText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
-                .onSubmit { Task { await load() } }
+                .onChange(of: filterText) { _, _ in
+                    filterDebounceTask?.cancel()
+                    filterDebounceTask = Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard !Task.isCancelled else { return }
+                        offset = 0
+                        triggerLoad()
+                    }
+                }
 
             Button {
-                Task { await load() }
+                triggerLoad()
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
@@ -85,7 +95,7 @@ struct DataBrowserView: View {
             if offset > 0 {
                 Button("← Previous") {
                     offset = max(0, offset - pageSize)
-                    Task { await load() }
+                    triggerLoad()
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)
@@ -94,7 +104,7 @@ struct DataBrowserView: View {
             if result.rows.count == pageSize {
                 Button("Next →") {
                     offset += pageSize
-                    Task { await load() }
+                    triggerLoad()
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)
@@ -117,9 +127,18 @@ struct DataBrowserView: View {
 
     // MARK: - Load
 
+    /// Cancels any in-flight load and starts a fresh one.
+    private func triggerLoad() {
+        loadTask?.cancel()
+        loadTask = Task { await load() }
+    }
+
     private func load() async {
+        guard !Task.isCancelled else { return }
         isLoading = true
         error = nil
+        // Only clear isLoading when this task was not superseded by a newer one.
+        defer { if !Task.isCancelled { isLoading = false } }
 
         var sql = "SELECT * FROM \(qualifiedName)"
 
@@ -134,12 +153,16 @@ struct DataBrowserView: View {
         sql += " LIMIT \(pageSize) OFFSET \(offset)"
 
         do {
-            result = try await client.query(sql)
+            let queryResult = try await client.query(sql)
+            guard !Task.isCancelled else { return }
+            result = queryResult
+        } catch is CancellationError {
+            // A newer load superseded this one — don't touch the visible state.
+            return
         } catch {
+            guard !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     // MARK: - Export
