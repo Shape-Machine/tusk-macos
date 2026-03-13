@@ -8,6 +8,10 @@ A minimal, native macOS PostgreSQL client. No Electron, no telemetry, no subscri
 
 Built in SwiftUI for macOS 14+. Tusk is for developers who want a fast, no-nonsense way to explore databases and run queries — without handing their credentials or query history to a cloud service.
 
+**[Download Tusk-1.0.0.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.0.0/Tusk-1.0.0.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
+
+> Not notarized. On first launch right-click → **Open**, or run `xattr -d com.apple.quarantine /Applications/Tusk.app`.
+
 **Features**
 
 - SQL query editor with syntax highlighting
