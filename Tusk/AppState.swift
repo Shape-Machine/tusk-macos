@@ -30,6 +30,7 @@ final class AppState {
     // MARK: - UI state
     var isAddingConnection = false
     var editingConnection: Connection? = nil
+    var connectingIDs: Set<UUID> = []
 
     init() {
         connections = ConnectionStore.shared.load()
@@ -66,6 +67,9 @@ final class AppState {
     // MARK: - Connect / Disconnect
 
     func connect(_ connection: Connection) async throws {
+        connectingIDs.insert(connection.id)
+        defer { connectingIDs.remove(connection.id) }
+
         // Build and connect the new client *before* tearing down the old one so
         // that table tabs backed by the existing client stay renderable during reconnect.
         var effectiveConnection = connection
@@ -247,6 +251,20 @@ final class AppState {
     /// Activates a detail tab and keeps `activeDetailTabID`, `selectedSidebarItem`,
     /// and `selectedConnectionID` in sync. Only updates `selectedConnectionID` when
     /// the tab has a definite connection (never clears it for connection-less file tabs).
+    func activateNextTab() {
+        guard openTabs.count > 1,
+              let idx = openTabs.firstIndex(where: { $0.id == activeDetailTabID })
+        else { return }
+        activateDetailTab(openTabs[(idx + 1) % openTabs.count])
+    }
+
+    func activatePreviousTab() {
+        guard openTabs.count > 1,
+              let idx = openTabs.firstIndex(where: { $0.id == activeDetailTabID })
+        else { return }
+        activateDetailTab(openTabs[idx == 0 ? openTabs.count - 1 : idx - 1])
+    }
+
     func activateDetailTab(_ tab: DetailTab) {
         activeDetailTabID = tab.id
         switch tab.kind {
