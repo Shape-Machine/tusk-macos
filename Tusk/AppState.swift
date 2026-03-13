@@ -164,15 +164,16 @@ final class AppState {
     }
 
     func openFileInEditor(url: URL) {
-        guard let connID = selectedConnectionID ?? clients.keys.first,
-              clients[connID] != nil,
-              let connection = connections.first(where: { $0.id == connID })
-        else { return }
+        let connID = selectedConnectionID ?? clients.keys.first
+        let connName = connID.flatMap { id in connections.first(where: { $0.id == id }) }?.name ?? ""
 
         let sql = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        var queryTab = QueryTab(connectionID: connID, connectionName: connection.name)
+        var queryTab = QueryTab()
+        queryTab.connectionID = connID
+        queryTab.connectionName = connName
         queryTab.title = url.deletingPathExtension().lastPathComponent
         queryTab.sql = sql
+        queryTab.sourceURL = url
         queryTabs.append(queryTab)
 
         let detailTab = DetailTab(
@@ -187,7 +188,9 @@ final class AppState {
     }
 
     func openQueryTab(for connection: Connection) {
-        let queryTab = QueryTab(connectionID: connection.id, connectionName: connection.name)
+        var queryTab = QueryTab()
+        queryTab.connectionID = connection.id
+        queryTab.connectionName = connection.name
         queryTabs.append(queryTab)
 
         let detailTab = DetailTab(
@@ -248,10 +251,11 @@ enum SidebarItem: Hashable {
 
 struct QueryTab: Identifiable {
     let id = UUID()
-    let connectionID: UUID
-    let connectionName: String
+    var connectionID: UUID?
+    var connectionName: String = ""
     var title: String = "Query"
     var sql: String = ""
+    var sourceURL: URL? = nil
 }
 
 // MARK: - Detail tab model

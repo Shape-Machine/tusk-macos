@@ -3,12 +3,14 @@ import SwiftUI
 struct QueryEditorView: View {
     @Environment(AppState.self) private var appState
     let tab: QueryTab
-    let client: DatabaseClient
+    let client: DatabaseClient?
 
     @State private var sql: String = ""
     @State private var result: QueryResult? = nil
     @State private var error: String? = nil
     @State private var isRunning = false
+    @State private var autoSaveTask: Task<Void, Never>? = nil
+    @State private var savedIndicator = false
 
     var body: some View {
         VSplitView {
@@ -22,8 +24,25 @@ struct QueryEditorView: View {
         }
         .onAppear { sql = tab.sql }
         .onChange(of: sql) { _, newValue in
-            guard let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) else { return }
-            appState.queryTabs[index].sql = newValue
+            // Sync in-memory state
+            if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
+                appState.queryTabs[index].sql = newValue
+            }
+            // Debounced auto-save to disk (500 ms)
+            guard tab.sourceURL != nil else { return }
+            autoSaveTask?.cancel()
+            autoSaveTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled, let url = tab.sourceURL else { return }
+                try? newValue.write(to: url, atomically: true, encoding: .utf8)
+                await MainActor.run {
+                    savedIndicator = true
+                    Task {
+                        try? await Task.sleep(for: .seconds(2))
+                        savedIndicator = false
+                    }
+                }
+            }
         }
     }
 
@@ -32,10 +51,22 @@ struct QueryEditorView: View {
     private var editorPane: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text(tab.connectionName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if client != nil {
+                    Text(tab.connectionName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Label("No connection", systemImage: "bolt.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
+                if savedIndicator {
+                    Label("Saved", systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.opacity)
+                }
                 if isRunning {
                     ProgressView().controlSize(.small)
                 }
@@ -46,7 +77,7 @@ struct QueryEditorView: View {
                         .font(.callout)
                 }
                 .keyboardShortcut(.return, modifiers: .command)
-                .disabled(sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .disabled(client == nil || sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
             }
@@ -115,6 +146,7 @@ struct QueryEditorView: View {
     // MARK: - Run query
 
     private func runQuery() async {
+        guard let client else { return }
         let trimmed = sql.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 

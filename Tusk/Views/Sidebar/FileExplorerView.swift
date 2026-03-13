@@ -27,16 +27,12 @@ struct FileExplorerView: View {
 
     private var homeDirectory: URL { FileManager.default.homeDirectoryForCurrentUser }
     private var isAtHome: Bool { currentDirectory.standardized == homeDirectory.standardized }
-    private var hasActiveConnection: Bool { !appState.clients.isEmpty }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
             fileList
-            if !hasActiveConnection {
-                noConnectionBanner
-            }
         }
         .task(id: currentDirectory) { loadItems() }
     }
@@ -87,7 +83,7 @@ struct FileExplorerView: View {
                     Button {
                         if item.isDirectory {
                             currentDirectory = item.url
-                        } else if item.isSql && hasActiveConnection {
+                        } else if item.isSql {
                             appState.openFileInEditor(url: item.url)
                         }
                     } label: {
@@ -107,21 +103,6 @@ struct FileExplorerView: View {
             }
             .listStyle(.sidebar)
         }
-    }
-
-    // MARK: - No connection banner
-
-    private var noConnectionBanner: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle")
-            Text("Connect to a database to open files")
-        }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar)
     }
 
     // MARK: - Load directory contents
