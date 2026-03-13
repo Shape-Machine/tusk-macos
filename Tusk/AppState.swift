@@ -17,9 +17,12 @@ final class AppState {
     // MARK: - Sidebar selection
     var selectedSidebarItem: SidebarItem? = nil
 
-    // MARK: - Query tabs
+    // MARK: - Detail tabs (one per open table or query editor)
+    var openTabs: [DetailTab] = []
+    var activeDetailTabID: UUID? = nil
+
+    // MARK: - Query tabs (stores editor state; paired with a DetailTab)
     var queryTabs: [QueryTab] = []
-    var activeTabID: UUID? = nil
 
     // MARK: - Schema cache  (connectionID → tables)
     var schemaTables: [UUID: [TableInfo]] = [:]
@@ -63,40 +66,50 @@ final class AppState {
     // MARK: - Connect / Disconnect
 
     func connect(_ connection: Connection) async throws {
-        // Tear down any existing client/tunnel first.
-        if let existing = clients.removeValue(forKey: connection.id) {
-            await existing.disconnect()
-        }
-        if let existingTunnel = tunnels.removeValue(forKey: connection.id) {
-            await existingTunnel.stop()
-        }
+        // Build and connect the new client *before* tearing down the old one so
+        // that table tabs backed by the existing client stay renderable during reconnect.
+        var effectiveConnection = connection
+        var newTunnel: SSHTunnel? = nil
 
         // Start SSH tunnel if enabled; the tunnel exposes a local port that
         // PostgresNIO will connect to instead of the real host/port.
-        var effectiveConnection = connection
         if connection.sshEnabled {
             let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id)
             let tunnel = SSHTunnel()
             try await tunnel.start(connection: connection, passphrase: passphrase)
-            tunnels[connection.id] = tunnel
+            newTunnel = tunnel
             let localPort = await tunnel.localPort
             effectiveConnection.host = "127.0.0.1"
             effectiveConnection.port = localPort
         }
 
         let password = KeychainManager.shared.password(for: connection.id) ?? ""
-        let client = DatabaseClient()
+        let newClient = DatabaseClient()
         do {
-            try await client.connect(to: effectiveConnection, password: password)
+            try await newClient.connect(to: effectiveConnection, password: password)
         } catch {
-            await client.disconnect()
-            if let tunnel = tunnels.removeValue(forKey: connection.id) {
-                await tunnel.stop()
-            }
+            await newClient.disconnect()
+            if let tunnel = newTunnel { await tunnel.stop() }
             throw error
         }
-        clients[connection.id] = client
+
+        // New client is ready — atomically swap out the old one.
+        if let oldClient = clients.removeValue(forKey: connection.id) {
+            await oldClient.disconnect()
+        }
+        if let oldTunnel = tunnels.removeValue(forKey: connection.id) {
+            await oldTunnel.stop()
+        }
+        if let tunnel = newTunnel { tunnels[connection.id] = tunnel }
+        clients[connection.id] = newClient
         selectedConnectionID = connection.id
+
+        // Bind any file-based query tabs that were opened without a connection.
+        for idx in queryTabs.indices where queryTabs[idx].sourceURL != nil && queryTabs[idx].connectionID == nil {
+            queryTabs[idx].connectionID = connection.id
+            queryTabs[idx].connectionName = connection.name
+        }
+
         try await refreshSchema(for: connection)
     }
 
@@ -107,6 +120,17 @@ final class AppState {
             Task { await tunnel.stop() }
         }
         schemaTables.removeValue(forKey: connection.id)
+
+        // Close all detail tabs belonging to this connection
+        let tabsToClose = openTabs.filter { tab in
+            switch tab.kind {
+            case .table(let cid, _, _): return cid == connection.id
+            case .queryEditor(let qid):
+                return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
+            }
+        }
+        for tab in tabsToClose { closeDetailTab(tab.id) }
+
         if selectedConnectionID == connection.id {
             selectedConnectionID = nil
             selectedSidebarItem = nil
@@ -127,16 +151,114 @@ final class AppState {
 
     // MARK: - Query tabs
 
-    func openQueryTab(for connection: Connection) {
-        let tab = QueryTab(connectionID: connection.id, connectionName: connection.name)
-        queryTabs.append(tab)
-        activeTabID = tab.id
-        selectedSidebarItem = .queryEditor(tab.id)
+    func openOrActivateTableTab(connectionID: UUID, schema: String, tableName: String) {
+        if let existing = openTabs.first(where: {
+            if case .table(let cid, let s, let n) = $0.kind {
+                return cid == connectionID && s == schema && n == tableName
+            }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: tableName,
+            icon: "tablecells",
+            kind: .table(connectionID: connectionID, schema: schema, tableName: tableName)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
     }
 
-    func closeTab(_ tabID: UUID) {
-        queryTabs.removeAll { $0.id == tabID }
-        activeTabID = queryTabs.last?.id
+    func openFileInEditor(url: URL) async {
+        let connID = selectedConnectionID
+        let connName = connID.flatMap { id in connections.first(where: { $0.id == id }) }?.name ?? ""
+
+        // If this file is already open, update its connection to reflect the
+        // current selection (handles gaining or losing a connection) and activate.
+        if let existingIdx = queryTabs.firstIndex(where: { $0.sourceURL == url }),
+           let detailTab = openTabs.first(where: {
+               if case .queryEditor(let qid) = $0.kind { return qid == queryTabs[existingIdx].id }
+               return false
+           }) {
+            queryTabs[existingIdx].connectionID = connID
+            queryTabs[existingIdx].connectionName = connName
+            activateDetailTab(detailTab)
+            return
+        }
+
+        let sql = await Task.detached(priority: .userInitiated) {
+            (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        }.value
+        var queryTab = QueryTab()
+        queryTab.connectionID = connID
+        queryTab.connectionName = connName
+        queryTab.title = url.deletingPathExtension().lastPathComponent
+        queryTab.sql = sql
+        queryTab.sourceURL = url
+        queryTabs.append(queryTab)
+
+        let detailTab = DetailTab(
+            id: UUID(),
+            title: queryTab.title,
+            icon: "doc.text",
+            kind: .queryEditor(queryTabID: queryTab.id)
+        )
+        openTabs.append(detailTab)
+        activateDetailTab(detailTab)
+    }
+
+    func openQueryTab(for connection: Connection) {
+        var queryTab = QueryTab()
+        queryTab.connectionID = connection.id
+        queryTab.connectionName = connection.name
+        queryTabs.append(queryTab)
+
+        let detailTab = DetailTab(
+            id: UUID(),
+            title: "Query",
+            icon: "terminal",
+            kind: .queryEditor(queryTabID: queryTab.id)
+        )
+        openTabs.append(detailTab)
+        activateDetailTab(detailTab)
+    }
+
+    func closeDetailTab(_ tabID: UUID) {
+        guard let idx = openTabs.firstIndex(where: { $0.id == tabID }) else { return }
+        let tab = openTabs[idx]
+        if case .queryEditor(let qid) = tab.kind {
+            queryTabs.removeAll { $0.id == qid }
+        }
+        openTabs.remove(at: idx)
+        if activeDetailTabID == tabID {
+            if !openTabs.isEmpty {
+                activateDetailTab(openTabs[min(idx, openTabs.count - 1)])
+            } else {
+                activeDetailTabID = nil
+                selectedSidebarItem = nil
+            }
+        }
+    }
+
+    // MARK: - Tab activation
+
+    /// Activates a detail tab and keeps `activeDetailTabID`, `selectedSidebarItem`,
+    /// and `selectedConnectionID` in sync. Only updates `selectedConnectionID` when
+    /// the tab has a definite connection (never clears it for connection-less file tabs).
+    func activateDetailTab(_ tab: DetailTab) {
+        activeDetailTabID = tab.id
+        switch tab.kind {
+        case .table(let cid, let s, let n):
+            selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
+            selectedConnectionID = cid
+        case .queryEditor(let qid):
+            selectedSidebarItem = nil
+            if let connID = queryTabs.first(where: { $0.id == qid })?.connectionID {
+                selectedConnectionID = connID
+            }
+        }
     }
 
     // MARK: - Convenience
@@ -163,8 +285,26 @@ enum SidebarItem: Hashable {
 
 struct QueryTab: Identifiable {
     let id = UUID()
-    let connectionID: UUID
-    let connectionName: String
+    var connectionID: UUID?
+    var connectionName: String = ""
     var title: String = "Query"
     var sql: String = ""
+    var sourceURL: URL? = nil
+}
+
+// MARK: - Detail tab model
+
+struct DetailTab: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let icon: String
+    let kind: Kind
+
+    enum Kind: Hashable {
+        case table(connectionID: UUID, schema: String, tableName: String)
+        case queryEditor(queryTabID: UUID)
+    }
+
+    static func == (lhs: DetailTab, rhs: DetailTab) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
