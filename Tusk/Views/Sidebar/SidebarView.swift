@@ -4,15 +4,23 @@ struct SidebarView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        List(selection: Binding(
-            get: { appState.selectedSidebarItem },
-            set: { appState.selectedSidebarItem = $0 }
-        )) {
-            ForEach(appState.connections) { connection in
-                ConnectionSection(connection: connection)
+        VSplitView {
+            // Top — connections + schema tree
+            List(selection: Binding(
+                get: { appState.selectedSidebarItem },
+                set: { appState.selectedSidebarItem = $0 }
+            )) {
+                ForEach(appState.connections) { connection in
+                    ConnectionSection(connection: connection)
+                }
             }
+            .listStyle(.sidebar)
+            .frame(minHeight: 120)
+
+            // Bottom — file explorer
+            FileExplorerView()
+                .frame(minHeight: 120)
         }
-        .listStyle(.sidebar)
         .navigationTitle("Tusk")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
