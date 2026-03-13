@@ -161,11 +161,13 @@ final class AppState {
         activateDetailTab(tab)
     }
 
-    func openFileInEditor(url: URL) {
+    func openFileInEditor(url: URL) async {
         let connID = selectedConnectionID
         let connName = connID.flatMap { id in connections.first(where: { $0.id == id }) }?.name ?? ""
 
-        let sql = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let sql = await Task.detached(priority: .userInitiated) {
+            (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        }.value
         var queryTab = QueryTab()
         queryTab.connectionID = connID
         queryTab.connectionName = connName
