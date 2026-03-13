@@ -47,6 +47,14 @@ struct DetailView: View {
             case .table(let connID, let schema, let tableName):
                 if let client = appState.clients[connID] {
                     TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+                } else {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Connecting…")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             case .queryEditor(let queryTabID):
                 if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
