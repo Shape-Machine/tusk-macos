@@ -17,6 +17,13 @@ struct AddConnectionSheet: View {
     @State private var useSSL: Bool = false
     @State private var color: ConnectionColor = .blue
 
+    @State private var sshEnabled: Bool = false
+    @State private var sshHost: String = ""
+    @State private var sshPort: String = "22"
+    @State private var sshUser: String = ""
+    @State private var sshKeyPath: String = ""
+    @State private var sshPassphrase: String = ""
+
     @State private var isTestingConnection = false
     @State private var testResult: String? = nil
 
@@ -79,6 +86,25 @@ struct AddConnectionSheet: View {
                     Toggle("Use SSL", isOn: $useSSL)
                 }
 
+                Section {
+                    Toggle("Use SSH Tunnel", isOn: $sshEnabled)
+
+                    if sshEnabled {
+                        TextField("SSH Host", text: $sshHost)
+                        TextField("SSH Port", text: $sshPort)
+                            .frame(width: 70)
+                        TextField("SSH User", text: $sshUser)
+                        HStack {
+                            TextField("Private Key Path", text: $sshKeyPath)
+                            Button("Browse…") { pickKey() }
+                                .buttonStyle(.borderless)
+                        }
+                        SecureField("Key Passphrase (if any)", text: $sshPassphrase)
+                    }
+                } header: {
+                    Text("SSH Tunnel")
+                }
+
                 if let result = testResult {
                     Section {
                         Text(result)
@@ -116,36 +142,68 @@ struct AddConnectionSheet: View {
 
     private func populate() {
         guard let c = connection else { return }
-        name     = c.name
-        host     = c.host
-        port     = String(c.port)
-        database = c.database
-        username = c.username
-        password = KeychainManager.shared.password(for: c.id) ?? ""
-        useSSL   = c.useSSL
-        color    = c.color
+        name          = c.name
+        host          = c.host
+        port          = String(c.port)
+        database      = c.database
+        username      = c.username
+        password      = KeychainManager.shared.password(for: c.id) ?? ""
+        useSSL        = c.useSSL
+        color         = c.color
+        sshEnabled    = c.sshEnabled
+        sshHost       = c.sshHost
+        sshPort       = String(c.sshPort)
+        sshUser       = c.sshUser
+        sshKeyPath    = c.sshKeyPath
+        sshPassphrase = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
+    }
+
+    private func pickKey() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Select Key"
+        panel.title = "Choose SSH Private Key"
+        panel.directoryURL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".ssh")
+        if panel.runModal() == .OK, let url = panel.url {
+            sshKeyPath = url.path
+        }
     }
 
     private func save() {
-        let portInt = Int(port) ?? 5432
+        let portInt    = Int(port) ?? 5432
+        let sshPortInt = Int(sshPort) ?? 22
         if let existing = connection {
-            var updated = existing
-            updated.name     = name
-            updated.host     = host
-            updated.port     = portInt
-            updated.database = database
-            updated.username = username
-            updated.useSSL   = useSSL
-            updated.color    = color
+            var updated          = existing
+            updated.name         = name
+            updated.host         = host
+            updated.port         = portInt
+            updated.database     = database
+            updated.username     = username
+            updated.useSSL       = useSSL
+            updated.color        = color
+            updated.sshEnabled   = sshEnabled
+            updated.sshHost      = sshHost
+            updated.sshPort      = sshPortInt
+            updated.sshUser      = sshUser
+            updated.sshKeyPath   = sshKeyPath
             KeychainManager.shared.setPassword(password, for: updated.id)
+            KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
             appState.updateConnection(updated)
         } else {
-            let new = Connection(
+            var new          = Connection(
                 name: name, host: host, port: portInt,
                 database: database, username: username,
                 useSSL: useSSL, color: color
             )
+            new.sshEnabled   = sshEnabled
+            new.sshHost      = sshHost
+            new.sshPort      = sshPortInt
+            new.sshUser      = sshUser
+            new.sshKeyPath   = sshKeyPath
             KeychainManager.shared.setPassword(password, for: new.id)
+            KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
             appState.addConnection(new)
         }
         dismiss()
