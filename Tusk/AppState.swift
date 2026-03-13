@@ -55,6 +55,7 @@ final class AppState {
     func removeConnection(_ connection: Connection) {
         disconnect(connection)
         connections.removeAll { $0.id == connection.id }
+        KeychainManager.shared.deletePassword(for: connection.id)
         KeychainManager.shared.deleteSshPassphrase(for: connection.id)
         ConnectionStore.shared.save(connections)
     }
