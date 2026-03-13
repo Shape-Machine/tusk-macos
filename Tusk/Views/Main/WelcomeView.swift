@@ -5,10 +5,10 @@ struct WelcomeView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Image(systemName: "tusk")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
+            Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
 
             VStack(spacing: 8) {
                 Text("Welcome to Tusk")
