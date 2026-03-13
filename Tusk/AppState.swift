@@ -66,39 +66,42 @@ final class AppState {
     // MARK: - Connect / Disconnect
 
     func connect(_ connection: Connection) async throws {
-        // Tear down any existing client/tunnel first.
-        if let existing = clients.removeValue(forKey: connection.id) {
-            await existing.disconnect()
-        }
-        if let existingTunnel = tunnels.removeValue(forKey: connection.id) {
-            await existingTunnel.stop()
-        }
+        // Build and connect the new client *before* tearing down the old one so
+        // that table tabs backed by the existing client stay renderable during reconnect.
+        var effectiveConnection = connection
+        var newTunnel: SSHTunnel? = nil
 
         // Start SSH tunnel if enabled; the tunnel exposes a local port that
         // PostgresNIO will connect to instead of the real host/port.
-        var effectiveConnection = connection
         if connection.sshEnabled {
             let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id)
             let tunnel = SSHTunnel()
             try await tunnel.start(connection: connection, passphrase: passphrase)
-            tunnels[connection.id] = tunnel
+            newTunnel = tunnel
             let localPort = await tunnel.localPort
             effectiveConnection.host = "127.0.0.1"
             effectiveConnection.port = localPort
         }
 
         let password = KeychainManager.shared.password(for: connection.id) ?? ""
-        let client = DatabaseClient()
+        let newClient = DatabaseClient()
         do {
-            try await client.connect(to: effectiveConnection, password: password)
+            try await newClient.connect(to: effectiveConnection, password: password)
         } catch {
-            await client.disconnect()
-            if let tunnel = tunnels.removeValue(forKey: connection.id) {
-                await tunnel.stop()
-            }
+            await newClient.disconnect()
+            if let tunnel = newTunnel { await tunnel.stop() }
             throw error
         }
-        clients[connection.id] = client
+
+        // New client is ready — atomically swap out the old one.
+        if let oldClient = clients.removeValue(forKey: connection.id) {
+            await oldClient.disconnect()
+        }
+        if let oldTunnel = tunnels.removeValue(forKey: connection.id) {
+            await oldTunnel.stop()
+        }
+        if let tunnel = newTunnel { tunnels[connection.id] = tunnel }
+        clients[connection.id] = newClient
         selectedConnectionID = connection.id
         try await refreshSchema(for: connection)
     }
