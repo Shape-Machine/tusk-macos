@@ -127,12 +127,19 @@ private struct ConnectionHeader: View {
     let connection: Connection
 
     var isConnected: Bool { appState.isConnected(connection) }
+    var isConnecting: Bool { appState.connectingIDs.contains(connection.id) }
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(isConnected ? Color.green : connection.color.color)
-                .frame(width: 8, height: 8)
+            if isConnecting {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 8, height: 8)
+            } else {
+                Circle()
+                    .fill(isConnected ? Color.green : connection.color.color)
+                    .frame(width: 8, height: 8)
+            }
 
             Text(connection.name)
                 .font(.system(size: 12, weight: .semibold))
@@ -141,8 +148,9 @@ private struct ConnectionHeader: View {
             Spacer()
         }
         .contentShape(Rectangle())
+        .help(isConnected ? "" : isConnecting ? "Connecting…" : "Click to connect")
         .onTapGesture {
-            if !isConnected {
+            if !isConnected && !isConnecting {
                 Task {
                     do { try await appState.connect(connection) }
                     catch { print("Connection error: \(error)") }

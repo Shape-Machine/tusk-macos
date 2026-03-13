@@ -9,6 +9,24 @@ struct TuskCommands: Commands {
                 appState.isAddingConnection = true
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
+
+            Button("Close Tab") {
+                if let tabID = appState.activeDetailTabID {
+                    appState.closeDetailTab(tabID)
+                }
+            }
+            .keyboardShortcut("w", modifiers: .command)
+            .disabled(appState.activeDetailTabID == nil)
+        }
+
+        CommandGroup(after: .windowArrangement) {
+            Button("Show Next Tab") { appState.activateNextTab() }
+                .keyboardShortcut("]", modifiers: .command)
+                .disabled(appState.openTabs.count < 2)
+
+            Button("Show Previous Tab") { appState.activatePreviousTab() }
+                .keyboardShortcut("[", modifiers: .command)
+                .disabled(appState.openTabs.count < 2)
         }
 
         CommandMenu("Database") {

@@ -16,6 +16,7 @@ struct DataBrowserView: View {
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
     @State private var filterText = ""
+    @State private var filterTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,7 +61,15 @@ struct DataBrowserView: View {
             TextField("Filter…", text: $filterText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
-                .onSubmit { Task { await load() } }
+                .onChange(of: filterText) { _, _ in
+                    filterTask?.cancel()
+                    filterTask = Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard !Task.isCancelled else { return }
+                        offset = 0
+                        await load()
+                    }
+                }
 
             Button {
                 Task { await load() }

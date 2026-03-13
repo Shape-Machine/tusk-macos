@@ -94,6 +94,13 @@ private struct DetailTabItem: View {
 
     var isActive: Bool { appState.activeDetailTabID == tab.id }
 
+    var tooltip: String {
+        guard case .queryEditor(let qid) = tab.kind,
+              let path = appState.queryTabs.first(where: { $0.id == qid })?.sourceURL?.path
+        else { return "" }
+        return path
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: tab.icon)
@@ -127,6 +134,7 @@ private struct DetailTabItem: View {
             }
         }
         .contentShape(Rectangle())
+        .help(tooltip)
         .onTapGesture {
             appState.activateDetailTab(tab)
         }
