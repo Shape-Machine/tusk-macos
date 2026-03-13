@@ -118,12 +118,7 @@ private struct DetailTabItem: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            appState.activeDetailTabID = tab.id
-            if case .table(let cid, let s, let n) = tab.kind {
-                appState.selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
-            } else {
-                appState.selectedSidebarItem = nil
-            }
+            appState.activateDetailTab(tab)
         }
     }
 }
