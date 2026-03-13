@@ -70,12 +70,17 @@ enum SQLHighlighter {
         // 3. Numbers
         colorMatches(of: numberRE, in: text, range: fullRange, color: numberColour, to: textStorage)
 
-        // 4. String literals (override keywords inside strings)
-        colorMatches(of: stringRE, in: text, range: fullRange, color: stringColour, to: textStorage)
+        // 4. Collect string literal ranges first; apply their colour and use them
+        //    to shield string contents from the comment passes below.
+        let stringRanges = collectRanges(of: stringRE, in: text, range: fullRange)
+        for r in stringRanges {
+            textStorage.addAttribute(.foregroundColor, value: stringColour, range: r)
+        }
 
-        // 5. Comments — highest priority, override everything
-        colorMatches(of: lineCommentRE,  in: text, range: fullRange, color: commentColour, to: textStorage)
-        colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage)
+        // 5. Comments — highest priority, but must not fire inside string literals
+        //    (e.g. `'hello -- world'` should stay orange, not turn gray).
+        colorMatches(of: lineCommentRE,  in: text, range: fullRange, color: commentColour, to: textStorage, excluding: stringRanges)
+        colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage, excluding: stringRanges)
         } // end if !text.isEmpty
 
         textStorage.endEditing()
@@ -83,15 +88,31 @@ enum SQLHighlighter {
 
     // MARK: - Helpers
 
+    /// Returns all match ranges for `regex` within `range`.
+    private static func collectRanges(
+        of regex: NSRegularExpression,
+        in text: String,
+        range: NSRange
+    ) -> [NSRange] {
+        var ranges: [NSRange] = []
+        regex.enumerateMatches(in: text, range: range) { match, _, _ in
+            if let r = match?.range { ranges.append(r) }
+        }
+        return ranges
+    }
+
+    /// Colours every match of `regex`, skipping any match that overlaps a range in `excluding`.
     private static func colorMatches(
         of regex: NSRegularExpression,
         in text: String,
         range: NSRange,
         color: NSColor,
-        to textStorage: NSTextStorage
+        to textStorage: NSTextStorage,
+        excluding: [NSRange] = []
     ) {
         regex.enumerateMatches(in: text, range: range) { match, _, _ in
             guard let r = match?.range else { return }
+            if excluding.contains(where: { NSIntersectionRange($0, r).length > 0 }) { return }
             textStorage.addAttribute(.foregroundColor, value: color, range: r)
         }
     }
