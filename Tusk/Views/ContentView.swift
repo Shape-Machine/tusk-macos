@@ -109,8 +109,10 @@ private struct DetailTabItem: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.tertiary)
+                    .frame(width: 18, height: 18)
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .help("Close tab")
         }
         .padding(.horizontal, 10)
