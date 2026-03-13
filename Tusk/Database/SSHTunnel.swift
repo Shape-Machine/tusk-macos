@@ -125,6 +125,10 @@ actor SSHTunnel {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if Self.isPortOpen(port) { return }
+            // Fail fast if ssh already exited — no point waiting out the timeout.
+            if let p = process, !p.isRunning {
+                throw TuskError.sshTunnelFailed("SSH process exited unexpectedly (exit code \(p.terminationStatus))")
+            }
             try await Task.sleep(nanoseconds: 200_000_000) // 200 ms
         }
         throw TuskError.sshTunnelFailed("Timed out waiting for SSH tunnel on port \(port)")
