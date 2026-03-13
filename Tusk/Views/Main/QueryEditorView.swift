@@ -92,16 +92,13 @@ struct QueryEditorView: View {
             Divider()
 
             ZStack(alignment: .topLeading) {
-                TextEditor(text: $sql)
-                    .font(.system(.body, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .background(Color(nsColor: .textBackgroundColor))
+                SQLTextEditor(text: $sql)
                 if sql.isEmpty {
                     Text("-- Write SQL here · ⌘↵ to run")
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 9)
                         .allowsHitTesting(false)
                 }
             }
