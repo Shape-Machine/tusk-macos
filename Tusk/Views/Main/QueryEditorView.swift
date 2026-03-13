@@ -10,6 +10,7 @@ struct QueryEditorView: View {
     @State private var error: String? = nil
     @State private var isRunning = false
     @State private var autoSaveTask: Task<Void, Never>? = nil
+    @State private var savedIndicatorTask: Task<Void, Never>? = nil
     @State private var savedIndicator = false
 
     var body: some View {
@@ -34,13 +35,16 @@ struct QueryEditorView: View {
             autoSaveTask = Task {
                 try? await Task.sleep(for: .milliseconds(500))
                 guard !Task.isCancelled, let url = tab.sourceURL else { return }
-                try? newValue.write(to: url, atomically: true, encoding: .utf8)
-                await MainActor.run {
+                do {
+                    try newValue.write(to: url, atomically: true, encoding: .utf8)
+                } catch {
+                    return
+                }
+                savedIndicatorTask?.cancel()
+                savedIndicatorTask = Task {
                     savedIndicator = true
-                    Task {
-                        try? await Task.sleep(for: .seconds(2))
-                        savedIndicator = false
-                    }
+                    try? await Task.sleep(for: .seconds(2))
+                    if !Task.isCancelled { savedIndicator = false }
                 }
             }
         }
