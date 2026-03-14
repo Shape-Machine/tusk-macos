@@ -15,5 +15,10 @@ struct TuskApp: App {
         .commands {
             TuskCommands(appState: appState)
         }
+
+        Window("About Tusk", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
     }
 }
