@@ -118,26 +118,29 @@ struct AddConnectionSheet: View {
 
             Divider()
 
-            // Footer with test button and inline result
-            HStack(spacing: 12) {
-                Button {
-                    Task { await testConnection() }
-                } label: {
-                    if isTestingConnection {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Text("Test Connection")
+            // Footer with test button and result below
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Button {
+                        Task { await testConnection() }
+                    } label: {
+                        if isTestingConnection {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Test Connection")
+                        }
                     }
+                    .disabled(host.isEmpty || database.isEmpty || username.isEmpty)
+
+                    Spacer()
                 }
-                .disabled(host.isEmpty || database.isEmpty || username.isEmpty)
 
                 if let result = testResult {
                     Text(result)
                         .foregroundStyle(result.hasPrefix("✓") ? Color.green : Color.red)
                         .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer()
             }
             .padding()
         }
