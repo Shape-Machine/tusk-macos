@@ -151,7 +151,7 @@ struct FileExplorerView: View {
         guard !name.isEmpty else { isCreatingFile = false; return }
         // Strip any path separators/traversal — keep only the last component
         name = URL(fileURLWithPath: name).lastPathComponent
-        guard !name.isEmpty else { isCreatingFile = false; return }
+        guard !name.isEmpty, !name.hasPrefix(".") else { isCreatingFile = false; return }
         if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
         let fileURL = currentDirectory.appendingPathComponent(name)
         // Verify the resolved URL stays within currentDirectory
