@@ -66,9 +66,9 @@ struct AddConnectionSheet: View {
                             }
                         } label: {
                             HStack(spacing: 5) {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 12, height: 12)
+                                Image(systemName: "circle.fill")
+                                    .foregroundStyle(color.color)
+                                    .font(.caption)
                                 Text(color.rawValue.capitalized)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -102,7 +102,8 @@ struct AddConnectionSheet: View {
                         HStack {
                             TextField("SSH Host", text: $sshHost)
                             TextField("SSH Port", text: $sshPort)
-                                .frame(width: 100)
+                                .labelsHidden()
+                                .frame(width: 80)
                         }
                         TextField("SSH User", text: $sshUser)
                         HStack {
