@@ -185,7 +185,7 @@ actor DatabaseClient {
 
     // MARK: - Raw query
 
-    func query(_ sql: String) async throws -> QueryResult {
+    func query(_ sql: String, rowLimit: Int? = nil) async throws -> QueryResult {
         guard let conn = box?.connection else { throw TuskError.notConnected }
 
         let start = Date()
@@ -216,6 +216,7 @@ actor DatabaseClient {
                 return .text(pgCellString(bytes: bytes, dataType: cell.dataType))
             }
             rows.append(cells)
+            if let rowLimit, rows.count >= rowLimit { break }
         }
 
         let duration = Date().timeIntervalSince(start)

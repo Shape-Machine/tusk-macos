@@ -176,7 +176,7 @@ struct QueryEditorView: View {
 
         let (finalSQL, capped) = cappedSQL(trimmed)
         do {
-            let r = try await client.query(finalSQL)
+            let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
             result = r
             resultIsCapped = capped && r.rows.count == tuskPageSize
         } catch {
@@ -186,8 +186,10 @@ struct QueryEditorView: View {
         isRunning = false
     }
 
-    /// Wraps SELECT/WITH queries that lack a LIMIT in a subquery capped at
-    /// `tuskPageSize`. Non-SELECT statements are returned unchanged.
+    /// Wraps SELECT/WITH queries in a subquery capped at `tuskPageSize`.
+    /// Non-SELECT statements are returned unchanged.
+    /// Note: the subquery wrapping is a DB-side optimisation; the hard row cap
+    /// is enforced independently by DatabaseClient.query(rowLimit:).
     private func cappedSQL(_ sql: String) -> (sql: String, capped: Bool) {
         let stripped = sql
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -195,9 +197,6 @@ struct QueryEditorView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = stripped.lowercased()
         guard lower.hasPrefix("select") || lower.hasPrefix("with") else {
-            return (sql, false)
-        }
-        guard lower.range(of: "\\blimit\\b", options: .regularExpression) == nil else {
             return (sql, false)
         }
         return ("SELECT * FROM (\(stripped)) AS _tusk_result LIMIT \(tuskPageSize)", true)
