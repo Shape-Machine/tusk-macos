@@ -290,8 +290,9 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         let micros:       Int64 = r < 0 ? r + 1_000_000 : r
         let date = Date(timeIntervalSince1970: pgEpochOffset + Double(wholeSeconds))
         let c = pgUTCCalendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
-        var s = String(format: "%04d-%02d-%02d %02d:%02d:%02d",
-                       c.year!, c.month!, c.day!, c.hour!, c.minute!, c.second!)
+        guard let year = c.year, let month = c.month, let day = c.day,
+              let hour = c.hour, let minute = c.minute, let second = c.second else { break }
+        var s = String(format: "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second)
         if micros != 0 {
             var f = String(format: "%06d", micros)
             while f.hasSuffix("0") { f.removeLast() }
@@ -303,7 +304,8 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         guard let days = buf.readInteger(as: Int32.self) else { break }
         let date = Date(timeIntervalSince1970: pgEpochOffset + Double(days) * 86_400)
         let c = pgUTCCalendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+        guard let year = c.year, let month = c.month, let day = c.day else { break }
+        return String(format: "%04d-%02d-%02d", year, month, day)
 
     case .time:
         guard let us = buf.readInteger(as: Int64.self) else { break }
