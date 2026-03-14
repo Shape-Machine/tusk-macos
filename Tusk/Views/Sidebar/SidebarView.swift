@@ -56,7 +56,7 @@ private struct ConnectionSection: View {
 
     /// All schemas present in the cache, public first then alphabetical.
     /// Each entry pairs a schema name with its BASE TABLE items only.
-    var schemas: [(name: String, tables: [TableInfo])] {
+    var schemas: [(id: String, name: String, tables: [TableInfo])] {
         let all = appState.schemaTables[connection.id] ?? []
         let uniqueSchemas = Array(Set(all.map { $0.schema })).sorted {
             if $0 == "public" { return true }
@@ -64,13 +64,16 @@ private struct ConnectionSection: View {
             return $0 < $1
         }
         let tablesBySchema = Dictionary(grouping: all.filter { $0.type == .table }, by: { $0.schema })
-        return uniqueSchemas.map { (name: $0, tables: tablesBySchema[$0] ?? []) }
+        // Include connection.id in the row ID so that identically-named schemas
+        // across different connections get distinct SwiftUI identities in the
+        // flattened List — otherwise @State (isExpanded) is shared between them.
+        return uniqueSchemas.map { (id: "\(connection.id)-\($0)", name: $0, tables: tablesBySchema[$0] ?? []) }
     }
 
     var body: some View {
         Section {
             if isConnected {
-                ForEach(schemas, id: \.name) { schema in
+                ForEach(schemas, id: \.id) { schema in
                     SchemaRow(schema: schema.name, tables: schema.tables, connection: connection)
                 }
             }
