@@ -122,9 +122,10 @@ final class AppState {
 
     func disconnect(_ connection: Connection) {
         let client = clients.removeValue(forKey: connection.id)
-        Task { await client?.disconnect() }
-        if let tunnel = tunnels.removeValue(forKey: connection.id) {
-            Task { await tunnel.stop() }
+        let tunnel = tunnels.removeValue(forKey: connection.id)
+        Task {
+            await client?.disconnect()
+            await tunnel?.stop()
         }
         schemaTables.removeValue(forKey: connection.id)
 
@@ -293,7 +294,7 @@ final class AppState {
         guard openTabs.count > 1,
               let idx = openTabs.firstIndex(where: { $0.id == activeDetailTabID })
         else { return }
-        activateDetailTab(openTabs[idx == 0 ? openTabs.count - 1 : idx - 1])
+        activateDetailTab(openTabs[(idx + openTabs.count - 1) % openTabs.count])
     }
 
     func activateDetailTab(_ tab: DetailTab) {

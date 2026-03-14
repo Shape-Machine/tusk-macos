@@ -89,7 +89,12 @@ actor DatabaseClient {
             let schema  = row[safe: 0]?.displayValue ?? "public"
             let name    = row[safe: 1]?.displayValue ?? ""
             let rawType = row[safe: 2]?.displayValue ?? ""
-            let type: TableInfo.TableType = rawType == "VIEW" ? .view : (rawType == "BASE TABLE" ? .table : .other)
+            let type: TableInfo.TableType
+            switch rawType {
+            case "VIEW":       type = .view
+            case "BASE TABLE": type = .table
+            default:           type = .other
+            }
             return TableInfo(schema: schema, name: name, type: type)
         }
     }
@@ -220,7 +225,7 @@ actor DatabaseClient {
         }
 
         let duration = Date().timeIntervalSince(start)
-        return QueryResult(columns: columns, rows: rows, rowsAffected: rows.count, duration: duration)
+        return QueryResult(columns: columns, rows: rows, duration: duration)
     }
 }
 

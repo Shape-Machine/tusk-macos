@@ -208,20 +208,7 @@ struct QueryEditorView: View {
     // MARK: - Export
 
     private func exportCSV(_ result: QueryResult) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.commaSeparatedText]
-        panel.nameFieldStringValue = "query_result.csv"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        var lines = [result.columns.map(\.name).joined(separator: ",")]
-        for row in result.rows {
-            lines.append(row.map { cell in
-                let val = cell.displayValue
-                return val.contains(",") || val.contains("\n") ? "\"\(val)\"" : val
-            }.joined(separator: ","))
-        }
-
-        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        exportResultAsCSV(result, defaultName: "query_result")
     }
 }
 

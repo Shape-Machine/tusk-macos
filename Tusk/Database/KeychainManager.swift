@@ -8,63 +8,37 @@ final class KeychainManager: Sendable {
 
     private init() {}
 
+    // MARK: - DB password
+
     func setPassword(_ password: String, for connectionID: UUID) {
-        let account = connectionID.uuidString
-        let data = Data(password.utf8)
-
-        // Delete existing entry first
-        let deleteQuery: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-
-        guard !password.isEmpty else { return }
-
-        let addQuery: [String: Any] = [
-            kSecClass as String:            kSecClassGenericPassword,
-            kSecAttrService as String:      service,
-            kSecAttrAccount as String:      account,
-            kSecValueData as String:        data,
-            kSecAttrAccessible as String:   kSecAttrAccessibleWhenUnlocked
-        ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+        setItem(password, account: connectionID.uuidString)
     }
 
     func password(for connectionID: UUID) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: connectionID.uuidString,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let password = String(data: data, encoding: .utf8)
-        else { return nil }
-        return password
+        item(for: connectionID.uuidString)
     }
 
     func deletePassword(for connectionID: UUID) {
-        let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: connectionID.uuidString
-        ]
-        SecItemDelete(query as CFDictionary)
+        deleteItem(account: connectionID.uuidString)
     }
 
-    // MARK: - SSH key passphrase (stored under a separate account key)
+    // MARK: - SSH key passphrase
 
     func setSshPassphrase(_ passphrase: String, for connectionID: UUID) {
-        let account = "\(connectionID.uuidString).ssh"
-        let data = Data(passphrase.utf8)
+        setItem(passphrase, account: "\(connectionID.uuidString).ssh")
+    }
 
+    func sshPassphrase(for connectionID: UUID) -> String? {
+        item(for: "\(connectionID.uuidString).ssh")
+    }
+
+    func deleteSshPassphrase(for connectionID: UUID) {
+        deleteItem(account: "\(connectionID.uuidString).ssh")
+    }
+
+    // MARK: - Private helpers
+
+    private func setItem(_ value: String, account: String) {
         let deleteQuery: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -72,40 +46,38 @@ final class KeychainManager: Sendable {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
-        guard !passphrase.isEmpty else { return }
+        guard !value.isEmpty else { return }
 
         let addQuery: [String: Any] = [
-            kSecClass as String:            kSecClassGenericPassword,
-            kSecAttrService as String:      service,
-            kSecAttrAccount as String:      account,
-            kSecValueData as String:        data,
-            kSecAttrAccessible as String:   kSecAttrAccessibleWhenUnlocked
+            kSecClass as String:          kSecClassGenericPassword,
+            kSecAttrService as String:    service,
+            kSecAttrAccount as String:    account,
+            kSecValueData as String:      Data(value.utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
         ]
         SecItemAdd(addQuery as CFDictionary, nil)
     }
 
-    func sshPassphrase(for connectionID: UUID) -> String? {
+    private func item(for account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: "\(connectionID.uuidString).ssh",
+            kSecAttrAccount as String: account,
             kSecReturnData as String:  true,
             kSecMatchLimit as String:  kSecMatchLimitOne
         ]
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let passphrase = String(data: data, encoding: .utf8)
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data
         else { return nil }
-        return passphrase
+        return String(data: data, encoding: .utf8)
     }
 
-    func deleteSshPassphrase(for connectionID: UUID) {
+    private func deleteItem(account: String) {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: "\(connectionID.uuidString).ssh"
+            kSecAttrAccount as String: account
         ]
         SecItemDelete(query as CFDictionary)
     }

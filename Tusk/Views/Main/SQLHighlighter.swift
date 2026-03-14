@@ -47,7 +47,7 @@ enum SQLHighlighter {
 
     static func highlight(_ textStorage: NSTextStorage, font: NSFont) {
         let text = textStorage.string
-        let fullRange = NSRange(location: 0, length: (text as NSString).length)
+        let fullRange = NSRange(location: 0, length: text.utf16.count)
 
         // Always bracket with beginEditing/endEditing so the layout manager is
         // notified and the text view can update its insertion-point attributes

@@ -11,7 +11,7 @@ struct DataBrowserView: View {
     @State private var result: QueryResult? = nil
     @State private var error: String? = nil
     @State private var isLoading = false
-    @State private var pageSize = tuskPageSize
+    private let pageSize = tuskPageSize
     @State private var offset = 0
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
@@ -168,19 +168,6 @@ struct DataBrowserView: View {
     // MARK: - Export
 
     private func exportCSV(_ result: QueryResult) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.commaSeparatedText]
-        panel.nameFieldStringValue = "\(tableName).csv"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        var lines = [result.columns.map(\.name).joined(separator: ",")]
-        for row in result.rows {
-            lines.append(row.map { cell in
-                let val = cell.displayValue
-                return val.contains(",") || val.contains("\n") ? "\"\(val)\"" : val
-            }.joined(separator: ","))
-        }
-
-        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        exportResultAsCSV(result, defaultName: tableName)
     }
 }
