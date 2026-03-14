@@ -332,10 +332,11 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         if years != 0 { parts.append("\(years) \(years == 1 ? "year" : "years")") }
         if mons  != 0 { parts.append("\(mons) \(mons == 1 ? "month" : "months")") }
         if days  != 0 { parts.append("\(days) \(days == 1 ? "day" : "days")") }
-        let absMicros = abs(us)
-        let h = absMicros / 3_600_000_000
-        let m = (absMicros % 3_600_000_000) / 60_000_000
-        let s = (absMicros % 60_000_000) / 1_000_000
+        // Use magnitude (UInt64) to avoid overflow trap when us == Int64.min.
+        let absMicros: UInt64 = us.magnitude
+        let h    = absMicros / 3_600_000_000
+        let m    = (absMicros % 3_600_000_000) / 60_000_000
+        let s    = (absMicros % 60_000_000)    / 1_000_000
         let frac = absMicros % 1_000_000
         var timeStr = String(format: "%02d:%02d:%02d", h, m, s)
         if frac != 0 {
