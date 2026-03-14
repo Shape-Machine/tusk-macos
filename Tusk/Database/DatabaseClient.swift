@@ -315,11 +315,15 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         // 8 bytes microseconds since midnight + 4 bytes timezone offset (seconds west of UTC)
         guard let us     = buf.readInteger(as: Int64.self),
               let tzSec  = buf.readInteger(as: Int32.self) else { break }
-        let absOff = abs(Int(tzSec))
-        let sign   = tzSec <= 0 ? "+" : "-"
-        return String(format: "%@%@%02d:%02d",
-                      pgTimeOfDayString(microseconds: us), sign,
-                      absOff / 3600, (absOff % 3600) / 60)
+        let absOff  = abs(Int(tzSec))
+        let sign    = tzSec <= 0 ? "+" : "-"
+        let tzHH    = absOff / 3600
+        let tzMM    = (absOff % 3600) / 60
+        let tzSS    = absOff % 60
+        let tzStr   = tzSS != 0
+            ? String(format: "%02d:%02d:%02d", tzHH, tzMM, tzSS)
+            : String(format: "%02d:%02d", tzHH, tzMM)
+        return "\(pgTimeOfDayString(microseconds: us))\(sign)\(tzStr)"
 
     case .interval:
         // 8 bytes microseconds + 4 bytes days + 4 bytes months
