@@ -143,7 +143,7 @@ struct DataBrowserView: View {
         var sql = "SELECT * FROM \(qualifiedName)"
 
         if !filterText.isEmpty {
-            sql += " WHERE \(qualifiedName)::text ILIKE '%\(filterText)%'"
+            sql += " WHERE \"\(tableName)\"::text ILIKE '%\(filterText)%'"
         }
 
         if let col = sortColumn {
