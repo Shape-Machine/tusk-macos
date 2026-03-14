@@ -1,11 +1,12 @@
 import Foundation
+import AppKit
+import UniformTypeIdentifiers
 
 // MARK: - Query result
 
 struct QueryResult: Sendable {
     let columns: [QueryColumn]
     let rows: [[QueryCell]]
-    let rowsAffected: Int
     let duration: TimeInterval
 
     var isEmpty: Bool { rows.isEmpty }
@@ -44,6 +45,27 @@ enum QueryCell: Sendable {
         if case .null = self { return true }
         return false
     }
+}
+
+// MARK: - CSV export
+
+/// Presents a save panel and writes `result` as CSV.
+/// `defaultName` is the pre-filled filename (without extension).
+@MainActor
+func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
+    let panel = NSSavePanel()
+    panel.allowedContentTypes = [.commaSeparatedText]
+    panel.nameFieldStringValue = "\(defaultName).csv"
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+
+    var lines = [result.columns.map(\.name).joined(separator: ",")]
+    for row in result.rows {
+        lines.append(row.map { cell in
+            let val = cell.displayValue
+            return val.contains(",") || val.contains("\n") ? "\"\(val)\"" : val
+        }.joined(separator: ","))
+    }
+    try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
 }
 
 // MARK: - App-level errors

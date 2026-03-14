@@ -15,8 +15,16 @@ struct WelcomeView: View {
                     .font(.largeTitle)
                     .fontWeight(.semibold)
 
-                Text("A minimal, privacy-first PostgreSQL client.")
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 4) {
+                    Text("Native MacOS client for PostgreSQL.")
+                        .foregroundStyle(.secondary)
+
+                    Text("Zero-telemetry. Privacy-focused.")
+                        .foregroundStyle(.tertiary)
+
+                    Text("Minimal. Powerful.")
+                        .foregroundStyle(.tertiary)
+                }
             }
 
             if appState.connections.isEmpty {
