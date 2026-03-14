@@ -32,9 +32,14 @@ struct AboutView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Link("tusk.macos@srirangan.net",
-                     destination: URL(string: "mailto:tusk.macos@srirangan.net")!)
-                    .font(.caption)
+                if let mailtoURL = URL(string: "mailto:tusk.macos@srirangan.net") {
+                    Link("tusk.macos@srirangan.net", destination: mailtoURL)
+                        .font(.caption)
+                } else {
+                    Text("tusk.macos@srirangan.net")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 14)
 
