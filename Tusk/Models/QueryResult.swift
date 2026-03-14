@@ -68,7 +68,15 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
                 : escaped
         }.joined(separator: ","))
     }
-    try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+    do {
+        try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+    } catch {
+        let alert = NSAlert()
+        alert.messageText = "Export Failed"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.runModal()
+    }
 }
 
 // MARK: - App-level errors
