@@ -35,6 +35,7 @@ struct SQLTextEditor: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
+        context.coordinator.parent = self
         guard let textView = nsView.documentView as? NSTextView else { return }
         // Re-apply font if it changed (e.g. user adjusted content font size setting)
         if textView.font != editorFont, let storage = textView.textStorage {
