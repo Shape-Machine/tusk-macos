@@ -27,6 +27,7 @@ struct ContentView: View {
 
 struct DetailView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +36,7 @@ struct DetailView: View {
                 Divider()
             }
             activeContent
+                .environment(\.font, .system(size: contentFontSize))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
