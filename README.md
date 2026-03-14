@@ -31,20 +31,23 @@
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td><img src="screenshots/1.1.2-01.png" width="460" alt="Screenshot 01" /></td>
-    <td><img src="screenshots/1.1.2-02.png" width="460" alt="Screenshot 02" /></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/1.1.2-03.png" width="460" alt="Screenshot 03" /></td>
-    <td><img src="screenshots/1.1.2-04.png" width="460" alt="Screenshot 04" /></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/1.1.2-05.png" width="460" alt="Screenshot 05" /></td>
-    <td><img src="screenshots/1.1.2-06.png" width="460" alt="Screenshot 06" /></td>
-  </tr>
-</table>
+![Screenshot 01](screenshots/1.2.1-01.png)
+
+![Screenshot 02](screenshots/1.2.1-02.png)
+
+![Screenshot 03](screenshots/1.2.1-03.png)
+
+![Screenshot 04](screenshots/1.2.1-04.png)
+
+![Screenshot 05](screenshots/1.2.1-05.png)
+
+![Screenshot 06](screenshots/1.2.1-06.png)
+
+![Screenshot 07](screenshots/1.2.1-07.png)
+
+![Screenshot 08](screenshots/1.2.1-08.png)
+
+![Screenshot 09](screenshots/1.2.1-09.png)
 
 ---
 
