@@ -5,9 +5,6 @@
 </p>
 
 * Minimal, native macOS PostgreSQL client.
-* No Electron
-* No telemetry
-* No subscription.
 * Built in SwiftUI for macOS 14+.
 
 **[Download Tusk-1.0.0.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.0.0/Tusk-1.0.0.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
@@ -16,16 +13,21 @@
 
 ### Features
 
-* SQL query editor with syntax highlighting
-* Schema browser — tables, columns, indexes, foreign keys
-* Table data browser with filtering and CSV export
+* Connection credentials stored in the system Keychain
 * SSH tunnel support
-* Credentials stored in the system Keychain
-* Multiple simultaneous connections
+* Schema browser — tables, columns, indexes, foreign keys
+* Data browser — with filtering
+* SQL query editor with syntax highlighting
+
+### Non-Features
+
+* No Electron
+* No Telemetry
+* No Subscription.
 
 ---
 
-## Developers
+## Development
 
 ### Requirements
 
