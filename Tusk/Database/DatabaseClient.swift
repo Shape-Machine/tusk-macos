@@ -213,7 +213,7 @@ actor DatabaseClient {
 
             let cells: [QueryCell] = pgRow.map { cell in
                 guard let bytes = cell.bytes else { return QueryCell.null }
-                return .text(bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes) ?? "")
+                return .text(pgCellString(bytes: bytes, dataType: cell.dataType))
             }
             rows.append(cells)
         }
@@ -229,4 +229,108 @@ private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+// MARK: - PostgreSQL binary date/time decoding
+//
+// PostgresNIO requests binary result format via the extended query protocol.
+// Date/time values arrive as raw bytes (int64/int32), not UTF-8 strings,
+// so getString() returns nil/garbage for those columns.
+// We decode the known binary layouts here and fall back to text for all
+// other types.
+
+/// 2000-01-01 00:00:00 UTC expressed as a Unix timestamp (seconds).
+private let pgEpochOffset: Double = 946_684_800
+
+/// Returns a display string for a single PostgreSQL cell value.
+/// Handles binary-encoded date/time types; falls back to UTF-8 text.
+private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> String {
+    var buf = bytes
+    switch dataType {
+
+    case .timestamp, .timestamptz:
+        guard let us = buf.readInteger(as: Int64.self) else { break }
+        let date = Date(timeIntervalSince1970: pgEpochOffset + Double(us) / 1_000_000)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let c = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        var s = String(format: "%04d-%02d-%02d %02d:%02d:%02d",
+                       c.year!, c.month!, c.day!, c.hour!, c.minute!, c.second!)
+        let frac = abs(us) % 1_000_000
+        if frac != 0 {
+            var f = String(format: "%06d", frac)
+            while f.hasSuffix("0") { f.removeLast() }
+            s += "." + f
+        }
+        return s
+
+    case .date:
+        guard let days = buf.readInteger(as: Int32.self) else { break }
+        let date = Date(timeIntervalSince1970: pgEpochOffset + Double(days) * 86_400)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let c = cal.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+
+    case .time:
+        guard let us = buf.readInteger(as: Int64.self) else { break }
+        return pgTimeOfDayString(microseconds: us)
+
+    case .timetz:
+        // 8 bytes microseconds since midnight + 4 bytes timezone offset (seconds west of UTC)
+        guard let us     = buf.readInteger(as: Int64.self),
+              let tzSec  = buf.readInteger(as: Int32.self) else { break }
+        let absOff = abs(Int(tzSec))
+        let sign   = tzSec <= 0 ? "+" : "-"
+        return String(format: "%@%@%02d:%02d",
+                      pgTimeOfDayString(microseconds: us), sign,
+                      absOff / 3600, (absOff % 3600) / 60)
+
+    case .interval:
+        // 8 bytes microseconds + 4 bytes days + 4 bytes months
+        guard let us     = buf.readInteger(as: Int64.self),
+              let days   = buf.readInteger(as: Int32.self),
+              let months = buf.readInteger(as: Int32.self) else { break }
+        var parts: [String] = []
+        let years = months / 12
+        let mons  = months % 12
+        if years != 0 { parts.append("\(years) \(years == 1 ? "year" : "years")") }
+        if mons  != 0 { parts.append("\(mons) \(mons == 1 ? "month" : "months")") }
+        if days  != 0 { parts.append("\(days) \(days == 1 ? "day" : "days")") }
+        let absMicros = abs(us)
+        let h = absMicros / 3_600_000_000
+        let m = (absMicros % 3_600_000_000) / 60_000_000
+        let s = (absMicros % 60_000_000) / 1_000_000
+        let frac = absMicros % 1_000_000
+        var timeStr = String(format: "%02d:%02d:%02d", h, m, s)
+        if frac != 0 {
+            var f = String(format: "%06d", frac)
+            while f.hasSuffix("0") { f.removeLast() }
+            timeStr += "." + f
+        }
+        if us < 0 { timeStr = "-" + timeStr }
+        if !timeStr.hasPrefix("00:00:00") || parts.isEmpty { parts.append(timeStr) }
+        return parts.joined(separator: " ")
+
+    default:
+        break
+    }
+
+    // Non-date/time types: bytes are the UTF-8 text representation from the server
+    return bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes) ?? ""
+}
+
+/// Formats microseconds-since-midnight as `HH:MM:SS[.ffffff]`.
+private func pgTimeOfDayString(microseconds us: Int64) -> String {
+    let h    = us / 3_600_000_000
+    let m    = (us % 3_600_000_000) / 60_000_000
+    let s    = (us % 60_000_000)    / 1_000_000
+    let frac = us % 1_000_000
+    var str  = String(format: "%02d:%02d:%02d", h, m, s)
+    if frac != 0 {
+        var f = String(format: "%06d", frac)
+        while f.hasSuffix("0") { f.removeLast() }
+        str += "." + f
+    }
+    return str
 }
