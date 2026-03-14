@@ -109,6 +109,16 @@ private struct DetailTabItem: View {
         return path
     }
 
+    var connectionColor: Color? {
+        switch tab.kind {
+        case .table(let connID, _, _):
+            return appState.connections.first(where: { $0.id == connID })?.color.color
+        case .queryEditor(let qid):
+            guard let connID = appState.queryTabs.first(where: { $0.id == qid })?.connectionID else { return nil }
+            return appState.connections.first(where: { $0.id == connID })?.color.color
+        }
+    }
+
     var body: some View {
         // Use a Button for tab activation so it doesn't compete with the
         // close button the way .onTapGesture does on macOS.
@@ -116,6 +126,11 @@ private struct DetailTabItem: View {
             appState.activateDetailTab(tab)
         } label: {
             HStack(spacing: 5) {
+                if let color = connectionColor {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                }
                 Image(systemName: tab.icon)
                     .font(.caption)
                     .foregroundStyle(isActive ? .primary : .secondary)
