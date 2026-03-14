@@ -67,7 +67,7 @@ struct AddConnectionSheet: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "circle.fill")
-                                    .foregroundStyle(color.color)
+                                    .foregroundColor(color.color)
                                     .font(.caption)
                                 Text(color.rawValue.capitalized)
                                     .font(.caption)
