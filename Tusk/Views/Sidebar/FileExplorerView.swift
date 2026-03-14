@@ -21,6 +21,7 @@ struct FileItem: Identifiable {
 
 struct FileExplorerView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
 
     @State private var currentDirectory: URL = {
         if let path = UserDefaults.standard.string(forKey: "fileExplorerDirectory") {
@@ -141,6 +142,7 @@ struct FileExplorerView: View {
                         Image(systemName: "folder")
                             .foregroundStyle(.secondary)
                         TextField("folder name", text: $newFolderName)
+                            .font(.system(size: sidebarFontSize))
                             .focused($isFolderNameFocused)
                             .onSubmit { commitNewFolder() }
                             .onExitCommand { isCreatingFolder = false }
@@ -152,6 +154,7 @@ struct FileExplorerView: View {
                         Image(systemName: "doc.text")
                             .foregroundStyle(.secondary)
                         TextField("filename.sql", text: $newFileName)
+                            .font(.system(size: sidebarFontSize))
                             .focused($isFileNameFocused)
                             .onSubmit { commitNewFile() }
                             .onExitCommand { isCreatingFile = false }
@@ -164,6 +167,7 @@ struct FileExplorerView: View {
                             Image(systemName: item.icon)
                                 .foregroundStyle(.secondary)
                             TextField(item.isDirectory ? "folder name" : "filename.sql", text: $renameText)
+                                .font(.system(size: sidebarFontSize))
                                 .focused($isRenameFocused)
                                 .onSubmit { commitRename() }
                                 .onExitCommand { renamingItem = nil }
@@ -179,6 +183,7 @@ struct FileExplorerView: View {
                         } label: {
                             Label {
                                 Text(item.name)
+                                    .font(.system(size: sidebarFontSize))
                                     .foregroundStyle(item.isInteractable ? .primary : .tertiary)
                                     .lineLimit(1)
                             } icon: {
