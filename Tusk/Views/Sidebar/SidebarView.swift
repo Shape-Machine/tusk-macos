@@ -105,6 +105,7 @@ private struct SchemaRow: View {
     let tables: [TableInfo]
     let connection: Connection
 
+    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
     @State private var isExpanded: Bool
 
     init(schema: String, tables: [TableInfo], connection: Connection) {
@@ -120,6 +121,7 @@ private struct SchemaRow: View {
         DisclosureGroup(isExpanded: $isExpanded) {
             ForEach(tables) { table in
                 Label(table.name, systemImage: "tablecells")
+                    .font(.system(size: sidebarFontSize))
                     .tag(SidebarItem.table(
                         connectionID: connection.id,
                         schema: table.schema,
@@ -129,6 +131,7 @@ private struct SchemaRow: View {
         } label: {
             HStack(spacing: 6) {
                 Text(schema)
+                    .font(.system(size: sidebarFontSize))
                     .foregroundStyle(isEmpty ? .tertiary : .primary)
                 if isEmpty {
                     Text("empty")
