@@ -1,33 +1,39 @@
-<p align="center">
-  <img src="icon.svg" width="320" alt="Tusk icon" />
-</p>
-
 # Tusk
 
-A minimal, native macOS PostgreSQL client. No Electron, no telemetry, no subscription.
+<p align="center">
+  <img src="icon.svg" width="480" alt="Tusk icon" />
+</p>
 
-Built in SwiftUI for macOS 14+. Tusk is for developers who want a fast, no-nonsense way to explore databases and run queries — without handing their credentials or query history to a cloud service.
+* Minimal, native macOS PostgreSQL client.
+* No Electron
+* No telemetry
+* No subscription.
+* Built in SwiftUI for macOS 14+.
 
 **[Download Tusk-1.0.0.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.0.0/Tusk-1.0.0.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
 
 > Not notarized. On first launch right-click → **Open**, or run `xattr -d com.apple.quarantine /Applications/Tusk.app`.
 
-**Features**
+### Features
 
-- SQL query editor with syntax highlighting
-- Schema browser — tables, columns, indexes, foreign keys
-- Table data browser with filtering and CSV export
-- SSH tunnel support
-- Credentials stored in the system Keychain
-- Multiple simultaneous connections
+* SQL query editor with syntax highlighting
+* Schema browser — tables, columns, indexes, foreign keys
+* Table data browser with filtering and CSV export
+* SSH tunnel support
+* Credentials stored in the system Keychain
+* Multiple simultaneous connections
 
-## Requirements
+---
 
-- macOS 14+
-- Xcode 16+
-- [xcodegen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
+## Developers
 
-## Setup
+### Requirements
+
+* macOS 14+
+* Xcode 16+
+* [xcodegen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
+
+### Setup
 
 ```sh
 git clone https://github.com/Shape-Machine/tusk-macos.git
@@ -36,21 +42,6 @@ xcodegen generate
 open Tusk.xcodeproj
 ```
 
-## Project structure
-
+```sh
+make clean build run
 ```
-Tusk/
-├── AppState.swift          # central @Observable state
-├── Database/               # PostgresNIO client, keychain, persistence
-├── Models/                 # Connection, QueryResult, and schema types
-└── Views/
-    ├── ContentView.swift   # root NavigationSplitView
-    ├── Sidebar/            # connection list, add/edit sheet
-    └── Main/               # schema browser, table detail, query editor
-```
-
-## Dependencies
-
-Managed via Swift Package Manager (defined in `Tusk.xcodeproj`):
-
-- [PostgresNIO](https://github.com/vapor/postgres-nio) — async PostgreSQL driver
