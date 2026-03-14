@@ -2,7 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
+    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
     @State private var columnVisibility = NavigationSplitViewVisibility.all
 
@@ -17,11 +18,11 @@ struct ContentView: View {
         .navigationSplitViewStyle(.balanced)
         .sheet(isPresented: $appState.isAddingConnection) {
             AddConnectionSheet(connection: nil)
-                .environment(\.font, .system(size: contentFontSize))
+                .environment(\.font, .system(size: contentFontSize, design: contentFontDesign.design))
         }
         .sheet(item: $appState.editingConnection) { connection in
             AddConnectionSheet(connection: connection)
-                .environment(\.font, .system(size: contentFontSize))
+                .environment(\.font, .system(size: contentFontSize, design: contentFontDesign.design))
         }
     }
 }
@@ -30,7 +31,8 @@ struct ContentView: View {
 
 struct DetailView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
+    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +42,7 @@ struct DetailView: View {
             }
             activeContent
         }
-        .environment(\.font, .system(size: contentFontSize))
+        .environment(\.font, .system(size: contentFontSize, design: contentFontDesign.design))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

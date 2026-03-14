@@ -6,7 +6,8 @@ struct TableDetailView: View {
     let schemaName: String
     let tableName: String
 
-    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
+    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
     enum Tab { case columns, keys, data, relations }
 
@@ -34,7 +35,7 @@ struct TableDetailView: View {
             Image(systemName: "tablecells")
                 .foregroundStyle(.blue)
             Text(tableName)
-                .font(.system(size: contentFontSize + 8, weight: .semibold))
+                .font(.system(size: contentFontSize + 8, weight: .semibold, design: contentFontDesign.design))
             Text(schemaName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -66,7 +67,7 @@ struct TableDetailView: View {
     private func tabSegment(_ title: String, for tab: Tab) -> some View {
         Button { selectedTab = tab } label: {
             Text(title)
-                .font(.system(size: contentFontSize - 1))
+                .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 3)
                 .background(

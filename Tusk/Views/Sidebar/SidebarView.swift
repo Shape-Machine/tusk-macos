@@ -2,7 +2,8 @@ import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var showingSettings = false
 
     var body: some View {
@@ -28,13 +29,13 @@ struct SidebarView: View {
             }
             .listStyle(.sidebar)
             .frame(minHeight: 120)
-            .environment(\.font, .system(size: sidebarFontSize))
+            .environment(\.font, .system(size: sidebarFontSize, design: sidebarFontDesign.design))
 
             // Bottom — file explorer
             FileExplorerView()
                 .frame(minHeight: 120)
                 .splitViewAutosaveName("tusk.sidebar.split")
-                .environment(\.font, .system(size: sidebarFontSize))
+                .environment(\.font, .system(size: sidebarFontSize, design: sidebarFontDesign.design))
         }
         .navigationTitle("Tusk")
         .toolbar {
@@ -105,7 +106,8 @@ private struct SchemaRow: View {
     let tables: [TableInfo]
     let connection: Connection
 
-    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded: Bool
 
     init(schema: String, tables: [TableInfo], connection: Connection) {
@@ -122,7 +124,7 @@ private struct SchemaRow: View {
             ForEach(tables) { table in
                 Label {
                     Text(table.name)
-                        .font(.system(size: sidebarFontSize))
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                 } icon: {
                     Image(systemName: "tablecells")
                 }
@@ -135,7 +137,7 @@ private struct SchemaRow: View {
         } label: {
             HStack(spacing: 6) {
                 Text(schema)
-                    .font(.system(size: sidebarFontSize))
+                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                     .foregroundStyle(isEmpty ? .tertiary : .primary)
                 if isEmpty {
                     Text("empty")
@@ -157,7 +159,8 @@ private struct SchemaRow: View {
 
 private struct ConnectionHeader: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     let connection: Connection
 
     @State private var connectionError: String? = nil
@@ -184,7 +187,7 @@ private struct ConnectionHeader: View {
             }
 
             Text(connection.name)
-                .font(.system(size: sidebarFontSize, weight: .semibold))
+                .font(.system(size: sidebarFontSize, weight: .semibold, design: sidebarFontDesign.design))
                 .lineLimit(1)
 
             Spacer()
