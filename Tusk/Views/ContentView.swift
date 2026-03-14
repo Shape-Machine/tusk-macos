@@ -95,27 +95,28 @@ private struct DetailTabItem: View {
 
     var isActive: Bool { appState.activeDetailTabID == tab.id }
 
-    var resolvedTitle: String {
-        guard case .queryEditor(let qid) = tab.kind,
-              let title = appState.queryTabs.first(where: { $0.id == qid })?.title
-        else { return tab.title }
-        return title
+    /// Single scan of queryTabs — reused by resolvedTitle, tooltip, and connectionColor.
+    private var queryTab: QueryTab? {
+        guard case .queryEditor(let qid) = tab.kind else { return nil }
+        return appState.queryTabs.first(where: { $0.id == qid })
     }
 
-    var tooltip: String {
-        guard case .queryEditor(let qid) = tab.kind,
-              let path = appState.queryTabs.first(where: { $0.id == qid })?.sourceURL?.path
-        else { return "" }
-        return path
+    /// Single scan of connections — reused by connectionColor for both tab kinds.
+    private func connection(for connID: UUID) -> Connection? {
+        appState.connections.first(where: { $0.id == connID })
     }
+
+    var resolvedTitle: String { queryTab?.title ?? tab.title }
+
+    var tooltip: String { queryTab?.sourceURL?.path ?? "" }
 
     var connectionColor: Color? {
         switch tab.kind {
         case .table(let connID, _, _):
-            return appState.connections.first(where: { $0.id == connID })?.color.color
-        case .queryEditor(let qid):
-            guard let connID = appState.queryTabs.first(where: { $0.id == qid })?.connectionID else { return nil }
-            return appState.connections.first(where: { $0.id == connID })?.color.color
+            return connection(for: connID)?.color.color
+        case .queryEditor:
+            guard let connID = queryTab?.connectionID else { return nil }
+            return connection(for: connID)?.color.color
         }
     }
 
