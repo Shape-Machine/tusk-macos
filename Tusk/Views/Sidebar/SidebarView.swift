@@ -146,16 +146,15 @@ private struct ConnectionHeader: View {
                 ProgressView()
                     .scaleEffect(0.5)
                     .frame(width: 8, height: 8)
-            } else {
+                    .tint(connection.color.color)
+            } else if isConnected {
                 Circle()
                     .fill(connection.color.color)
                     .frame(width: 8, height: 8)
-                    .overlay {
-                        if isConnected {
-                            Circle()
-                                .strokeBorder(Color.green, lineWidth: 2)
-                        }
-                    }
+            } else {
+                Circle()
+                    .strokeBorder(connection.color.color, lineWidth: 1.5)
+                    .frame(width: 8, height: 8)
             }
 
             Text(connection.name)
