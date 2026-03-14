@@ -255,6 +255,20 @@ final class AppState {
         queryTabs[idx].title = newURL.deletingPathExtension().lastPathComponent
     }
 
+    func renameFolderTabs(from oldFolder: URL, to newFolder: URL) {
+        let oldPrefix = oldFolder.standardized.path + "/"
+        let newPrefix = newFolder.standardized.path + "/"
+        for idx in queryTabs.indices {
+            guard let sourceURL = queryTabs[idx].sourceURL else { continue }
+            let sourcePath = sourceURL.standardized.path
+            guard sourcePath.hasPrefix(oldPrefix) else { continue }
+            let relativePath = String(sourcePath.dropFirst(oldPrefix.count))
+            let updatedURL = URL(fileURLWithPath: newPrefix + relativePath)
+            queryTabs[idx].sourceURL = updatedURL
+            queryTabs[idx].title = updatedURL.deletingPathExtension().lastPathComponent
+        }
+    }
+
     func closeTabForFile(url: URL) {
         guard let qidx = queryTabs.firstIndex(where: { $0.sourceURL == url }) else { return }
         let qid = queryTabs[qidx].id

@@ -309,7 +309,11 @@ struct FileExplorerView: View {
         } catch {
             renamingItem = nil; return
         }
-        if item.isSql { appState.renameFileTab(from: item.url, to: newURL) }
+        if item.isSql {
+            appState.renameFileTab(from: item.url, to: newURL)
+        } else if item.isDirectory {
+            appState.renameFolderTabs(from: item.url, to: newURL)
+        }
         renamingItem = nil
         Task { await loadItems() }
     }
