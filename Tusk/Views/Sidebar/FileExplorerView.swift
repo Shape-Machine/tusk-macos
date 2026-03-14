@@ -149,8 +149,16 @@ struct FileExplorerView: View {
     private func commitNewFile() {
         var name = newFileName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { isCreatingFile = false; return }
+        // Strip any path separators/traversal — keep only the last component
+        name = URL(fileURLWithPath: name).lastPathComponent
+        guard !name.isEmpty else { isCreatingFile = false; return }
         if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
         let fileURL = currentDirectory.appendingPathComponent(name)
+        // Verify the resolved URL stays within currentDirectory
+        guard fileURL.deletingLastPathComponent().standardized == currentDirectory.standardized else {
+            isCreatingFile = false
+            return
+        }
         guard !FileManager.default.fileExists(atPath: fileURL.path) else {
             isCreatingFile = false
             Task { await appState.openFileInEditor(url: fileURL) }
