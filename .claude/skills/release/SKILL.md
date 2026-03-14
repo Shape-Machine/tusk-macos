@@ -42,7 +42,15 @@ Confirm `** BUILD SUCCEEDED **` before continuing.
   ```
   xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -showBuildSettings | awk '$1 == "BUILT_PRODUCTS_DIR" {print $3}'
   ```
-- Replace `dist/dmg-staging/Tusk.app` with the freshly built app
+- Replace `dist/dmg-staging/Tusk.app` with the freshly built app — **always `rm -rf` first** so `cp -R` creates a fresh copy rather than copying into the existing bundle directory:
+  ```
+  rm -rf dist/dmg-staging/Tusk.app
+  cp -R "$BUILT_PRODUCTS_DIR/Tusk.app" dist/dmg-staging/
+  ```
+- Verify the version in the staged app matches `$ARGUMENTS`:
+  ```
+  defaults read "$(pwd)/dist/dmg-staging/Tusk.app/Contents/Info.plist" CFBundleShortVersionString
+  ```
 - Create the DMG:
   ```
   hdiutil create -volname "Tusk" -srcfolder dist/dmg-staging -ov -format UDZO dist/Tusk-$ARGUMENTS.dmg
