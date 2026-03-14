@@ -35,6 +35,9 @@ struct FileExplorerView: View {
     @State private var isCreatingFile = false
     @State private var newFileName = ""
     @FocusState private var isFileNameFocused: Bool
+    @State private var isCreatingFolder = false
+    @State private var newFolderName = ""
+    @FocusState private var isFolderNameFocused: Bool
     @State private var renamingItem: FileItem? = nil
     @State private var renameText = ""
     @FocusState private var isRenameFocused: Bool
@@ -54,7 +57,7 @@ struct FileExplorerView: View {
         .onChange(of: currentDirectory) { _, newValue in
             UserDefaults.standard.set(newValue.path, forKey: "fileExplorerDirectory")
         }
-        .alert("Could Not Delete File", isPresented: Binding(
+        .alert("Could Not Delete", isPresented: Binding(
             get: { deleteErrorMessage != nil },
             set: { if !$0 { deleteErrorMessage = nil } }
         )) {
@@ -90,17 +93,32 @@ struct FileExplorerView: View {
 
             Spacer()
 
-            Button {
-                newFileName = ""
-                isCreatingFile = true
-                isFileNameFocused = true
+            Menu {
+                Button {
+                    isCreatingFolder = false
+                    newFileName = ""
+                    isCreatingFile = true
+                    isFileNameFocused = true
+                } label: {
+                    Label("New SQL File", systemImage: "doc.badge.plus")
+                }
+                Button {
+                    isCreatingFile = false
+                    newFolderName = ""
+                    isCreatingFolder = true
+                    isFolderNameFocused = true
+                } label: {
+                    Label("New Folder", systemImage: "folder.badge.plus")
+                }
             } label: {
                 Image(systemName: "plus")
                     .font(.caption)
             }
-            .buttonStyle(.borderless)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .foregroundStyle(.secondary)
-            .help("New SQL file")
+            .fixedSize()
+            .help("New item")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -111,13 +129,26 @@ struct FileExplorerView: View {
 
     @ViewBuilder
     private var fileList: some View {
-        if items.isEmpty && !isCreatingFile {
+        if items.isEmpty && !isCreatingFile && !isCreatingFolder {
             Text("Empty folder")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List {
+                if isCreatingFolder {
+                    HStack(spacing: 6) {
+                        Image(systemName: "folder")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        TextField("folder name", text: $newFolderName)
+                            .font(.system(size: 12))
+                            .focused($isFolderNameFocused)
+                            .onSubmit { commitNewFolder() }
+                            .onExitCommand { isCreatingFolder = false }
+                    }
+                    .padding(.vertical, 1)
+                }
                 if isCreatingFile {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.text")
@@ -137,7 +168,7 @@ struct FileExplorerView: View {
                             Image(systemName: item.icon)
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
-                            TextField("filename.sql", text: $renameText)
+                            TextField(item.isDirectory ? "folder name" : "filename.sql", text: $renameText)
                                 .font(.system(size: 12))
                                 .focused($isRenameFocused)
                                 .onSubmit { commitRename() }
@@ -165,9 +196,11 @@ struct FileExplorerView: View {
                         .buttonStyle(.plain)
                         .disabled(!item.isInteractable)
                         .contextMenu {
-                            if item.isSql {
+                            if item.isSql || item.isDirectory {
                                 Button("Rename") {
-                                    renameText = item.url.deletingPathExtension().lastPathComponent
+                                    renameText = item.isDirectory
+                                        ? item.name
+                                        : item.url.deletingPathExtension().lastPathComponent
                                     renamingItem = item
                                     isRenameFocused = true
                                 }
@@ -191,7 +224,9 @@ struct FileExplorerView: View {
                         if let item = itemPendingDelete { commitDelete(item) }
                     }
                 } message: {
-                    Text("This file will be moved to the Trash.")
+                    Text(itemPendingDelete?.isDirectory == true
+                         ? "This folder will be moved to the Trash."
+                         : "This file will be moved to the Trash.")
                 }
             }
             .listStyle(.sidebar)
@@ -203,12 +238,10 @@ struct FileExplorerView: View {
     private func commitNewFile() {
         var name = newFileName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { isCreatingFile = false; return }
-        // Strip any path separators/traversal — keep only the last component
         name = URL(fileURLWithPath: name).lastPathComponent
         guard !name.isEmpty, !name.hasPrefix(".") else { isCreatingFile = false; return }
         if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
         let fileURL = currentDirectory.appendingPathComponent(name)
-        // Verify the resolved URL stays within currentDirectory
         guard fileURL.deletingLastPathComponent().standardized == currentDirectory.standardized else {
             isCreatingFile = false
             return
@@ -231,14 +264,40 @@ struct FileExplorerView: View {
         }
     }
 
-    // MARK: - Rename file
+    // MARK: - Create new folder
+
+    private func commitNewFolder() {
+        var name = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { isCreatingFolder = false; return }
+        name = URL(fileURLWithPath: name).lastPathComponent
+        guard !name.isEmpty, !name.hasPrefix(".") else { isCreatingFolder = false; return }
+        let folderURL = currentDirectory.appendingPathComponent(name)
+        guard folderURL.deletingLastPathComponent().standardized == currentDirectory.standardized else {
+            isCreatingFolder = false
+            return
+        }
+        guard !FileManager.default.fileExists(atPath: folderURL.path) else {
+            isCreatingFolder = false
+            return
+        }
+        do {
+            try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: false)
+        } catch {
+            isCreatingFolder = false
+            return
+        }
+        isCreatingFolder = false
+        Task { await loadItems() }
+    }
+
+    // MARK: - Rename
 
     private func commitRename() {
         guard let item = renamingItem else { return }
         var name = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
         name = URL(fileURLWithPath: name).lastPathComponent
         guard !name.isEmpty, !name.hasPrefix(".") else { renamingItem = nil; return }
-        if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
+        if item.isSql, !name.lowercased().hasSuffix(".sql") { name += ".sql" }
         let newURL = currentDirectory.appendingPathComponent(name)
         guard newURL.deletingLastPathComponent().standardized == currentDirectory.standardized else {
             renamingItem = nil; return
@@ -250,17 +309,29 @@ struct FileExplorerView: View {
         } catch {
             renamingItem = nil; return
         }
-        appState.renameFileTab(from: item.url, to: newURL)
+        if item.isSql { appState.renameFileTab(from: item.url, to: newURL) }
         renamingItem = nil
         Task { await loadItems() }
     }
 
-    // MARK: - Delete file
+    // MARK: - Delete
 
     private func commitDelete(_ item: FileItem) {
+        if item.isDirectory {
+            let contents = (try? FileManager.default.contentsOfDirectory(
+                at: item.url,
+                includingPropertiesForKeys: nil,
+                options: .skipsHiddenFiles
+            )) ?? []
+            guard contents.isEmpty else {
+                deleteErrorMessage = "\"\(item.name)\" is not empty. Remove its contents before deleting it."
+                itemPendingDelete = nil
+                return
+            }
+        }
         do {
             try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
-            appState.closeTabForFile(url: item.url)
+            if item.isSql { appState.closeTabForFile(url: item.url) }
             itemPendingDelete = nil
             Task { await loadItems() }
         } catch {
