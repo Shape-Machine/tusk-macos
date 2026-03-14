@@ -23,7 +23,7 @@
 
 ---
 
-**[Download Tusk-1.1.4.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.1.4/Tusk-1.1.4.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
+**[Download Tusk-1.1.5.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.1.5/Tusk-1.1.5.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
 
 > Not notarized. On first launch right-click → **Open**, or run `xattr -d com.apple.quarantine /Applications/Tusk.app`.
 
