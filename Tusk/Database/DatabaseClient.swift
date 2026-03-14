@@ -342,7 +342,7 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
             timeStr += "." + f
         }
         if us < 0 { timeStr = "-" + timeStr }
-        if !timeStr.hasPrefix("00:00:00") || parts.isEmpty { parts.append(timeStr) }
+        if us != 0 || parts.isEmpty { parts.append(timeStr) }
         return parts.joined(separator: " ")
 
     default:
