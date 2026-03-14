@@ -2,7 +2,8 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
+    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
     var body: some View {
         VStack(spacing: 24) {
@@ -13,7 +14,7 @@ struct WelcomeView: View {
 
             VStack(spacing: 8) {
                 Text("Welcome to Tusk")
-                    .font(.system(size: contentFontSize + 14, weight: .semibold))
+                    .font(.system(size: contentFontSize + 14, weight: .semibold, design: contentFontDesign.design))
 
                 VStack(spacing: 4) {
                     Text("Native MacOS client for PostgreSQL.")

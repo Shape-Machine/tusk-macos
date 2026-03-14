@@ -21,7 +21,8 @@ struct FileItem: Identifiable {
 
 struct FileExplorerView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
 
     @State private var currentDirectory: URL = {
         if let path = UserDefaults.standard.string(forKey: "fileExplorerDirectory") {
@@ -76,18 +77,18 @@ struct FileExplorerView: View {
                 currentDirectory = currentDirectory.deletingLastPathComponent()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: sidebarFontSize - 2))
+                    .font(.system(size: sidebarFontSize - 2, design: sidebarFontDesign.design))
             }
             .disabled(isAtHome)
             .buttonStyle(.borderless)
             .foregroundStyle(isAtHome ? .tertiary : .secondary)
 
             Image(systemName: "folder.fill")
-                .font(.system(size: sidebarFontSize - 2))
+                .font(.system(size: sidebarFontSize - 2, design: sidebarFontDesign.design))
                 .foregroundStyle(.secondary)
 
             Text(isAtHome ? "Home" : currentDirectory.lastPathComponent)
-                .font(.system(size: sidebarFontSize - 2, weight: .medium))
+                .font(.system(size: sidebarFontSize - 2, weight: .medium, design: sidebarFontDesign.design))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -112,7 +113,7 @@ struct FileExplorerView: View {
                 }
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: sidebarFontSize - 2))
+                    .font(.system(size: sidebarFontSize - 2, design: sidebarFontDesign.design))
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -141,7 +142,7 @@ struct FileExplorerView: View {
                         Image(systemName: "folder")
                             .foregroundStyle(.secondary)
                         TextField("folder name", text: $newFolderName)
-                            .font(.system(size: sidebarFontSize))
+                            .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                             .focused($isFolderNameFocused)
                             .onSubmit { commitNewFolder() }
                             .onExitCommand { isCreatingFolder = false }
@@ -153,7 +154,7 @@ struct FileExplorerView: View {
                         Image(systemName: "doc.text")
                             .foregroundStyle(.secondary)
                         TextField("filename.sql", text: $newFileName)
-                            .font(.system(size: sidebarFontSize))
+                            .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                             .focused($isFileNameFocused)
                             .onSubmit { commitNewFile() }
                             .onExitCommand { isCreatingFile = false }
@@ -166,7 +167,7 @@ struct FileExplorerView: View {
                             Image(systemName: item.icon)
                                 .foregroundStyle(.secondary)
                             TextField(item.isDirectory ? "folder name" : "filename.sql", text: $renameText)
-                                .font(.system(size: sidebarFontSize))
+                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                                 .focused($isRenameFocused)
                                 .onSubmit { commitRename() }
                                 .onExitCommand { renamingItem = nil }
@@ -182,7 +183,7 @@ struct FileExplorerView: View {
                         } label: {
                             Label {
                                 Text(item.name)
-                                    .font(.system(size: sidebarFontSize))
+                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                                     .foregroundStyle(item.isInteractable ? .primary : .tertiary)
                                     .lineLimit(1)
                             } icon: {
