@@ -94,6 +94,13 @@ private struct DetailTabItem: View {
 
     var isActive: Bool { appState.activeDetailTabID == tab.id }
 
+    var resolvedTitle: String {
+        guard case .queryEditor(let qid) = tab.kind,
+              let title = appState.queryTabs.first(where: { $0.id == qid })?.title
+        else { return tab.title }
+        return title
+    }
+
     var tooltip: String {
         guard case .queryEditor(let qid) = tab.kind,
               let path = appState.queryTabs.first(where: { $0.id == qid })?.sourceURL?.path
@@ -111,7 +118,7 @@ private struct DetailTabItem: View {
                 Image(systemName: tab.icon)
                     .font(.caption)
                     .foregroundStyle(isActive ? .primary : .secondary)
-                Text(tab.title)
+                Text(resolvedTitle)
                     .font(.system(size: 12))
                     .lineLimit(1)
                     .foregroundStyle(isActive ? .primary : .secondary)
