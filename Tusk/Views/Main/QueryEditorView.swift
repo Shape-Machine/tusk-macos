@@ -191,10 +191,13 @@ struct QueryEditorView: View {
     /// Note: the subquery wrapping is a DB-side optimisation; the hard row cap
     /// is enforced independently by DatabaseClient.query(rowLimit:).
     private func cappedSQL(_ sql: String) -> (sql: String, capped: Bool) {
+        // Strip trailing single-line comments before stripping semicolons —
+        // otherwise "SELECT ... ; -- comment" leaves the semicolon in place
+        // and the capped subquery becomes invalid SQL.
         let stripped = sql
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: CharacterSet(charactersIn: ";"))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"\s*--[^\r\n]*$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ";").union(.whitespacesAndNewlines))
         let lower = stripped.lowercased()
         guard lower.hasPrefix("select") || lower.hasPrefix("with") else {
             return (sql, false)
