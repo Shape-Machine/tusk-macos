@@ -117,6 +117,9 @@ struct QueryEditorView: View {
                                 connectionID: connection.id,
                                 name: connection.name
                             )
+                            result = nil
+                            error = nil
+                            resultIsCapped = false
                         } label: {
                             if tab.connectionID == connection.id {
                                 Label(connection.name, systemImage: "checkmark")
