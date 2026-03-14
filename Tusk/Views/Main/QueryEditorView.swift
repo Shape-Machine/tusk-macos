@@ -7,6 +7,7 @@ struct QueryEditorView: View {
 
     @State private var sql: String = ""
     @State private var result: QueryResult? = nil
+    @State private var resultIsCapped = false
     @State private var error: String? = nil
     @State private var isRunning = false
     @State private var autoSaveTask: Task<Void, Never>? = nil
@@ -119,6 +120,13 @@ struct QueryEditorView: View {
                     Text(String(format: "%.3fs", result.duration))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if resultIsCapped {
+                        Text("·")
+                            .foregroundStyle(.tertiary)
+                        Text("Showing first \(tuskPageSize) rows")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if let error {
                     Image(systemName: "exclamationmark.circle")
@@ -164,14 +172,35 @@ struct QueryEditorView: View {
         isRunning = true
         error = nil
         result = nil
+        resultIsCapped = false
 
+        let (finalSQL, capped) = cappedSQL(trimmed)
         do {
-            result = try await client.query(trimmed)
+            let r = try await client.query(finalSQL)
+            result = r
+            resultIsCapped = capped && r.rows.count == tuskPageSize
         } catch {
             self.error = error.localizedDescription
         }
 
         isRunning = false
+    }
+
+    /// Wraps SELECT/WITH queries that lack a LIMIT in a subquery capped at
+    /// `tuskPageSize`. Non-SELECT statements are returned unchanged.
+    private func cappedSQL(_ sql: String) -> (sql: String, capped: Bool) {
+        let stripped = sql
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ";"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = stripped.lowercased()
+        guard lower.hasPrefix("select") || lower.hasPrefix("with") else {
+            return (sql, false)
+        }
+        guard lower.range(of: "\\blimit\\b", options: .regularExpression) == nil else {
+            return (sql, false)
+        }
+        return ("SELECT * FROM (\(stripped)) AS _tusk_result LIMIT \(tuskPageSize)", true)
     }
 
     // MARK: - Export

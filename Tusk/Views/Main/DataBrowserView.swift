@@ -11,7 +11,7 @@ struct DataBrowserView: View {
     @State private var result: QueryResult? = nil
     @State private var error: String? = nil
     @State private var isLoading = false
-    @State private var pageSize = 200
+    @State private var pageSize = tuskPageSize
     @State private var offset = 0
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
