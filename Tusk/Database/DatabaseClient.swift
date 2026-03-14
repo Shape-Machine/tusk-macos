@@ -250,15 +250,21 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
 
     case .timestamp, .timestamptz:
         guard let us = buf.readInteger(as: Int64.self) else { break }
-        let date = Date(timeIntervalSince1970: pgEpochOffset + Double(us) / 1_000_000)
+        // Floor-divide so the remainder (micros) is always in [0, 999_999].
+        // Swift's % truncates toward zero, giving a negative remainder for
+        // negative us — which would produce the wrong fractional digits for
+        // timestamps before the PostgreSQL epoch (2000-01-01).
+        let (q, r) = us.quotientAndRemainder(dividingBy: 1_000_000)
+        let wholeSeconds: Int64 = r < 0 ? q - 1 : q
+        let micros:       Int64 = r < 0 ? r + 1_000_000 : r
+        let date = Date(timeIntervalSince1970: pgEpochOffset + Double(wholeSeconds))
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         let c = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
         var s = String(format: "%04d-%02d-%02d %02d:%02d:%02d",
                        c.year!, c.month!, c.day!, c.hour!, c.minute!, c.second!)
-        let frac = abs(us) % 1_000_000
-        if frac != 0 {
-            var f = String(format: "%06d", frac)
+        if micros != 0 {
+            var f = String(format: "%06d", micros)
             while f.hasSuffix("0") { f.removeLast() }
             s += "." + f
         }
