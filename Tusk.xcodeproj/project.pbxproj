@@ -29,6 +29,7 @@
 		EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */; };
 		ED65F385DAFD91259FA6AD73 /* FileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009D995F865C1E2F42BA3F72 /* FileExplorerView.swift */; };
 		EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84F6197423F6B815DCFF5EC /* TableDetailView.swift */; };
+		FB2DF2917401EB297E0173FA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193CE42C808DDA972A10DACE /* Constants.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLTextEditor.swift; sourceTree = "<group>"; };
 		09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		15B49B9D6360FE850DD93363 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		193CE42C808DDA972A10DACE /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tusk.entitlements; sourceTree = "<group>"; };
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
@@ -108,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				B48A2CA1E506E6FDF0786437 /* Connection.swift */,
+				193CE42C808DDA972A10DACE /* Constants.swift */,
 				9EBD0E0FCEF86AA688735504 /* QueryResult.swift */,
 			);
 			path = Models;
@@ -240,6 +243,7 @@
 				88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */,
 				B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */,
 				7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */,
+				FB2DF2917401EB297E0173FA /* Constants.swift in Sources */,
 				62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */,
 				D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */,
 				166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */,
