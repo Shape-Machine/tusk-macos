@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
 
     @State private var columnVisibility = NavigationSplitViewVisibility.all
 
@@ -16,9 +17,11 @@ struct ContentView: View {
         .navigationSplitViewStyle(.balanced)
         .sheet(isPresented: $appState.isAddingConnection) {
             AddConnectionSheet(connection: nil)
+                .environment(\.font, .system(size: contentFontSize))
         }
         .sheet(item: $appState.editingConnection) { connection in
             AddConnectionSheet(connection: connection)
+                .environment(\.font, .system(size: contentFontSize))
         }
     }
 }
@@ -36,8 +39,8 @@ struct DetailView: View {
                 Divider()
             }
             activeContent
-                .environment(\.font, .system(size: contentFontSize))
         }
+        .environment(\.font, .system(size: contentFontSize))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -138,7 +141,6 @@ private struct DetailTabItem: View {
                     .font(.caption)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 Text(resolvedTitle)
-                    .font(.system(size: 12))
                     .lineLimit(1)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 // Reserve space so the title doesn't shift when close button overlaps

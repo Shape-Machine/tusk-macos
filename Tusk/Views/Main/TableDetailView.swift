@@ -6,6 +6,8 @@ struct TableDetailView: View {
     let schemaName: String
     let tableName: String
 
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+
     enum Tab { case columns, keys, data, relations }
 
     @State private var selectedTab: Tab = .columns
@@ -32,8 +34,7 @@ struct TableDetailView: View {
             Image(systemName: "tablecells")
                 .foregroundStyle(.blue)
             Text(tableName)
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.system(size: contentFontSize + 8, weight: .semibold))
             Text(schemaName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
