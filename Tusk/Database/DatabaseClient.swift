@@ -250,10 +250,34 @@ private let pgUTCCalendar: Calendar = {
 }()
 
 /// Returns a display string for a single PostgreSQL cell value.
-/// Handles binary-encoded date/time types; falls back to UTF-8 text.
+/// Handles binary-encoded numeric, boolean, and date/time types; falls back to UTF-8 text.
 private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> String {
     var buf = bytes
     switch dataType {
+
+    case .bool:
+        guard let byte = buf.readInteger(as: UInt8.self) else { break }
+        return byte != 0 ? "true" : "false"
+
+    case .int2:
+        guard let v = buf.readInteger(as: Int16.self) else { break }
+        return String(v)
+
+    case .int4, .oid:
+        guard let v = buf.readInteger(as: Int32.self) else { break }
+        return String(v)
+
+    case .int8:
+        guard let v = buf.readInteger(as: Int64.self) else { break }
+        return String(v)
+
+    case .float4:
+        guard let bits = buf.readInteger(as: UInt32.self) else { break }
+        return String(Float(bitPattern: bits))
+
+    case .float8:
+        guard let bits = buf.readInteger(as: UInt64.self) else { break }
+        return String(Double(bitPattern: bits))
 
     case .timestamp, .timestamptz:
         guard let us = buf.readInteger(as: Int64.self) else { break }
@@ -325,7 +349,7 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         break
     }
 
-    // Non-date/time types: bytes are the UTF-8 text representation from the server
+    // Remaining types (text, varchar, json, numeric, …): UTF-8 text from the server
     return bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes) ?? ""
 }
 
