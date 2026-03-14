@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @State private var showingSettings = false
 
     var body: some View {
         VSplitView {
@@ -26,6 +28,7 @@ struct SidebarView: View {
             }
             .listStyle(.sidebar)
             .frame(minHeight: 120)
+            .environment(\.font, .system(size: sidebarFontSize))
 
             // Bottom — file explorer
             FileExplorerView()
@@ -34,6 +37,17 @@ struct SidebarView: View {
         }
         .navigationTitle("Tusk")
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingSettings.toggle()
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .help("Appearance settings")
+                .popover(isPresented: $showingSettings, arrowEdge: .bottom) {
+                    SettingsPopover()
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     appState.isAddingConnection = true
@@ -135,6 +149,7 @@ private struct SchemaRow: View {
 
 private struct ConnectionHeader: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
     let connection: Connection
 
     @State private var connectionError: String? = nil
@@ -161,7 +176,7 @@ private struct ConnectionHeader: View {
             }
 
             Text(connection.name)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: sidebarFontSize, weight: .semibold))
                 .lineLimit(1)
 
             Spacer()
