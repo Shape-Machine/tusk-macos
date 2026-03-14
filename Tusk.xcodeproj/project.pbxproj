@@ -20,6 +20,7 @@
 		7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */; };
 		8579F3571057CAD4338D6EB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */; };
 		88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B49B9D6360FE850DD93363 /* AppState.swift */; };
+		8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */; };
 		A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */; };
 		B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A2CA1E506E6FDF0786437 /* Connection.swift */; };
 		B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */; };
@@ -44,6 +45,7 @@
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewAutosave.swift; sourceTree = "<group>"; };
 		6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHTunnel.swift; sourceTree = "<group>"; };
 		7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLHighlighter.swift; sourceTree = "<group>"; };
 		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
@@ -79,6 +81,7 @@
 			children = (
 				EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */,
 				EC9EED50F915727B9063AE8C /* About */,
+				6E7B1A76049F7074E3A3CEF0 /* Components */,
 				C26728883657235882AE0D7B /* Main */,
 				FD7123F93B469D46524BFEC5 /* Sidebar */,
 			);
@@ -117,6 +120,14 @@
 				9EBD0E0FCEF86AA688735504 /* QueryResult.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		6E7B1A76049F7074E3A3CEF0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		8832BAA17D9CBDC0B350235E /* Products */ = {
@@ -268,6 +279,7 @@
 				A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */,
 				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
+				8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */,
 				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
 				DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */,
 				4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */,
