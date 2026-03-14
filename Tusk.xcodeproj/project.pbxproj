@@ -22,6 +22,7 @@
 		88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B49B9D6360FE850DD93363 /* AppState.swift */; };
 		8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */; };
 		A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */; };
+		B2123B053A58F7D78FEE550A /* SettingsPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1C8E9BF3BF31794B0FF27A /* SettingsPopover.swift */; };
 		B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A2CA1E506E6FDF0786437 /* Connection.swift */; };
 		B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */; };
 		BDF57DF2459313BCFB4DDD3D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1576217C7FBD3F87C830FD0 /* AboutView.swift */; };
@@ -41,6 +42,7 @@
 		09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		15B49B9D6360FE850DD93363 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		193CE42C808DDA972A10DACE /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		1F1C8E9BF3BF31794B0FF27A /* SettingsPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPopover.swift; sourceTree = "<group>"; };
 		1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tusk.entitlements; sourceTree = "<group>"; };
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
@@ -125,6 +127,7 @@
 		6E7B1A76049F7074E3A3CEF0 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				1F1C8E9BF3BF31794B0FF27A /* SettingsPopover.swift */,
 				64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */,
 			);
 			path = Components;
@@ -278,6 +281,7 @@
 				B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */,
 				A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */,
 				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
+				B2123B053A58F7D78FEE550A /* SettingsPopover.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
 				8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */,
 				EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */,
