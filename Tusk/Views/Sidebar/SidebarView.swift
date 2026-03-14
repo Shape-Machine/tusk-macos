@@ -120,13 +120,17 @@ private struct SchemaRow: View {
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             ForEach(tables) { table in
-                Label(table.name, systemImage: "tablecells")
-                    .font(.system(size: sidebarFontSize))
-                    .tag(SidebarItem.table(
-                        connectionID: connection.id,
-                        schema: table.schema,
-                        tableName: table.name
-                    ))
+                Label {
+                    Text(table.name)
+                        .font(.system(size: sidebarFontSize))
+                } icon: {
+                    Image(systemName: "tablecells")
+                }
+                .tag(SidebarItem.table(
+                    connectionID: connection.id,
+                    schema: table.schema,
+                    tableName: table.name
+                ))
             }
         } label: {
             HStack(spacing: 6) {
