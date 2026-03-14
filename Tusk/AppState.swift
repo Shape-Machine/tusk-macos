@@ -249,6 +249,20 @@ final class AppState {
         }
     }
 
+    func renameFileTab(from oldURL: URL, to newURL: URL) {
+        guard let idx = queryTabs.firstIndex(where: { $0.sourceURL == oldURL }) else { return }
+        queryTabs[idx].sourceURL = newURL
+        queryTabs[idx].title = newURL.deletingPathExtension().lastPathComponent
+    }
+
+    func closeTabForFile(url: URL) {
+        guard let qidx = queryTabs.firstIndex(where: { $0.sourceURL == url }) else { return }
+        let qid = queryTabs[qidx].id
+        guard let tab = openTabs.first(where: { if case .queryEditor(let id) = $0.kind { return id == qid }; return false })
+        else { return }
+        closeDetailTab(tab.id)
+    }
+
     // MARK: - Tab activation
 
     /// Activates a detail tab and keeps `activeDetailTabID`, `selectedSidebarItem`,
