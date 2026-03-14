@@ -19,6 +19,7 @@ struct QueryEditorView: View {
             // Editor pane
             editorPane
                 .frame(minHeight: 120)
+                .splitViewAutosaveName("tusk.queryeditor.split")
 
             // Results pane
             resultsPane
