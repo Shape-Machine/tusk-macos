@@ -57,15 +57,7 @@ struct QueryEditorView: View {
     private var editorPane: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                if client != nil {
-                    Text(tab.connectionName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Label("No connection", systemImage: "bolt.slash")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                connectionPicker
                 Spacer()
                 if savedIndicator {
                     Label("Saved", systemImage: "checkmark.circle")
@@ -103,6 +95,48 @@ struct QueryEditorView: View {
                         .padding(.vertical, 9)
                         .allowsHitTesting(false)
                 }
+            }
+        }
+    }
+
+    // MARK: - Connection picker
+
+    private var connectionPicker: some View {
+        let active = appState.connections.filter { appState.clients[$0.id] != nil }
+        return Group {
+            if active.isEmpty {
+                Label("No connection", systemImage: "bolt.slash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Menu {
+                    ForEach(active) { connection in
+                        Button {
+                            appState.setQueryTabConnection(
+                                tabID: tab.id,
+                                connectionID: connection.id,
+                                name: connection.name
+                            )
+                        } label: {
+                            if tab.connectionID == connection.id {
+                                Label(connection.name, systemImage: "checkmark")
+                            } else {
+                                Text(connection.name)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(client != nil ? tab.connectionName : "No connection")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
             }
         }
     }

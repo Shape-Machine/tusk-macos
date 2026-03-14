@@ -250,6 +250,12 @@ final class AppState {
         }
     }
 
+    func setQueryTabConnection(tabID: UUID, connectionID: UUID, name: String) {
+        guard let idx = queryTabs.firstIndex(where: { $0.id == tabID }) else { return }
+        queryTabs[idx].connectionID = connectionID
+        queryTabs[idx].connectionName = name
+    }
+
     func renameFileTab(from oldURL: URL, to newURL: URL) {
         guard let idx = queryTabs.firstIndex(where: { $0.sourceURL == oldURL }) else { return }
         queryTabs[idx].sourceURL = newURL
