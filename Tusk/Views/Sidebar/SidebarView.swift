@@ -80,14 +80,21 @@ private struct ConnectionSection: View {
     }
 }
 
-// MARK: - Schema row (collapsed by default)
+// MARK: - Schema row (public auto-expanded)
 
 private struct SchemaRow: View {
     let schema: String
     let tables: [TableInfo]
     let connection: Connection
 
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(schema: String, tables: [TableInfo], connection: Connection) {
+        self.schema = schema
+        self.tables = tables
+        self.connection = connection
+        _isExpanded = State(initialValue: schema == "public")
+    }
 
     var isEmpty: Bool { tables.isEmpty }
 
@@ -127,8 +134,11 @@ private struct ConnectionHeader: View {
     @Environment(AppState.self) private var appState
     let connection: Connection
 
+    @State private var connectionError: String? = nil
+
     var isConnected: Bool { appState.isConnected(connection) }
     var isConnecting: Bool { appState.connectingIDs.contains(connection.id) }
+    var isSelected: Bool { appState.selectedConnectionID == connection.id }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -149,14 +159,24 @@ private struct ConnectionHeader: View {
             Spacer()
         }
         .contentShape(Rectangle())
-        .help(isConnected ? "" : isConnecting ? "Connecting…" : "Click to connect")
+        .help(isConnected ? "Click to select" : isConnecting ? "Connecting…" : "Click to connect")
         .onTapGesture {
-            if !isConnected && !isConnecting {
+            if isConnected {
+                appState.selectedConnectionID = connection.id
+            } else if !isConnecting {
                 Task {
                     do { try await appState.connect(connection) }
-                    catch { print("Connection error: \(error)") }
+                    catch { connectionError = error.localizedDescription }
                 }
             }
+        }
+        .alert("Connection Failed", isPresented: Binding(
+            get: { connectionError != nil },
+            set: { if !$0 { connectionError = nil } }
+        )) {
+            Button("OK") { connectionError = nil }
+        } message: {
+            Text(connectionError ?? "")
         }
         .contextMenu {
             if isConnected {
@@ -170,7 +190,7 @@ private struct ConnectionHeader: View {
                 Button("Connect") {
                     Task {
                         do { try await appState.connect(connection) }
-                        catch { print("Connection error: \(error)") }
+                        catch { connectionError = error.localizedDescription }
                     }
                 }
             }
