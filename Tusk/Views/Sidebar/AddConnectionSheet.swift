@@ -59,8 +59,8 @@ struct AddConnectionSheet: View {
                                     Label {
                                         Text(c.rawValue.capitalized)
                                     } icon: {
-                                        Image(systemName: color == c ? "checkmark.circle.fill" : "circle.fill")
-                                            .foregroundStyle(c.color)
+                                        Text(color == c ? "✓" : "●")
+                                            .foregroundColor(c.color)
                                     }
                                 }
                             }
