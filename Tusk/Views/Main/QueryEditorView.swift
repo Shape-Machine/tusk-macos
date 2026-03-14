@@ -230,7 +230,7 @@ struct QueryEditorView: View {
 struct ResultsGrid: View {
     let result: QueryResult
 
-    @State private var expandedCell: String? = nil
+    @State private var expandedCell: CellDetailContent? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -265,7 +265,7 @@ struct ResultsGrid: View {
                                         : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
                                     .border(Color(nsColor: .separatorColor), width: 0.5)
                                     .onTapGesture(count: 2) {
-                                        expandedCell = cell.displayValue
+                                        expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
                                     }
                                     .contextMenu {
                                         Button("Copy") {
@@ -273,7 +273,7 @@ struct ResultsGrid: View {
                                             NSPasteboard.general.setString(cell.displayValue, forType: .string)
                                         }
                                         Button("View Full Value") {
-                                            expandedCell = cell.displayValue
+                                            expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
                                         }
                                     }
                             }
@@ -288,10 +288,7 @@ struct ResultsGrid: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
-        .sheet(item: Binding(
-            get: { expandedCell.map { CellDetailContent(value: $0) } },
-            set: { if $0 == nil { expandedCell = nil } }
-        )) { content in
+        .sheet(item: $expandedCell) { content in
             CellDetailView(value: content.value)
         }
     }
@@ -300,7 +297,7 @@ struct ResultsGrid: View {
 // MARK: - Cell detail sheet
 
 private struct CellDetailContent: Identifiable {
-    let id = UUID()
+    let id: String   // "\(rowIndex):\(colIndex)" — stable across re-renders
     let value: String
 }
 
