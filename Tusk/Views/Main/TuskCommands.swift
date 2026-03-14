@@ -3,7 +3,15 @@ import SwiftUI
 struct TuskCommands: Commands {
     let appState: AppState
 
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Tusk") {
+                openWindow(id: "about")
+            }
+        }
+
         CommandGroup(after: .newItem) {
             Button("New Connection…") {
                 appState.isAddingConnection = true
