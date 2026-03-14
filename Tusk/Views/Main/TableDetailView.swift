@@ -59,6 +59,7 @@ struct TableDetailView: View {
                 Text("Data").tag(Tab.data)
             }
             .pickerStyle(.segmented)
+            .font(.system(size: contentFontSize))
             .fixedSize()
             .padding(.horizontal, 16)
             .padding(.vertical, 6)

@@ -76,19 +76,18 @@ struct FileExplorerView: View {
                 currentDirectory = currentDirectory.deletingLastPathComponent()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.caption)
+                    .font(.system(size: sidebarFontSize - 2))
             }
             .disabled(isAtHome)
             .buttonStyle(.borderless)
             .foregroundStyle(isAtHome ? .tertiary : .secondary)
 
             Image(systemName: "folder.fill")
-                .font(.caption)
+                .font(.system(size: sidebarFontSize - 2))
                 .foregroundStyle(.secondary)
 
             Text(isAtHome ? "Home" : currentDirectory.lastPathComponent)
-                .font(.caption)
-                .fontWeight(.medium)
+                .font(.system(size: sidebarFontSize - 2, weight: .medium))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -113,7 +112,7 @@ struct FileExplorerView: View {
                 }
             } label: {
                 Image(systemName: "plus")
-                    .font(.caption)
+                    .font(.system(size: sidebarFontSize - 2))
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
