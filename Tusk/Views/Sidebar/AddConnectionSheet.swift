@@ -90,9 +90,11 @@ struct AddConnectionSheet: View {
                     Toggle("Use SSH Tunnel", isOn: $sshEnabled)
 
                     if sshEnabled {
-                        TextField("SSH Host", text: $sshHost)
-                        TextField("SSH Port", text: $sshPort)
-                            .frame(width: 70)
+                        HStack {
+                            TextField("SSH Host", text: $sshHost)
+                            TextField("SSH Port", text: $sshPort)
+                                .frame(width: 70)
+                        }
                         TextField("SSH User", text: $sshUser)
                         HStack {
                             TextField("Private Key Path", text: $sshKeyPath)
