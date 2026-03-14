@@ -322,13 +322,19 @@ struct FileExplorerView: View {
 
     private func commitDelete(_ item: FileItem) {
         if item.isDirectory {
-            let contents = (try? FileManager.default.contentsOfDirectory(
-                at: item.url,
-                includingPropertiesForKeys: nil,
-                options: .skipsHiddenFiles
-            )) ?? []
-            guard contents.isEmpty else {
-                deleteErrorMessage = "\"\(item.name)\" is not empty. Remove its contents before deleting it."
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(
+                    at: item.url,
+                    includingPropertiesForKeys: nil,
+                    options: .skipsHiddenFiles
+                )
+                guard contents.isEmpty else {
+                    deleteErrorMessage = "\"\(item.name)\" is not empty. Remove its contents before deleting it."
+                    itemPendingDelete = nil
+                    return
+                }
+            } catch {
+                deleteErrorMessage = "Could not verify the contents of \"\(item.name)\"."
                 itemPendingDelete = nil
                 return
             }
