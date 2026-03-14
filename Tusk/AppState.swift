@@ -254,6 +254,13 @@ final class AppState {
         guard let idx = queryTabs.firstIndex(where: { $0.id == tabID }) else { return }
         queryTabs[idx].connectionID = connectionID
         queryTabs[idx].connectionName = name
+        // Keep selectedConnectionID in sync so global Database commands (⌘T,
+        // Refresh Schema, Disconnect) target the connection shown in the active tab.
+        let isActiveTab = openTabs.first(where: {
+            if case .queryEditor(let qid) = $0.kind { return qid == tabID }
+            return false
+        })?.id == activeDetailTabID
+        if isActiveTab { selectedConnectionID = connectionID }
     }
 
     func renameFileTab(from oldURL: URL, to newURL: URL) {
