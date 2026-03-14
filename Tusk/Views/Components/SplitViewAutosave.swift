@@ -19,11 +19,13 @@ private struct SplitViewAutosaveConfigurator: NSViewRepresentable {
         SplitViewFinderView(autosaveName: autosaveName)
     }
 
-    func updateNSView(_ nsView: SplitViewFinderView, context: Context) {}
+    func updateNSView(_ nsView: SplitViewFinderView, context: Context) {
+        nsView.updateAutosaveName(autosaveName)
+    }
 }
 
 private final class SplitViewFinderView: NSView {
-    let autosaveName: String
+    var autosaveName: String
 
     init(autosaveName: String) {
         self.autosaveName = autosaveName
@@ -42,14 +44,28 @@ private final class SplitViewFinderView: NSView {
         }
     }
 
+    /// Called by `updateNSView` when the autosave name changes after initial configuration.
+    func updateAutosaveName(_ name: String) {
+        guard name != autosaveName else { return }
+        autosaveName = name
+        applyToSplitView(name)
+    }
+
     private func configureSplitView() {
+        applyToSplitView(autosaveName)
+    }
+
+    private func applyToSplitView(_ name: String) {
         var current: NSView? = superview
         while let v = current {
             if let splitView = v as? NSSplitView {
-                splitView.autosaveName = autosaveName
+                splitView.autosaveName = name
                 return
             }
             current = v.superview
         }
+#if DEBUG
+        print("[SplitViewAutosave] Warning: no NSSplitView found in superview chain for key '\(name)'")
+#endif
     }
 }
