@@ -47,6 +47,7 @@ struct DetailView: View {
             case .table(let connID, let schema, let tableName):
                 if let client = appState.clients[connID] {
                     TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+                        .id(connID)
                 } else {
                     VStack(spacing: 12) {
                         ProgressView()
