@@ -23,6 +23,7 @@
 		A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */; };
 		B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A2CA1E506E6FDF0786437 /* Connection.swift */; };
 		B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */; };
+		BDF57DF2459313BCFB4DDD3D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1576217C7FBD3F87C830FD0 /* AboutView.swift */; };
 		D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */; };
 		DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */; };
 		DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAC42E3023CAE6227191B992 /* TuskApp.swift */; };
@@ -54,6 +55,7 @@
 		BA3E61CFF0505201909FC54F /* DatabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseClient.swift; sourceTree = "<group>"; };
 		D84F6197423F6B815DCFF5EC /* TableDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDetailView.swift; sourceTree = "<group>"; };
 		DAC42E3023CAE6227191B992 /* TuskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskApp.swift; sourceTree = "<group>"; };
+		E1576217C7FBD3F87C830FD0 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F317DCA7625AA05FB8810169 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */,
+				EC9EED50F915727B9063AE8C /* About */,
 				C26728883657235882AE0D7B /* Main */,
 				FD7123F93B469D46524BFEC5 /* Sidebar */,
 			);
@@ -155,6 +158,14 @@
 				1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		EC9EED50F915727B9063AE8C /* About */ = {
+			isa = PBXGroup;
+			children = (
+				E1576217C7FBD3F87C830FD0 /* AboutView.swift */,
+			);
+			path = About;
 			sourceTree = "<group>";
 		};
 		FD7123F93B469D46524BFEC5 /* Sidebar */ = {
@@ -239,6 +250,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BDF57DF2459313BCFB4DDD3D /* AboutView.swift in Sources */,
 				19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */,
 				88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */,
 				B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */,
