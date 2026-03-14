@@ -51,21 +51,31 @@ struct TableDetailView: View {
     // MARK: - Tab picker
 
     private var tabPicker: some View {
-        HStack {
-            Picker("", selection: $selectedTab) {
-                Text("Columns").tag(Tab.columns)
-                Text("Keys").tag(Tab.keys)
-                Text("Relations").tag(Tab.relations)
-                Text("Data").tag(Tab.data)
-            }
-            .pickerStyle(.segmented)
-            .font(.system(size: contentFontSize))
-            .fixedSize()
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
+        HStack(spacing: 2) {
+            tabSegment("Columns", for: .columns)
+            tabSegment("Keys", for: .keys)
+            tabSegment("Relations", for: .relations)
+            tabSegment("Data", for: .data)
             Spacer()
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
         .background(.bar)
+    }
+
+    private func tabSegment(_ title: String, for tab: Tab) -> some View {
+        Button { selectedTab = tab } label: {
+            Text(title)
+                .font(.system(size: contentFontSize - 1))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
+                .background(
+                    selectedTab == tab ? Color(nsColor: .selectedControlColor) : .clear,
+                    in: RoundedRectangle(cornerRadius: 5)
+                )
+                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Content

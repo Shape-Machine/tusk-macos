@@ -3,6 +3,7 @@ import SwiftUI
 struct SidebarView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("tusk.sidebar.fontSize") private var sidebarFontSize = 13.0
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
     @State private var showingSettings = false
 
     var body: some View {
@@ -38,6 +39,10 @@ struct SidebarView: View {
         }
         .navigationTitle("Tusk")
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Tusk")
+                    .font(.system(size: contentFontSize, weight: .semibold))
+            }
             ToolbarItem(placement: .automatic) {
                 Button {
                     showingSettings.toggle()
