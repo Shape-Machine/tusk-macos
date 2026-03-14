@@ -34,6 +34,7 @@ struct SidebarView: View {
             FileExplorerView()
                 .frame(minHeight: 120)
                 .splitViewAutosaveName("tusk.sidebar.split")
+                .environment(\.font, .system(size: sidebarFontSize))
         }
         .navigationTitle("Tusk")
         .toolbar {
