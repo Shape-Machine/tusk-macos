@@ -139,10 +139,8 @@ struct FileExplorerView: View {
                 if isCreatingFolder {
                     HStack(spacing: 6) {
                         Image(systemName: "folder")
-                            .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                         TextField("folder name", text: $newFolderName)
-                            .font(.system(size: 12))
                             .focused($isFolderNameFocused)
                             .onSubmit { commitNewFolder() }
                             .onExitCommand { isCreatingFolder = false }
@@ -152,10 +150,8 @@ struct FileExplorerView: View {
                 if isCreatingFile {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.text")
-                            .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                         TextField("filename.sql", text: $newFileName)
-                            .font(.system(size: 12))
                             .focused($isFileNameFocused)
                             .onSubmit { commitNewFile() }
                             .onExitCommand { isCreatingFile = false }
@@ -166,10 +162,8 @@ struct FileExplorerView: View {
                     if renamingItem?.id == item.id {
                         HStack(spacing: 6) {
                             Image(systemName: item.icon)
-                                .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
                             TextField(item.isDirectory ? "folder name" : "filename.sql", text: $renameText)
-                                .font(.system(size: 12))
                                 .focused($isRenameFocused)
                                 .onSubmit { commitRename() }
                                 .onExitCommand { renamingItem = nil }
@@ -185,7 +179,6 @@ struct FileExplorerView: View {
                         } label: {
                             Label {
                                 Text(item.name)
-                                    .font(.system(size: 12))
                                     .foregroundStyle(item.isInteractable ? .primary : .tertiary)
                                     .lineLimit(1)
                             } icon: {

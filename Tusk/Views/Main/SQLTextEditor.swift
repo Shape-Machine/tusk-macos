@@ -4,6 +4,7 @@ import AppKit
 /// An NSTextView-backed editor with live SQL syntax highlighting.
 struct SQLTextEditor: NSViewRepresentable {
     @Binding var text: String
+    var fontSize: Double = Double(NSFont.systemFontSize)
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -35,7 +36,13 @@ struct SQLTextEditor: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = nsView.documentView as? NSTextView else { return }
-        // Only update when the text changed externally (e.g. tab switch)
+        // Re-apply font if it changed (e.g. user adjusted content font size setting)
+        if textView.font != editorFont, let storage = textView.textStorage {
+            textView.font = editorFont
+            SQLHighlighter.highlight(storage, font: editorFont)
+            textView.typingAttributes = baseTypingAttributes
+        }
+        // Only update text when it changed externally (e.g. tab switch)
         guard textView.string != text, let storage = textView.textStorage else { return }
         let sel = textView.selectedRange()
         textView.string = text
@@ -73,7 +80,7 @@ struct SQLTextEditor: NSViewRepresentable {
     // MARK: - Helpers
 
     var editorFont: NSFont {
-        NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
     }
 
     var baseTypingAttributes: [NSAttributedString.Key: Any] {

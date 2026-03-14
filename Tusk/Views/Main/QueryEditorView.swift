@@ -2,6 +2,7 @@ import SwiftUI
 
 struct QueryEditorView: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
     let tab: QueryTab
     let client: DatabaseClient?
 
@@ -86,10 +87,10 @@ struct QueryEditorView: View {
             Divider()
 
             ZStack(alignment: .topLeading) {
-                SQLTextEditor(text: $sql)
+                SQLTextEditor(text: $sql, fontSize: contentFontSize)
                 if sql.isEmpty {
                     Text("-- Write SQL here · ⌘↵ to run")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(size: contentFontSize, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 9)
