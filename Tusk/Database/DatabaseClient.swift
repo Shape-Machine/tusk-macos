@@ -281,15 +281,12 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         return String(Double(bitPattern: bits))
 
     case .uuid:
-        // 16 bytes, big-endian. Read as two UInt64s and format as xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-        guard let hi = buf.readInteger(as: UInt64.self),
-              let lo = buf.readInteger(as: UInt64.self) else { break }
-        return String(format: "%08x-%04x-%04x-%04x-%012x",
-                      (hi >> 32),
-                      (hi >> 16) & 0xffff,
-                      hi & 0xffff,
-                      (lo >> 48) & 0xffff,
-                      lo & 0xffffffffffff)
+        guard let b = buf.readBytes(length: 16) else { break }
+        let t: uuid_t = (b[0],  b[1],  b[2],  b[3],
+                         b[4],  b[5],  b[6],  b[7],
+                         b[8],  b[9],  b[10], b[11],
+                         b[12], b[13], b[14], b[15])
+        return UUID(uuid: t).uuidString.lowercased()
 
     case .timestamp, .timestamptz:
         guard let us = buf.readInteger(as: Int64.self) else { break }
