@@ -56,14 +56,23 @@ struct AddConnectionSheet: View {
                                 Button {
                                     color = c
                                 } label: {
-                                    Label(c.rawValue.capitalized, systemImage: color == c ? "checkmark.circle.fill" : "circle.fill")
-                                        .foregroundStyle(c.color)
+                                    Label {
+                                        Text(c.rawValue.capitalized)
+                                    } icon: {
+                                        Image(systemName: color == c ? "checkmark.circle.fill" : "circle.fill")
+                                            .foregroundStyle(c.color)
+                                    }
                                 }
                             }
                         } label: {
-                            Circle()
-                                .fill(color.color)
-                                .frame(width: 18, height: 18)
+                            HStack(spacing: 5) {
+                                Circle()
+                                    .fill(color.color)
+                                    .frame(width: 12, height: 12)
+                                Text(color.rawValue.capitalized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .menuStyle(.borderlessButton)
                         .fixedSize()
@@ -93,7 +102,7 @@ struct AddConnectionSheet: View {
                         HStack {
                             TextField("SSH Host", text: $sshHost)
                             TextField("SSH Port", text: $sshPort)
-                                .frame(width: 70)
+                                .frame(width: 100)
                         }
                         TextField("SSH User", text: $sshUser)
                         HStack {
