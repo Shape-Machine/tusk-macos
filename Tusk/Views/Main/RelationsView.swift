@@ -7,6 +7,8 @@ struct RelationsView: View {
     let schemaName: String
     let tableName: String
 
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+
     @State private var outgoing: [ForeignKeyInfo] = []    // this table → other
     @State private var incoming: [IncomingReference] = [] // other table → this table
     @State private var isLoading = true
@@ -113,7 +115,7 @@ struct RelationsView: View {
 
     private var focalNodeView: some View {
         Text(tableName)
-            .font(.system(size: 13, weight: .bold))
+            .font(.system(size: contentFontSize, weight: .bold))
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
             .foregroundStyle(.white)
@@ -124,7 +126,7 @@ struct RelationsView: View {
     private func relatedNodeView(_ edge: Edge) -> some View {
         let borderColor: Color = edge.isOutgoing ? .orange : .green
         return Text(edge.relatedTable)
-            .font(.system(size: 12))
+            .font(.system(size: contentFontSize - 1))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(
@@ -140,7 +142,7 @@ struct RelationsView: View {
 
     private func edgeLabelView(_ text: String, isOutgoing: Bool) -> some View {
         Text(text)
-            .font(.system(size: 10))
+            .font(.system(size: contentFontSize - 3))
             .foregroundStyle(isOutgoing ? Color.orange : Color.green)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
