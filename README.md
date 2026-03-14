@@ -1,15 +1,19 @@
-# Tusk
-
 <p align="center">
-  <img src="icon.svg" width="480" alt="Tusk icon" />
+  <img src="icon.svg" width="150" alt="Tusk icon" />
 </p>
 
-* Minimal, native macOS PostgreSQL client.
-* Built in SwiftUI for macOS 14+.
+# Tusk
+
+* Minimal, native macOS PostgreSQL client
+* Built in SwiftUI for macOS 14+
+
+---
 
 **[Download Tusk-1.0.0.dmg](https://github.com/Shape-Machine/tusk-macos/releases/download/v1.0.0/Tusk-1.0.0.dmg)** — macOS 14+ · [All releases](https://github.com/Shape-Machine/tusk-macos/releases)
 
 > Not notarized. On first launch right-click → **Open**, or run `xattr -d com.apple.quarantine /Applications/Tusk.app`.
+
+---
 
 ### Features
 
@@ -23,7 +27,7 @@
 
 * No Electron
 * No Telemetry
-* No Subscription.
+* No Subscription
 
 ---
 
