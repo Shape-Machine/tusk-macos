@@ -62,7 +62,10 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
     for row in result.rows {
         lines.append(row.map { cell in
             let val = cell.displayValue
-            return val.contains(",") || val.contains("\n") ? "\"\(val)\"" : val
+            let escaped = val.replacingOccurrences(of: "\"", with: "\"\"")
+            return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
+                ? "\"\(escaped)\""
+                : escaped
         }.joined(separator: ","))
     }
     try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
