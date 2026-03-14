@@ -39,6 +39,7 @@ struct FileExplorerView: View {
     @State private var renameText = ""
     @FocusState private var isRenameFocused: Bool
     @State private var itemPendingDelete: FileItem? = nil
+    @State private var deleteErrorMessage: String? = nil
 
     private var homeDirectory: URL { FileManager.default.homeDirectoryForCurrentUser }
     private var isAtHome: Bool { currentDirectory.standardized == homeDirectory.standardized }
@@ -52,6 +53,14 @@ struct FileExplorerView: View {
         .task(id: currentDirectory) { await loadItems() }
         .onChange(of: currentDirectory) { _, newValue in
             UserDefaults.standard.set(newValue.path, forKey: "fileExplorerDirectory")
+        }
+        .alert("Could Not Delete File", isPresented: Binding(
+            get: { deleteErrorMessage != nil },
+            set: { if !$0 { deleteErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { deleteErrorMessage = nil }
+        } message: {
+            Text(deleteErrorMessage ?? "")
         }
     }
 
@@ -249,10 +258,14 @@ struct FileExplorerView: View {
     // MARK: - Delete file
 
     private func commitDelete(_ item: FileItem) {
-        try? FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
-        appState.closeTabForFile(url: item.url)
-        itemPendingDelete = nil
-        Task { await loadItems() }
+        do {
+            try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            appState.closeTabForFile(url: item.url)
+            itemPendingDelete = nil
+            Task { await loadItems() }
+        } catch {
+            deleteErrorMessage = error.localizedDescription
+        }
     }
 
     // MARK: - Load directory contents
