@@ -32,6 +32,9 @@ struct FileExplorerView: View {
         return FileManager.default.homeDirectoryForCurrentUser
     }()
     @State private var items: [FileItem] = []
+    @State private var isCreatingFile = false
+    @State private var newFileName = ""
+    @FocusState private var isFileNameFocused: Bool
 
     private var homeDirectory: URL { FileManager.default.homeDirectoryForCurrentUser }
     private var isAtHome: Bool { currentDirectory.standardized == homeDirectory.standardized }
@@ -73,6 +76,18 @@ struct FileExplorerView: View {
                 .truncationMode(.middle)
 
             Spacer()
+
+            Button {
+                newFileName = ""
+                isCreatingFile = true
+                isFileNameFocused = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.caption)
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .help("New SQL file")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -83,13 +98,26 @@ struct FileExplorerView: View {
 
     @ViewBuilder
     private var fileList: some View {
-        if items.isEmpty {
+        if items.isEmpty && !isCreatingFile {
             Text("Empty folder")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List {
+                if isCreatingFile {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        TextField("filename.sql", text: $newFileName)
+                            .font(.system(size: 12))
+                            .focused($isFileNameFocused)
+                            .onSubmit { commitNewFile() }
+                            .onExitCommand { isCreatingFile = false }
+                    }
+                    .padding(.vertical, 1)
+                }
                 ForEach(items) { item in
                     Button {
                         if item.isDirectory {
@@ -113,6 +141,26 @@ struct FileExplorerView: View {
                 }
             }
             .listStyle(.sidebar)
+        }
+    }
+
+    // MARK: - Create new file
+
+    private func commitNewFile() {
+        var name = newFileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { isCreatingFile = false; return }
+        if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
+        let fileURL = currentDirectory.appendingPathComponent(name)
+        do {
+            try "".write(to: fileURL, atomically: true, encoding: .utf8)
+        } catch {
+            isCreatingFile = false
+            return
+        }
+        isCreatingFile = false
+        Task {
+            await loadItems()
+            await appState.openFileInEditor(url: fileURL)
         }
     }
 
