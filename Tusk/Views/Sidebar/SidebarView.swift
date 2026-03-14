@@ -30,6 +30,7 @@ struct SidebarView: View {
             // Bottom — file explorer
             FileExplorerView()
                 .frame(minHeight: 120)
+                .splitViewAutosaveName("tusk.sidebar.split")
         }
         .navigationTitle("Tusk")
         .toolbar {
