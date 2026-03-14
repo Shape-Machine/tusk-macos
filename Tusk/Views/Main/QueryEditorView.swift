@@ -200,7 +200,10 @@ struct QueryEditorView: View {
     // MARK: - Run query
 
     private func runQuery() async {
-        guard let client else { return }
+        // Read the live connectionID from appState rather than the prop, which
+        // may be a stale copy if the connection picker was just changed.
+        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
+        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
         let trimmed = sql.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
