@@ -75,6 +75,7 @@ struct AboutView: View {
 
     // MARK: - Update check (manual only — never called automatically)
 
+    @MainActor
     private func checkForUpdates() {
         updateStatus = .checking
         Task {
