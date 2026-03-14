@@ -151,6 +151,11 @@ struct FileExplorerView: View {
         guard !name.isEmpty else { isCreatingFile = false; return }
         if !name.lowercased().hasSuffix(".sql") { name += ".sql" }
         let fileURL = currentDirectory.appendingPathComponent(name)
+        guard !FileManager.default.fileExists(atPath: fileURL.path) else {
+            isCreatingFile = false
+            Task { await appState.openFileInEditor(url: fileURL) }
+            return
+        }
         do {
             try "".write(to: fileURL, atomically: true, encoding: .utf8)
         } catch {
