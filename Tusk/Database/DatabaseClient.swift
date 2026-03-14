@@ -242,6 +242,13 @@ private extension Array {
 /// 2000-01-01 00:00:00 UTC expressed as a Unix timestamp (seconds).
 private let pgEpochOffset: Double = 946_684_800
 
+private let pgUTCTimeZone: TimeZone = TimeZone(secondsFromGMT: 0)!
+private let pgUTCCalendar: Calendar = {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = pgUTCTimeZone
+    return c
+}()
+
 /// Returns a display string for a single PostgreSQL cell value.
 /// Handles binary-encoded date/time types; falls back to UTF-8 text.
 private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> String {
@@ -258,9 +265,7 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         let wholeSeconds: Int64 = r < 0 ? q - 1 : q
         let micros:       Int64 = r < 0 ? r + 1_000_000 : r
         let date = Date(timeIntervalSince1970: pgEpochOffset + Double(wholeSeconds))
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
-        let c = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        let c = pgUTCCalendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
         var s = String(format: "%04d-%02d-%02d %02d:%02d:%02d",
                        c.year!, c.month!, c.day!, c.hour!, c.minute!, c.second!)
         if micros != 0 {
@@ -273,9 +278,7 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
     case .date:
         guard let days = buf.readInteger(as: Int32.self) else { break }
         let date = Date(timeIntervalSince1970: pgEpochOffset + Double(days) * 86_400)
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
-        let c = cal.dateComponents([.year, .month, .day], from: date)
+        let c = pgUTCCalendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
 
     case .time:
