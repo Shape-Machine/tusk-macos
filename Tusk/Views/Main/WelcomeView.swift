@@ -62,7 +62,7 @@ struct WelcomeView: View {
                 .background(.quinary, in: RoundedRectangle(cornerRadius: 4))
                 .frame(width: 90, alignment: .center)
             Text(label)
-                .font(.caption)
+                .font(.system(.caption, design: contentFontDesign.design))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

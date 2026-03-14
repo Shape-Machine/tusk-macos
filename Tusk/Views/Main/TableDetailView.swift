@@ -37,7 +37,7 @@ struct TableDetailView: View {
             Text(tableName)
                 .font(.system(size: contentFontSize + 8, weight: .semibold, design: contentFontDesign.design))
             Text(schemaName)
-                .font(.caption)
+                .font(.system(.caption, design: contentFontDesign.design))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
