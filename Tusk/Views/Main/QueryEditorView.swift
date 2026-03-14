@@ -230,6 +230,8 @@ struct QueryEditorView: View {
 struct ResultsGrid: View {
     let result: QueryResult
 
+    @State private var expandedCell: String? = nil
+
     var body: some View {
         GeometryReader { geo in
             ScrollView([.horizontal, .vertical]) {
@@ -252,6 +254,8 @@ struct ResultsGrid: View {
                         GridRow {
                             ForEach(Array(row.enumerated()), id: \.offset) { colIndex, cell in
                                 Text(cell.displayValue)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                                     .foregroundStyle(cell.isNull ? .tertiary : .primary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
@@ -260,10 +264,16 @@ struct ResultsGrid: View {
                                         ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
                                         : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
                                     .border(Color(nsColor: .separatorColor), width: 0.5)
+                                    .onTapGesture(count: 2) {
+                                        expandedCell = cell.displayValue
+                                    }
                                     .contextMenu {
                                         Button("Copy") {
                                             NSPasteboard.general.clearContents()
                                             NSPasteboard.general.setString(cell.displayValue, forType: .string)
+                                        }
+                                        Button("View Full Value") {
+                                            expandedCell = cell.displayValue
                                         }
                                     }
                             }
@@ -278,5 +288,62 @@ struct ResultsGrid: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+        .sheet(item: Binding(
+            get: { expandedCell.map { CellDetailContent(value: $0) } },
+            set: { if $0 == nil { expandedCell = nil } }
+        )) { content in
+            CellDetailView(value: content.value)
+        }
+    }
+}
+
+// MARK: - Cell detail sheet
+
+private struct CellDetailContent: Identifiable {
+    let id = UUID()
+    let value: String
+}
+
+struct CellDetailView: View {
+    let value: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Cell Value")
+                    .fontWeight(.semibold)
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(value, forType: .string)
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ScrollView([.horizontal, .vertical]) {
+                Text(value)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+            }
+            .background(Color(nsColor: .textBackgroundColor))
+        }
+        .frame(minWidth: 480, minHeight: 300)
     }
 }
