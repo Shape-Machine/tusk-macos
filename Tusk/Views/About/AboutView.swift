@@ -26,6 +26,20 @@ struct AboutView: View {
 
             Divider()
 
+            // Developer info
+            VStack(spacing: 4) {
+                Text("Sri Rang · Shape Machine")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Link("tusk.macos@srirangan.net",
+                     destination: URL(string: "mailto:tusk.macos@srirangan.net")!)
+                    .font(.caption)
+            }
+            .padding(.vertical, 14)
+
+            Divider()
+
             // Update section
             VStack(spacing: 12) {
                 updateStatusView
