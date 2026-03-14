@@ -1,49 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="8" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+
+  <!-- 3 colors: #1E2B3C (bg), #7BACC4 (elephant), #F2E490 (tusks) -->
 
   <!-- Background -->
-  <rect width="1024" height="1024" fill="#1C2333"/>
+  <rect width="1024" height="1024" rx="220" fill="#1E2B3C"/>
 
-  <!-- Tusk group shifted down 71px to vertically centre within the 1024×1024 canvas -->
-  <g transform="translate(0, 71)">
+  <!-- Left ear -->
+  <ellipse cx="210" cy="340" rx="180" ry="215"
+    fill="#7BACC4" stroke="#111" stroke-width="18" filter="url(#rough)"/>
 
-  <!-- Tusk: a single curved ivory tusk, thick at the base, tapering to a fine point -->
-  <path
-    d="
-      M 340 820
-      C 300 780, 280 700, 295 610
-      C 310 520, 360 450, 420 390
-      C 480 330, 540 280, 570 220
-      C 595 168, 590 118, 565 90
-      C 548 70, 525 62, 500 65
-      C 465 70, 445 95, 438 128
-      C 428 170, 445 210, 468 240
-      C 488 266, 505 278, 500 300
-      C 494 326, 468 345, 445 370
-      C 390 432, 340 510, 315 600
-      C 292 686, 298 768, 340 820
-      Z
-    "
-    fill="#E8DCC8"
-    stroke="#C8B898"
-    stroke-width="4"
-  />
+  <!-- Right ear -->
+  <ellipse cx="814" cy="340" rx="180" ry="215"
+    fill="#7BACC4" stroke="#111" stroke-width="18" filter="url(#rough)"/>
 
-  <!-- Subtle inner highlight to give the tusk a rounded, ivory feel -->
-  <path
-    d="
-      M 370 790
-      C 340 755, 325 685, 338 600
-      C 350 520, 393 455, 448 398
-      C 500 345, 548 300, 572 248
-      C 560 270, 535 315, 510 355
-      C 474 410, 435 455, 408 520
-      C 378 592, 365 680, 370 790
-      Z
-    "
-    fill="#F5EDD8"
-    opacity="0.5"
-  />
+  <!-- Head -->
+  <circle cx="512" cy="410" r="205"
+    fill="#7BACC4" stroke="#111" stroke-width="18" filter="url(#rough)"/>
 
-  </g>
+  <!-- Trunk -->
+  <rect x="462" y="565" width="100" height="138" rx="50"
+    fill="#7BACC4" stroke="#111" stroke-width="18"/>
+
+  <!-- Left eye -->
+  <circle cx="440" cy="378" r="34" fill="white" stroke="#111" stroke-width="10"/>
+  <circle cx="447" cy="385" r="17" fill="#111"/>
+  <circle cx="440" cy="377" r="7" fill="white"/>
+
+  <!-- Right eye -->
+  <circle cx="584" cy="378" r="34" fill="white" stroke="#111" stroke-width="10"/>
+  <circle cx="591" cy="385" r="17" fill="#111"/>
+  <circle cx="584" cy="377" r="7" fill="white"/>
+
+  <!-- LEFT TUSK — big sweep out to lower-left -->
+  <path d="
+    M 474 575
+    C 430 560 330 565 200 638
+    C 108 698  52 792  48 868
+    C 46 900  62 918  82 908
+    C 102 898 108 870 102 844
+    C 108 808 160 738 256 684
+    C 376 622 452 614 466 642
+    Z
+  " fill="#F2E490" stroke="#111" stroke-width="15" stroke-linejoin="round" filter="url(#rough)"/>
+
+  <!-- RIGHT TUSK — mirrored -->
+  <path d="
+    M 550 575
+    C 594 560 694 565 824 638
+    C 916 698 972 792 976 868
+    C 978 900 962 918 942 908
+    C 922 898 916 870 922 844
+    C 916 808 864 738 768 684
+    C 648 622 572 614 558 642
+    Z
+  " fill="#F2E490" stroke="#111" stroke-width="15" stroke-linejoin="round" filter="url(#rough)"/>
 
 </svg>
