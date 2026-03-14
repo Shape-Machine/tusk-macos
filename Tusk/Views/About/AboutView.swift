@@ -83,7 +83,11 @@ struct AboutView: View {
                 let url = URL(string: "https://api.github.com/repos/Shape-Machine/tusk-macos/releases/latest")!
                 var request = URLRequest(url: url)
                 request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-                let (data, _) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    updateStatus = .error("GitHub returned an error (HTTP \(http.statusCode)).")
+                    return
+                }
                 let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
                 let latest = release.tagName.hasPrefix("v") ? String(release.tagName.dropFirst()) : release.tagName
                 updateStatus = isNewer(latest, than: appVersion) ? .available(latest) : .upToDate
