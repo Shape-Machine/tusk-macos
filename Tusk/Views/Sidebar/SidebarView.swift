@@ -148,8 +148,14 @@ private struct ConnectionHeader: View {
                     .frame(width: 8, height: 8)
             } else {
                 Circle()
-                    .fill(isConnected ? Color.green : connection.color.color)
+                    .fill(connection.color.color)
                     .frame(width: 8, height: 8)
+                    .overlay {
+                        if isConnected {
+                            Circle()
+                                .strokeBorder(Color.green, lineWidth: 2)
+                        }
+                    }
             }
 
             Text(connection.name)
