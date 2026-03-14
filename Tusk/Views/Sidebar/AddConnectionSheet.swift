@@ -80,7 +80,7 @@ struct AddConnectionSheet: View {
                     }
                 }
 
-                Section("Host") {
+                Section("Server") {
                     HStack {
                         TextField("Host", text: $host)
                         TextField("Port", text: $port)
@@ -95,33 +95,22 @@ struct AddConnectionSheet: View {
                     Toggle("Use SSL", isOn: $useSSL)
                 }
 
-                Section {
+                Section("SSH Tunnel") {
                     Toggle("Use SSH Tunnel", isOn: $sshEnabled)
 
                     if sshEnabled {
                         HStack {
-                            TextField("SSH Host", text: $sshHost)
-                            TextField("SSH Port", text: $sshPort)
-                                .labelsHidden()
-                                .frame(width: 80)
+                            TextField("Host", text: $sshHost)
+                            TextField("Port", text: $sshPort)
+                                .frame(width: 70)
                         }
-                        TextField("SSH User", text: $sshUser)
+                        TextField("User", text: $sshUser)
                         HStack {
-                            TextField("Private Key Path", text: $sshKeyPath)
+                            TextField("Key Path", text: $sshKeyPath)
                             Button("Browse…") { pickKey() }
                                 .buttonStyle(.borderless)
                         }
-                        SecureField("Key Passphrase (if any)", text: $sshPassphrase)
-                    }
-                } header: {
-                    Text("SSH Tunnel")
-                }
-
-                if let result = testResult {
-                    Section {
-                        Text(result)
-                            .foregroundStyle(result.hasPrefix("✓") ? Color.green : Color.red)
-                            .font(.callout)
+                        SecureField("Passphrase", text: $sshPassphrase)
                     }
                 }
             }
@@ -129,8 +118,8 @@ struct AddConnectionSheet: View {
 
             Divider()
 
-            // Footer with test button
-            HStack {
+            // Footer with test button and inline result
+            HStack(spacing: 12) {
                 Button {
                     Task { await testConnection() }
                 } label: {
@@ -141,6 +130,12 @@ struct AddConnectionSheet: View {
                     }
                 }
                 .disabled(host.isEmpty || database.isEmpty || username.isEmpty)
+
+                if let result = testResult {
+                    Text(result)
+                        .foregroundStyle(result.hasPrefix("✓") ? Color.green : Color.red)
+                        .font(.callout)
+                }
 
                 Spacer()
             }
