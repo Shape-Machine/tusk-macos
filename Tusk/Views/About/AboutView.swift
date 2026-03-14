@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AboutView: View {
-    private let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    private let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
 
     @State private var updateStatus: UpdateStatus = .idle
 
