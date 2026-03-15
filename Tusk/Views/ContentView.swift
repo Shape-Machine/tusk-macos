@@ -11,7 +11,7 @@ struct ContentView: View {
         @Bindable var appState = appState
 
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView()
+            SidebarView(appState: appState)
         } detail: {
             DetailView()
         }
