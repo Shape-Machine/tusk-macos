@@ -379,7 +379,7 @@ struct ResultsGrid: View {
         .sheet(item: $expandedCell) { content in
             CellDetailView(value: content.value)
         }
-        .onChange(of: result.rows.count) {
+        .onChange(of: result.id) {
             selectedRows.removeAll()
             lastSelectedRow = nil
         }
