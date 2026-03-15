@@ -15,6 +15,7 @@ struct TableDetailView: View {
     @State private var columns: [ColumnInfo] = []
     @State private var foreignKeys: [ForeignKeyInfo] = []
     @State private var isLoadingMeta = false
+    @State private var dataState = DataBrowserState()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,6 +27,7 @@ struct TableDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: tableName) { await loadMeta() }
+        .onChange(of: tableName) { dataState = DataBrowserState() }
     }
 
     // MARK: - Header
@@ -85,7 +87,7 @@ struct TableDetailView: View {
     private var content: some View {
         switch selectedTab {
         case .data:
-            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName)
+            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, state: dataState)
         case .columns:
             columnsTab
         case .keys:

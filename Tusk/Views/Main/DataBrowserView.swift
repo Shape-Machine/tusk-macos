@@ -1,21 +1,31 @@
 import SwiftUI
 
+// MARK: - Data browser state (survives sub-tab switches)
+
+@MainActor
+@Observable
+final class DataBrowserState {
+    var result: QueryResult? = nil
+    var isLoading: Bool = false
+    var error: String? = nil
+    var offset: Int = 0
+    var filterText: String = ""
+}
+
+// MARK: - Data browser view
+
 struct DataBrowserView: View {
     let client: DatabaseClient
     let connectionID: UUID
     let schemaName: String
     let tableName: String
+    @Bindable var state: DataBrowserState
 
     private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
-
-    @State private var result: QueryResult? = nil
-    @State private var error: String? = nil
-    @State private var isLoading = false
     private let pageSize = tuskPageSize
-    @State private var offset = 0
+
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
-    @State private var filterText = ""
     @State private var filterDebounceTask: Task<Void, Never>? = nil
     @State private var loadTask: Task<Void, Never>? = nil
 
@@ -24,13 +34,13 @@ struct DataBrowserView: View {
             toolbar
             Divider()
 
-            if isLoading {
+            if state.isLoading {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error {
+            } else if let error = state.error {
                 ContentUnavailableView(error, systemImage: "exclamationmark.triangle")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let result {
+            } else if let result = state.result {
                 VStack(spacing: 0) {
                     if result.rows.isEmpty {
                         ContentUnavailableView("Empty Table", systemImage: "tray",
@@ -48,9 +58,9 @@ struct DataBrowserView: View {
                 Color(nsColor: .textBackgroundColor)
             }
         }
-        .task { triggerLoad() }
+        .task { if state.result == nil { triggerLoad() } }
         .onChange(of: tableName) { _, _ in
-            offset = 0
+            state.offset = 0
             triggerLoad()
         }
     }
@@ -61,15 +71,15 @@ struct DataBrowserView: View {
         HStack(spacing: 10) {
             Spacer()
 
-            TextField("Filter…", text: $filterText)
+            TextField("Filter…", text: $state.filterText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
-                .onChange(of: filterText) { _, _ in
+                .onChange(of: state.filterText) { _, _ in
                     filterDebounceTask?.cancel()
                     filterDebounceTask = Task {
                         try? await Task.sleep(for: .milliseconds(300))
                         guard !Task.isCancelled else { return }
-                        offset = 0
+                        state.offset = 0
                         triggerLoad()
                     }
                 }
@@ -94,9 +104,9 @@ struct DataBrowserView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            if offset > 0 {
+            if state.offset > 0 {
                 Button("← Previous") {
-                    offset = max(0, offset - pageSize)
+                    state.offset = max(0, state.offset - pageSize)
                     triggerLoad()
                 }
                 .buttonStyle(.borderless)
@@ -105,7 +115,7 @@ struct DataBrowserView: View {
 
             if result.rows.count == pageSize {
                 Button("Next →") {
-                    offset += pageSize
+                    state.offset += pageSize
                     triggerLoad()
                 }
                 .buttonStyle(.borderless)
@@ -161,33 +171,33 @@ struct DataBrowserView: View {
 
     private func load() async {
         guard !Task.isCancelled else { return }
-        isLoading = true
-        error = nil
+        state.isLoading = true
+        state.error = nil
         // Only clear isLoading when this task was not superseded by a newer one.
-        defer { if !Task.isCancelled { isLoading = false } }
+        defer { if !Task.isCancelled { state.isLoading = false } }
 
         var sql = "SELECT * FROM \(qualifiedName)"
 
-        if !filterText.isEmpty {
-            sql += " WHERE \"\(tableName)\"::text ILIKE '%\(filterText)%'"
+        if !state.filterText.isEmpty {
+            sql += " WHERE \"\(tableName)\"::text ILIKE '%\(state.filterText)%'"
         }
 
         if let col = sortColumn {
             sql += " ORDER BY \"\(col)\" \(sortAscending ? "ASC" : "DESC")"
         }
 
-        sql += " LIMIT \(pageSize) OFFSET \(offset)"
+        sql += " LIMIT \(pageSize) OFFSET \(state.offset)"
 
         do {
             let queryResult = try await client.query(sql)
             guard !Task.isCancelled else { return }
-            result = queryResult
+            state.result = queryResult
         } catch is CancellationError {
             // A newer load superseded this one — don't touch the visible state.
             return
         } catch {
             guard !Task.isCancelled else { return }
-            self.error = error.localizedDescription
+            state.error = error.localizedDescription
         }
     }
 
