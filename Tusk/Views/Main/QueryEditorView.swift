@@ -126,6 +126,7 @@ struct QueryEditorView: View {
                             result = nil
                             error = nil
                             resultIsCapped = false
+                            persistResultStateToTab()
                         } label: {
                             if tab.connectionID == connection.id {
                                 Label(connection.name, systemImage: "checkmark")
@@ -238,6 +239,7 @@ struct QueryEditorView: View {
         error = nil
         result = nil
         resultIsCapped = false
+        persistResultStateToTab()
 
         let (finalSQL, capped) = cappedSQL(trimmed)
         do {
@@ -249,12 +251,14 @@ struct QueryEditorView: View {
         }
 
         isRunning = false
+        persistResultStateToTab()
+    }
 
-        if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
-            appState.queryTabs[index].result = result
-            appState.queryTabs[index].resultIsCapped = resultIsCapped
-            appState.queryTabs[index].error = error
-        }
+    private func persistResultStateToTab() {
+        guard let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        appState.queryTabs[index].result = result
+        appState.queryTabs[index].resultIsCapped = resultIsCapped
+        appState.queryTabs[index].error = error
     }
 
     /// Wraps SELECT/WITH queries in a subquery capped at `tuskPageSize`.
