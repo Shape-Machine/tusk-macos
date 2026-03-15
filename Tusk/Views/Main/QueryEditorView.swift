@@ -276,6 +276,7 @@ struct QueryEditorView: View {
 
 struct ResultsGrid: View {
     let result: QueryResult
+    var copyAsInsert: (([QueryCell]) -> Void)? = nil
 
     @State private var expandedCell: CellDetailContent? = nil
 
@@ -328,6 +329,11 @@ struct ResultsGrid: View {
                                         }
                                         Button("Copy Row as JSON") {
                                             copyRowsAsJSON(columns: result.columns, rows: [row])
+                                        }
+                                        if let copyAsInsert {
+                                            Button("Copy Row as INSERT") {
+                                                copyAsInsert(row)
+                                            }
                                         }
                                     }
                             }

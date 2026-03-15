@@ -119,6 +119,40 @@ func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
     NSPasteboard.general.setString(str, forType: .string)
 }
 
+// MARK: - INSERT copy helpers
+
+private func sqlLiteral(_ cell: QueryCell) -> String {
+    switch cell {
+    case .null:             return "NULL"
+    case .text(let s):      return "'" + s.replacingOccurrences(of: "'", with: "''") + "'"
+    case .integer(let i):   return String(i)
+    case .double(let d):    return String(d)
+    case .bool(let b):      return b ? "TRUE" : "FALSE"
+    case .bytes(let data):  return "'" + data.map { String(format: "\\x%02x", $0) }.joined() + "'"
+    }
+}
+
+private func insertStatement(schema: String, table: String, columns: [QueryColumn], row: [QueryCell]) -> String {
+    let cols = columns.map { "\"\($0.name)\"" }.joined(separator: ", ")
+    let vals = row.map { sqlLiteral($0) }.joined(separator: ", ")
+    return "INSERT INTO \"\(schema)\".\"\(table)\" (\(cols)) VALUES (\(vals));"
+}
+
+/// Copies a single row as a PostgreSQL INSERT statement to the clipboard.
+@MainActor
+func copyRowAsInsert(schema: String, table: String, columns: [QueryColumn], row: [QueryCell]) {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(insertStatement(schema: schema, table: table, columns: columns, row: row), forType: .string)
+}
+
+/// Copies all rows as PostgreSQL INSERT statements (one per line) to the clipboard.
+@MainActor
+func copyRowsAsInsert(schema: String, table: String, columns: [QueryColumn], rows: [[QueryCell]]) {
+    let statements = rows.map { insertStatement(schema: schema, table: table, columns: columns, row: $0) }.joined(separator: "\n")
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(statements, forType: .string)
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {
