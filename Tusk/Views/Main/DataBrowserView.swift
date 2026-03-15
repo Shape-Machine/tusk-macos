@@ -113,6 +113,22 @@ struct DataBrowserView: View {
             Spacer()
 
             Button {
+                copyRowsAsCSV(columns: result.columns, rows: result.rows)
+            } label: {
+                Label("Copy CSV", systemImage: "doc.on.clipboard")
+                    .font(.caption)
+            }
+            .buttonStyle(.borderless)
+            .help("Copy all rows as CSV")
+            Button {
+                copyRowsAsJSON(columns: result.columns, rows: result.rows)
+            } label: {
+                Label("Copy JSON", systemImage: "doc.on.clipboard")
+                    .font(.caption)
+            }
+            .buttonStyle(.borderless)
+            .help("Copy all rows as JSON")
+            Button {
                 exportCSV(result)
             } label: {
                 Label("Export CSV", systemImage: "square.and.arrow.up")
