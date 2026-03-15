@@ -77,6 +77,8 @@ No Electron. No telemetry. No subscription.
 
 ![Screenshot 09](screenshots/1.3.0-09.png)
 
+![Screenshot 09](screenshots/1.3.0-10.png)
+
 ---
 
 ## Development
