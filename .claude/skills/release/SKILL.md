@@ -87,10 +87,5 @@ Always append this footer to the release notes:
 > \`\`\`
 ```
 
-### 8. Update features doc
-Run the `update-features` skill to scan the source code and refresh `docs/features.md`:
-- Invoke `/update-features` (or follow its steps inline if the skill is unavailable)
-- This must complete and push before confirming the release
-
-### 9. Confirm
+### 8. Confirm
 Report the GitHub release URL and confirm all steps completed successfully.
