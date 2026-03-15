@@ -218,7 +218,7 @@ actor DatabaseClient {
 
             let cells: [QueryCell] = pgRow.map { cell in
                 guard let bytes = cell.bytes else { return QueryCell.null }
-                return .text(pgCellString(bytes: bytes, dataType: cell.dataType))
+                return pgCellValue(bytes: bytes, dataType: cell.dataType)
             }
             rows.append(cells)
             if let rowLimit, rows.count >= rowLimit { break }
@@ -254,6 +254,36 @@ private let pgUTCCalendar: Calendar = {
     c.timeZone = pgUTCTimeZone
     return c
 }()
+
+/// Returns a typed `QueryCell` for a non-null PostgreSQL cell.
+/// Produces `.bool`, `.integer`, or `.double` for the corresponding wire types;
+/// falls back to `.text` (via `pgCellString`) for everything else.
+private func pgCellValue(bytes: ByteBuffer, dataType: PostgresDataType) -> QueryCell {
+    var buf = bytes
+    switch dataType {
+    case .bool:
+        guard let byte = buf.readInteger(as: UInt8.self) else { break }
+        return .bool(byte != 0)
+    case .int2:
+        guard let v = buf.readInteger(as: Int16.self) else { break }
+        return .integer(Int64(v))
+    case .int4, .oid:
+        guard let v = buf.readInteger(as: Int32.self) else { break }
+        return .integer(Int64(v))
+    case .int8:
+        guard let v = buf.readInteger(as: Int64.self) else { break }
+        return .integer(v)
+    case .float4:
+        guard let bits = buf.readInteger(as: UInt32.self) else { break }
+        return .double(Double(Float(bitPattern: bits)))
+    case .float8:
+        guard let bits = buf.readInteger(as: UInt64.self) else { break }
+        return .double(Double(bitPattern: bits))
+    default:
+        break
+    }
+    return .text(pgCellString(bytes: bytes, dataType: dataType))
+}
 
 /// Returns a display string for a single PostgreSQL cell value.
 /// Handles binary-encoded numeric, boolean, and date/time types; falls back to UTF-8 text.
