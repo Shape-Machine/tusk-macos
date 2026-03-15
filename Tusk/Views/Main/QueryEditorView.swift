@@ -294,6 +294,8 @@ struct ResultsGrid: View {
     var copyAsInsert: (([QueryCell]) -> Void)? = nil
 
     @State private var expandedCell: CellDetailContent? = nil
+    @State private var selectedRows: Set<Int> = []
+    @State private var lastSelectedRow: Int? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -303,6 +305,7 @@ struct ResultsGrid: View {
                         // Data rows — only rows near the viewport are materialised
                         ForEach(result.rows.indices, id: \.self) { rowIndex in
                             let row = result.rows[rowIndex]
+                            let isSelected = selectedRows.contains(rowIndex)
                             HStack(spacing: 0) {
                                 ForEach(row.indices, id: \.self) { colIndex in
                                     let cell = row[colIndex]
@@ -313,9 +316,6 @@ struct ResultsGrid: View {
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
                                         .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
-                                        .background(rowIndex.isMultiple(of: 2)
-                                            ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
-                                            : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
                                         .border(Color(nsColor: .separatorColor), width: 0.5)
                                         .onTapGesture(count: 2) {
                                             expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
@@ -328,19 +328,28 @@ struct ResultsGrid: View {
                                             Button("View Full Value") {
                                                 expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
                                             }
-                                            Divider()
-                                            Button("Copy Row as CSV") {
-                                                copyRowsAsCSV(columns: result.columns, rows: [row])
-                                            }
-                                            Button("Copy Row as JSON") {
-                                                copyRowsAsJSON(columns: result.columns, rows: [row])
-                                            }
-                                            if let copyAsInsert {
-                                                Button("Copy Row as INSERT") {
-                                                    copyAsInsert(row)
-                                                }
-                                            }
                                         }
+                                }
+                            }
+                            .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                handleRowTap(rowIndex: rowIndex)
+                            }
+                            .contextMenu {
+                                let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().map { result.rows[$0] }
+                                let count = selectedRows.isEmpty ? 1 : selectedRows.count
+                                let label = count == 1 ? "Row" : "\(count) Rows"
+                                Button("Copy \(label) as CSV") {
+                                    copyRowsAsCSV(columns: result.columns, rows: selectionRows)
+                                }
+                                Button("Copy \(label) as JSON") {
+                                    copyRowsAsJSON(columns: result.columns, rows: selectionRows)
+                                }
+                                if let copyAsInsert {
+                                    Button("Copy \(label) as INSERT") {
+                                        selectionRows.forEach { copyAsInsert($0) }
+                                    }
                                 }
                             }
                         }
@@ -369,6 +378,44 @@ struct ResultsGrid: View {
         .background(Color(nsColor: .textBackgroundColor))
         .sheet(item: $expandedCell) { content in
             CellDetailView(value: content.value)
+        }
+        .onChange(of: result.rows.count) {
+            selectedRows.removeAll()
+            lastSelectedRow = nil
+        }
+    }
+
+    // MARK: - Row background
+
+    private func rowBackground(rowIndex: Int, isSelected: Bool) -> Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.15)
+        }
+        return rowIndex.isMultiple(of: 2)
+            ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
+            : Color(nsColor: .controlAlternatingRowBackgroundColors[1])
+    }
+
+    // MARK: - Selection handling
+
+    private func handleRowTap(rowIndex: Int) {
+        let flags = NSEvent.modifierFlags
+        if flags.contains(.command) {
+            // Toggle this row
+            if selectedRows.contains(rowIndex) {
+                selectedRows.remove(rowIndex)
+            } else {
+                selectedRows.insert(rowIndex)
+                lastSelectedRow = rowIndex
+            }
+        } else if flags.contains(.shift), let anchor = lastSelectedRow {
+            // Range select from anchor to this row
+            let range = anchor <= rowIndex ? anchor...rowIndex : rowIndex...anchor
+            selectedRows = Set(range)
+        } else {
+            // Single select
+            selectedRows = [rowIndex]
+            lastSelectedRow = rowIndex
         }
     }
 }
