@@ -12,6 +12,13 @@ struct TuskCommands: Commands {
             }
         }
 
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                appState.isShowingSettings.toggle()
+            }
+            .keyboardShortcut(",", modifiers: .command)
+        }
+
         CommandGroup(after: .newItem) {
             Button("New Connection…") {
                 appState.isAddingConnection = true
