@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 // MARK: - Query result
 
 struct QueryResult: Sendable {
+    let id: UUID = UUID()
     let columns: [QueryColumn]
     let rows: [[QueryCell]]
     let duration: TimeInterval
