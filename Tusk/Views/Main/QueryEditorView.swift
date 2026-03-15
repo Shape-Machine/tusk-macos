@@ -296,83 +296,103 @@ struct ResultsGrid: View {
     @State private var expandedCell: CellDetailContent? = nil
     @State private var selectedRows: Set<Int> = []
     @State private var lastSelectedRow: Int? = nil
+    @FocusState private var isFocused: Bool
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @State private var scrollProxy: ScrollViewProxy? = nil
+    @State private var keyboardCursor: Int? = nil
 
     var body: some View {
         GeometryReader { geo in
             ScrollView([.horizontal, .vertical]) {
-                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        // Data rows — only rows near the viewport are materialised
-                        ForEach(result.rows.indices, id: \.self) { rowIndex in
-                            let row = result.rows[rowIndex]
-                            let isSelected = selectedRows.contains(rowIndex)
-                            HStack(spacing: 0) {
-                                ForEach(row.indices, id: \.self) { colIndex in
-                                    let cell = row[colIndex]
-                                    Text(cell.displayValue)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                        .foregroundStyle(cell.isNull ? .tertiary : .primary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
-                                        .border(Color(nsColor: .separatorColor), width: 0.5)
-                                        .onTapGesture(count: 2) {
-                                            expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
-                                        }
-                                        .contextMenu {
-                                            Button("Copy Cell") {
-                                                NSPasteboard.general.clearContents()
-                                                NSPasteboard.general.setString(cell.displayValue, forType: .string)
-                                            }
-                                            Button("View Full Value") {
+                ScrollViewReader { proxy in
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            // Data rows — only rows near the viewport are materialised
+                            ForEach(result.rows.indices, id: \.self) { rowIndex in
+                                let row = result.rows[rowIndex]
+                                let isSelected = selectedRows.contains(rowIndex)
+                                HStack(spacing: 0) {
+                                    ForEach(row.indices, id: \.self) { colIndex in
+                                        let cell = row[colIndex]
+                                        Text(cell.displayValue)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
+                                            .foregroundStyle(cell.isNull ? .tertiary : .primary)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                            .border(Color(nsColor: .separatorColor), width: 0.5)
+                                            .onTapGesture(count: 2) {
                                                 expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
                                             }
+                                            .contextMenu {
+                                                Button("Copy Cell") {
+                                                    NSPasteboard.general.clearContents()
+                                                    NSPasteboard.general.setString(cell.displayValue, forType: .string)
+                                                }
+                                                Button("View Full Value") {
+                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
+                                                }
+                                            }
+                                    }
+                                }
+                                .id(rowIndex)
+                                .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    isFocused = true
+                                    handleRowTap(rowIndex: rowIndex)
+                                }
+                                .contextMenu {
+                                    let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
+                                    let count = selectedRows.isEmpty ? 1 : selectedRows.count
+                                    let label = count == 1 ? "Row" : "\(count) Rows"
+                                    Button("Copy \(label) as CSV") {
+                                        copyRowsAsCSV(columns: result.columns, rows: selectionRows)
+                                    }
+                                    Button("Copy \(label) as JSON") {
+                                        copyRowsAsJSON(columns: result.columns, rows: selectionRows)
+                                    }
+                                    if let copyAsInsert {
+                                        Button("Copy \(label) as INSERT") {
+                                            copyAsInsert(selectionRows)
                                         }
-                                }
-                            }
-                            .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                handleRowTap(rowIndex: rowIndex)
-                            }
-                            .contextMenu {
-                                let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
-                                let count = selectedRows.isEmpty ? 1 : selectedRows.count
-                                let label = count == 1 ? "Row" : "\(count) Rows"
-                                Button("Copy \(label) as CSV") {
-                                    copyRowsAsCSV(columns: result.columns, rows: selectionRows)
-                                }
-                                Button("Copy \(label) as JSON") {
-                                    copyRowsAsJSON(columns: result.columns, rows: selectionRows)
-                                }
-                                if let copyAsInsert {
-                                    Button("Copy \(label) as INSERT") {
-                                        copyAsInsert(selectionRows)
                                     }
                                 }
                             }
-                        }
-                    } header: {
-                        // Header row — pinned to top while scrolling vertically
-                        HStack(spacing: 0) {
-                            ForEach(result.columns) { col in
-                                Text(col.name)
-                                    .fontWeight(.semibold)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(nsColor: .controlBackgroundColor))
-                                    .border(Color(nsColor: .separatorColor), width: 0.5)
+                        } header: {
+                            // Header row — pinned to top while scrolling vertically
+                            HStack(spacing: 0) {
+                                ForEach(result.columns) { col in
+                                    Text(col.name)
+                                        .fontWeight(.semibold)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(nsColor: .controlBackgroundColor))
+                                        .border(Color(nsColor: .separatorColor), width: 0.5)
+                                }
                             }
                         }
                     }
+                    .frame(
+                        minWidth: geo.size.width,
+                        minHeight: geo.size.height,
+                        alignment: .topLeading
+                    )
+                    .onAppear { scrollProxy = proxy }
                 }
-                .frame(
-                    minWidth: geo.size.width,
-                    minHeight: geo.size.height,
-                    alignment: .topLeading
-                )
+            }
+            .focusable()
+            .focused($isFocused)
+            .onKeyPress(keys: [.upArrow, .downArrow, .pageUp, .pageDown]) { press in
+                handleKeyNavigation(press: press, viewHeight: geo.size.height)
+                return .handled
+            }
+            .onKeyPress(keys: [.init("a")], phases: .down) { press in
+                guard press.modifiers.contains(.command) else { return .ignored }
+                handleSelectAll()
+                return .handled
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
@@ -382,6 +402,7 @@ struct ResultsGrid: View {
         .onChange(of: result.id) {
             selectedRows.removeAll()
             lastSelectedRow = nil
+            keyboardCursor = nil
         }
     }
 
@@ -396,12 +417,12 @@ struct ResultsGrid: View {
             : Color(nsColor: .controlAlternatingRowBackgroundColors[1])
     }
 
-    // MARK: - Selection handling
+    // MARK: - Mouse selection
 
     private func handleRowTap(rowIndex: Int) {
+        keyboardCursor = rowIndex
         let flags = NSEvent.modifierFlags
         if flags.contains(.command) {
-            // Toggle this row
             if selectedRows.contains(rowIndex) {
                 selectedRows.remove(rowIndex)
             } else {
@@ -409,14 +430,52 @@ struct ResultsGrid: View {
                 lastSelectedRow = rowIndex
             }
         } else if flags.contains(.shift), let anchor = lastSelectedRow {
-            // Range select from anchor to this row
             let range = anchor <= rowIndex ? anchor...rowIndex : rowIndex...anchor
             selectedRows = Set(range)
         } else {
-            // Single select
             selectedRows = [rowIndex]
             lastSelectedRow = rowIndex
         }
+    }
+
+    // MARK: - Keyboard navigation
+
+    private func handleKeyNavigation(press: KeyPress, viewHeight: CGFloat) {
+        guard !result.rows.isEmpty else { return }
+        let lastRow = result.rows.count - 1
+        let rowHeight = contentFontSize + 6
+        let pageRows = max(1, Int(viewHeight / rowHeight))
+        let currentCursor = keyboardCursor ?? lastSelectedRow ?? 0
+        let shift = press.modifiers.contains(.shift)
+
+        let delta: Int
+        switch press.key {
+        case .upArrow:   delta = -1
+        case .downArrow: delta = 1
+        case .pageUp:    delta = -pageRows
+        case .pageDown:  delta = pageRows
+        default: return
+        }
+
+        let newCursor = max(0, min(lastRow, currentCursor + delta))
+        keyboardCursor = newCursor
+
+        if shift, let anchor = lastSelectedRow {
+            selectedRows = Set(min(anchor, newCursor)...max(anchor, newCursor))
+        } else {
+            selectedRows = [newCursor]
+            lastSelectedRow = newCursor
+        }
+
+        scrollProxy?.scrollTo(newCursor, anchor: .center)
+    }
+
+    private func handleSelectAll() {
+        guard !result.rows.isEmpty else { return }
+        selectedRows = Set(result.rows.indices)
+        lastSelectedRow = 0
+        keyboardCursor = result.rows.count - 1
+        scrollProxy?.scrollTo(0, anchor: .top)
     }
 }
 
