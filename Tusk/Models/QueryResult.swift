@@ -79,6 +79,41 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
     }
 }
 
+// MARK: - Clipboard copy helpers
+
+/// Copies rows as CSV (header + data) to the system clipboard.
+@MainActor
+func copyRowsAsCSV(columns: [QueryColumn], rows: [[QueryCell]]) {
+    var lines = [columns.map(\.name).joined(separator: ",")]
+    for row in rows {
+        lines.append(row.map { cell in
+            let val = cell.displayValue
+            let escaped = val.replacingOccurrences(of: "\"", with: "\"\"")
+            return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
+                ? "\"\(escaped)\""
+                : escaped
+        }.joined(separator: ","))
+    }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+}
+
+/// Copies rows as a JSON array of objects to the system clipboard.
+@MainActor
+func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
+    let objects: [[String: String]] = rows.map { row in
+        var obj: [String: String] = [:]
+        for (col, cell) in zip(columns, row) {
+            obj[col.name] = cell.displayValue
+        }
+        return obj
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: objects, options: [.prettyPrinted, .sortedKeys]),
+          let str = String(data: data, encoding: .utf8) else { return }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(str, forType: .string)
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {
