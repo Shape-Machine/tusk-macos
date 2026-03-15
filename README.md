@@ -9,9 +9,13 @@
 
 ---
 
-<p align="center">
-<strong><a href="https://github.com/Shape-Machine/tusk-macos/releases/download/v1.3.0/Tusk-1.3.0.dmg">Download Tusk-1.3.0.dmg</a></strong> — macOS 14+<br/>
-<em>Not notarized. On first launch right-click → <strong>Open</strong>, or run <code>xattr -d com.apple.quarantine /Applications/Tusk.app</code></em>
+<h3 align=center><a href="https://github.com/Shape-Machine/tusk-macos/releases/download/v1.3.0/Tusk-1.3.0.dmg">Download Tusk-1.3.0.dmg</a><small> — macOS 14+</small></h3>
+<p align=center>
+<em>
+Not notarized.<br/>
+On first launch right-click → <strong>Open</strong>, or<br/>
+run <code>xattr -d com.apple.quarantine /Applications/Tusk.app</code>
+</em>
 </p>
 
 ---
