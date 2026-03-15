@@ -298,59 +298,61 @@ struct ResultsGrid: View {
     var body: some View {
         GeometryReader { geo in
             ScrollView([.horizontal, .vertical]) {
-                Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 0) {
-                    // Header row
-                    GridRow {
-                        ForEach(result.columns) { col in
-                            Text(col.name)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
-                                .background(Color(nsColor: .controlBackgroundColor))
-                                .border(Color(nsColor: .separatorColor), width: 0.5)
-                        }
-                    }
-
-                    // Data rows
-                    ForEach(Array(result.rows.enumerated()), id: \.offset) { rowIndex, row in
-                        GridRow {
-                            ForEach(Array(row.enumerated()), id: \.offset) { colIndex, cell in
-                                Text(cell.displayValue)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .foregroundStyle(cell.isNull ? .tertiary : .primary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
-                                    .background(rowIndex.isMultiple(of: 2)
-                                        ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
-                                        : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
-                                    .border(Color(nsColor: .separatorColor), width: 0.5)
-                                    .onTapGesture(count: 2) {
-                                        expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
-                                    }
-                                    .contextMenu {
-                                        Button("Copy Cell") {
-                                            NSPasteboard.general.clearContents()
-                                            NSPasteboard.general.setString(cell.displayValue, forType: .string)
-                                        }
-                                        Button("View Full Value") {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        // Data rows — only rows near the viewport are materialised
+                        ForEach(Array(result.rows.enumerated()), id: \.offset) { rowIndex, row in
+                            HStack(spacing: 0) {
+                                ForEach(Array(row.enumerated()), id: \.offset) { colIndex, cell in
+                                    Text(cell.displayValue)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .foregroundStyle(cell.isNull ? .tertiary : .primary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                        .background(rowIndex.isMultiple(of: 2)
+                                            ? Color(nsColor: .controlAlternatingRowBackgroundColors[0])
+                                            : Color(nsColor: .controlAlternatingRowBackgroundColors[1]))
+                                        .border(Color(nsColor: .separatorColor), width: 0.5)
+                                        .onTapGesture(count: 2) {
                                             expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
                                         }
-                                        Divider()
-                                        Button("Copy Row as CSV") {
-                                            copyRowsAsCSV(columns: result.columns, rows: [row])
-                                        }
-                                        Button("Copy Row as JSON") {
-                                            copyRowsAsJSON(columns: result.columns, rows: [row])
-                                        }
-                                        if let copyAsInsert {
-                                            Button("Copy Row as INSERT") {
-                                                copyAsInsert(row)
+                                        .contextMenu {
+                                            Button("Copy Cell") {
+                                                NSPasteboard.general.clearContents()
+                                                NSPasteboard.general.setString(cell.displayValue, forType: .string)
+                                            }
+                                            Button("View Full Value") {
+                                                expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
+                                            }
+                                            Divider()
+                                            Button("Copy Row as CSV") {
+                                                copyRowsAsCSV(columns: result.columns, rows: [row])
+                                            }
+                                            Button("Copy Row as JSON") {
+                                                copyRowsAsJSON(columns: result.columns, rows: [row])
+                                            }
+                                            if let copyAsInsert {
+                                                Button("Copy Row as INSERT") {
+                                                    copyAsInsert(row)
+                                                }
                                             }
                                         }
-                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        // Header row — pinned to top while scrolling vertically
+                        HStack(spacing: 0) {
+                            ForEach(result.columns) { col in
+                                Text(col.name)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .border(Color(nsColor: .separatorColor), width: 0.5)
                             }
                         }
                     }
