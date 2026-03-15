@@ -59,7 +59,7 @@ struct DataBrowserView: View {
             }
         }
         .task { if state.result == nil { triggerLoad() } }
-        .onChange(of: tableName) { _, _ in
+        .onChange(of: schemaName + "." + tableName) { _, _ in
             state.offset = 0
             triggerLoad()
         }
