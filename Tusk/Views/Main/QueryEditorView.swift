@@ -475,7 +475,7 @@ struct ResultsGrid: View {
         guard !result.rows.isEmpty else { return }
         selectedRows = Set(result.rows.indices)
         lastSelectedRow = 0
-        keyboardCursor = result.rows.count - 1
+        keyboardCursor = 0
         scrollProxy?.scrollTo(0, anchor: .top)
     }
 }
