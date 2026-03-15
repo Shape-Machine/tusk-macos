@@ -18,37 +18,7 @@
 
 ## Features
 
-### Connections
-
-PostgreSQL connections with name, host, port, credentials, SSL toggle. Passwords and SSH passphrases stored in Keychain. SSH tunnel support with automatic port forwarding and key-based auth. Color tagging per connection. Connect/disconnect in one click.
-
-### Schema Browser
-
-Full schema tree in sidebar — schemas → tables. Auto-expands `public`. Click a table to open it.
-
-### Table Detail
-
-Four views per table: columns (with types, nullability, defaults, PK indicators), foreign keys, incoming/outgoing relations visualized as a radial graph, and live data.
-
-### Data Browser
-
-Paginated grid (1000 rows/page). Column sorting. Real-time text filter. CSV export.
-
-### Query Editor
-
-SQL editor with live syntax highlighting. `Cmd+Enter` to run. Per-tab connection picker. Results in a grid with row count, execution time, and capped indicator. Double-click any cell for full value. File-backed queries autosave every 500ms.
-
-### File Explorer
-
-Local filesystem browser in the sidebar. Create, rename, delete SQL files and folders. Open `.sql` files directly into query editor. Last directory persisted.
-
-### Tabs
-
-Unlimited tabs — tables and query editors. Color-coded dots per connection. `Cmd+T` new tab, `Cmd+W` close, `Cmd+[/]` navigate.
-
-### Appearance
-
-Font size (11–17pt) and font family (Sans, Serif, Mono, Rounded) — configurable separately for sidebar and content. Live-applied, persisted.
+See [docs/features.md](docs/features.md) for a full breakdown.
 
 ---
 
@@ -60,25 +30,25 @@ No Electron. No telemetry. No subscription.
 
 ## Screenshots
 
-![Screenshot 01](screenshots/1.3.0-01.png)
+![Screenshot 01](docs/screenshots/1.3.0-01.png)
 
-![Screenshot 02](screenshots/1.3.0-02.png)
+![Screenshot 02](docs/screenshots/1.3.0-02.png)
 
-![Screenshot 03](screenshots/1.3.0-03.png)
+![Screenshot 03](docs/screenshots/1.3.0-03.png)
 
-![Screenshot 04](screenshots/1.3.0-04.png)
+![Screenshot 04](docs/screenshots/1.3.0-04.png)
 
-![Screenshot 05](screenshots/1.3.0-05.png)
+![Screenshot 05](docs/screenshots/1.3.0-05.png)
 
-![Screenshot 06](screenshots/1.3.0-06.png)
+![Screenshot 06](docs/screenshots/1.3.0-06.png)
 
-![Screenshot 07](screenshots/1.3.0-07.png)
+![Screenshot 07](docs/screenshots/1.3.0-07.png)
 
-![Screenshot 08](screenshots/1.3.0-08.png)
+![Screenshot 08](docs/screenshots/1.3.0-08.png)
 
-![Screenshot 09](screenshots/1.3.0-09.png)
+![Screenshot 09](docs/screenshots/1.3.0-09.png)
 
-![Screenshot 10](screenshots/1.3.0-10.png)
+![Screenshot 10](docs/screenshots/1.3.0-10.png)
 
 ---
 
