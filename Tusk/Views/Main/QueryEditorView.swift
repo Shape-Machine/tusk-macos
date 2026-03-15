@@ -26,7 +26,12 @@ struct QueryEditorView: View {
             resultsPane
                 .frame(minHeight: 100)
         }
-        .onAppear { sql = tab.sql }
+        .onAppear {
+            sql = tab.sql
+            result = tab.result
+            resultIsCapped = tab.resultIsCapped
+            error = tab.error
+        }
         .onChange(of: sql) { _, newValue in
             // Sync in-memory state
             if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
@@ -244,6 +249,12 @@ struct QueryEditorView: View {
         }
 
         isRunning = false
+
+        if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
+            appState.queryTabs[index].result = result
+            appState.queryTabs[index].resultIsCapped = resultIsCapped
+            appState.queryTabs[index].error = error
+        }
     }
 
     /// Wraps SELECT/WITH queries in a subquery capped at `tuskPageSize`.
