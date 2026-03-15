@@ -59,23 +59,23 @@ No Electron. No telemetry. No subscription.
 
 ## Screenshots
 
-![Screenshot 01](screenshots/1.2.1-01.png)
+![Screenshot 01](screenshots/1.3.0-01.png)
 
-![Screenshot 02](screenshots/1.2.1-02.png)
+![Screenshot 02](screenshots/1.3.0-02.png)
 
-![Screenshot 03](screenshots/1.2.1-03.png)
+![Screenshot 03](screenshots/1.3.0-03.png)
 
-![Screenshot 04](screenshots/1.2.1-04.png)
+![Screenshot 04](screenshots/1.3.0-04.png)
 
-![Screenshot 05](screenshots/1.2.1-05.png)
+![Screenshot 05](screenshots/1.3.0-05.png)
 
-![Screenshot 06](screenshots/1.2.1-06.png)
+![Screenshot 06](screenshots/1.3.0-06.png)
 
-![Screenshot 07](screenshots/1.2.1-07.png)
+![Screenshot 07](screenshots/1.3.0-07.png)
 
-![Screenshot 08](screenshots/1.2.1-08.png)
+![Screenshot 08](screenshots/1.3.0-08.png)
 
-![Screenshot 09](screenshots/1.2.1-09.png)
+![Screenshot 09](screenshots/1.3.0-09.png)
 
 ---
 
