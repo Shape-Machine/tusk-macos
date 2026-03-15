@@ -48,31 +48,40 @@ struct DetailView: View {
 
     @ViewBuilder
     private var activeContent: some View {
-        if let tabID = appState.activeDetailTabID,
-           let tab = appState.openTabs.first(where: { $0.id == tabID }) {
-            switch tab.kind {
-            case .table(let connID, let schema, let tableName):
-                if let client = appState.clients[connID] {
-                    TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
-                        .id(connID)
-                } else {
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("Connecting…")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            case .queryEditor(let queryTabID):
-                if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
-                    let client = queryTab.connectionID.flatMap { appState.clients[$0] }
-                    QueryEditorView(tab: queryTab, client: client)
-                        .id(queryTab.id)
+        if appState.openTabs.isEmpty {
+            WelcomeView()
+        } else {
+            ZStack {
+                ForEach(appState.openTabs) { tab in
+                    tabContent(for: tab)
+                        .opacity(tab.id == appState.activeDetailTabID ? 1 : 0)
+                        .allowsHitTesting(tab.id == appState.activeDetailTabID)
                 }
             }
-        } else {
-            WelcomeView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func tabContent(for tab: DetailTab) -> some View {
+        switch tab.kind {
+        case .table(let connID, let schema, let tableName):
+            if let client = appState.clients[connID] {
+                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Connecting…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .queryEditor(let queryTabID):
+            if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
+                let client = queryTab.connectionID.flatMap { appState.clients[$0] }
+                QueryEditorView(tab: queryTab, client: client)
+            }
         }
     }
 }
