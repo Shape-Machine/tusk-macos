@@ -70,7 +70,30 @@ Present the user with three options:
 
 Do not write any code until the user explicitly approves.
 
-### 7. Baseline build check
+### 7. Update the GitHub issue with the approved plan
+
+Post a comment on the issue summarising the approved implementation plan:
+
+```
+gh issue comment $ARGUMENTS --body "$(cat <<'EOF'
+## Approved Implementation Plan
+
+### UX
+<exact UX as approved — which view, which control, what triggers what>
+
+### Implementation
+<files that will change, new types/views, how state flows>
+
+### What will not change
+<anything explicitly out of scope>
+
+---
+*Implementation starting now.*
+EOF
+)"
+```
+
+### 9. Baseline build check
 
 Before touching any code, confirm the current state of the repo builds cleanly:
 
@@ -80,7 +103,7 @@ xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destinat
 
 If the build fails, stop and report — do not proceed on a broken baseline.
 
-### 8. Implement in a feature branch
+### 9. Implement in a feature branch
 
 1. Branch name: `feature/$ARGUMENTS-<slug>` where slug is a short lowercase hyphenated description of the feature (e.g. `feature/33-explain-analyze-viewer`)
    ```
@@ -99,7 +122,7 @@ If the build fails, stop and report — do not proceed on a broken baseline.
    git commit -m "feat: <short description>"
    ```
 
-### 9. Push and open PR
+### 10. Push and open PR
 
 ```
 git push -u origin feature/$ARGUMENTS-<slug>
@@ -124,6 +147,6 @@ EOF
 )"
 ```
 
-### 10. Confirm
+### 11. Confirm
 
 Report the PR URL and summarise what was implemented.
