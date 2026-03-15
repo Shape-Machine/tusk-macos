@@ -49,6 +49,21 @@ enum QueryCell: Sendable {
 
 // MARK: - CSV export
 
+private func csvEscape(_ value: String) -> String {
+    let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+    return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
+        ? "\"\(escaped)\""
+        : escaped
+}
+
+private func csvLines(columns: [QueryColumn], rows: [[QueryCell]]) -> [String] {
+    var lines = [columns.map { csvEscape($0.name) }.joined(separator: ",")]
+    for row in rows {
+        lines.append(row.map { csvEscape($0.displayValue) }.joined(separator: ","))
+    }
+    return lines
+}
+
 /// Presents a save panel and writes `result` as CSV.
 /// `defaultName` is the pre-filled filename (without extension).
 @MainActor
@@ -58,16 +73,7 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
     panel.nameFieldStringValue = "\(defaultName).csv"
     guard panel.runModal() == .OK, let url = panel.url else { return }
 
-    var lines = [result.columns.map(\.name).joined(separator: ",")]
-    for row in result.rows {
-        lines.append(row.map { cell in
-            let val = cell.displayValue
-            let escaped = val.replacingOccurrences(of: "\"", with: "\"\"")
-            return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
-                ? "\"\(escaped)\""
-                : escaped
-        }.joined(separator: ","))
-    }
+    let lines = csvLines(columns: result.columns, rows: result.rows)
     do {
         try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     } catch {
@@ -84,16 +90,7 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
 /// Copies rows as CSV (header + data) to the system clipboard.
 @MainActor
 func copyRowsAsCSV(columns: [QueryColumn], rows: [[QueryCell]]) {
-    var lines = [columns.map(\.name).joined(separator: ",")]
-    for row in rows {
-        lines.append(row.map { cell in
-            let val = cell.displayValue
-            let escaped = val.replacingOccurrences(of: "\"", with: "\"\"")
-            return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
-                ? "\"\(escaped)\""
-                : escaped
-        }.joined(separator: ","))
-    }
+    let lines = csvLines(columns: columns, rows: rows)
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
 }
