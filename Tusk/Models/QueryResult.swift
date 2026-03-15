@@ -99,12 +99,20 @@ func copyRowsAsCSV(columns: [QueryColumn], rows: [[QueryCell]]) {
 }
 
 /// Copies rows as a JSON array of objects to the system clipboard.
+/// Values are serialized with native JSON types: null, number, bool, string.
 @MainActor
 func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
-    let objects: [[String: String]] = rows.map { row in
-        var obj: [String: String] = [:]
+    let objects: [[String: Any]] = rows.map { row in
+        var obj: [String: Any] = [:]
         for (col, cell) in zip(columns, row) {
-            obj[col.name] = cell.displayValue
+            switch cell {
+            case .null:             obj[col.name] = NSNull()
+            case .integer(let i):  obj[col.name] = NSNumber(value: i)
+            case .double(let d):   obj[col.name] = NSNumber(value: d)
+            case .bool(let b):     obj[col.name] = b
+            case .text(let s):     obj[col.name] = s
+            case .bytes(let data): obj[col.name] = data.base64EncodedString()
+            }
         }
         return obj
     }
