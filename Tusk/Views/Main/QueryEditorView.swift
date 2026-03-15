@@ -426,6 +426,7 @@ struct ResultsGrid: View {
         if flags.contains(.command) {
             if selectedRows.contains(rowIndex) {
                 selectedRows.remove(rowIndex)
+                if lastSelectedRow == rowIndex { lastSelectedRow = nil }
             } else {
                 selectedRows.insert(rowIndex)
                 lastSelectedRow = rowIndex
