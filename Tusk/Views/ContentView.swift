@@ -44,6 +44,11 @@ struct DetailView: View {
         }
         .environment(\.font, .system(size: contentFontSize, design: contentFontDesign.design))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: appState.activeDetailTabID) {
+            // Resign AppKit first responder (e.g. NSTextView in SQLTextEditor) when
+            // switching tabs so hidden editors don't continue receiving keyboard input.
+            NSApp.keyWindow?.makeFirstResponder(nil)
+        }
     }
 
     @ViewBuilder
@@ -56,6 +61,7 @@ struct DetailView: View {
                     tabContent(for: tab)
                         .opacity(tab.id == appState.activeDetailTabID ? 1 : 0)
                         .allowsHitTesting(tab.id == appState.activeDetailTabID)
+                        .accessibilityHidden(tab.id != appState.activeDetailTabID)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
