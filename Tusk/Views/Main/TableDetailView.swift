@@ -27,7 +27,13 @@ struct TableDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: tableName) { await loadMeta() }
-        .onChange(of: tableName) { dataState = DataBrowserState() }
+        .onChange(of: tableName) { _, _ in
+            dataState.result = nil
+            dataState.error = nil
+            dataState.isLoading = false
+            dataState.offset = 0
+            dataState.filterText = ""
+        }
     }
 
     // MARK: - Header
