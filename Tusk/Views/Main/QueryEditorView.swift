@@ -385,6 +385,7 @@ struct ResultsGrid: View {
             }
             .focusable()
             .focused($isFocused)
+            .focusEffectDisabled()
             .onKeyPress(keys: [.upArrow, .downArrow, .pageUp, .pageDown]) { press in
                 handleKeyNavigation(press: press, viewHeight: geo.size.height)
                 return .handled
