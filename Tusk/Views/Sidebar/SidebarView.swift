@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct SidebarView: View {
-    @Environment(AppState.self) private var appState
+    @Bindable var appState: AppState
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
-    @State private var showingSettings = false
 
     var body: some View {
         VSplitView {
@@ -41,12 +40,12 @@ struct SidebarView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
-                    showingSettings.toggle()
+                    appState.isShowingSettings.toggle()
                 } label: {
                     Image(systemName: "gearshape")
                 }
                 .help("Appearance settings")
-                .popover(isPresented: $showingSettings, arrowEdge: .bottom) {
+                .popover(isPresented: $appState.isShowingSettings, arrowEdge: .bottom) {
                     SettingsPopover()
                 }
             }
