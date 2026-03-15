@@ -121,6 +121,10 @@ func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
 
 // MARK: - INSERT copy helpers
 
+private func quoteIdentifier(_ name: String) -> String {
+    "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+}
+
 private func sqlLiteral(_ cell: QueryCell) -> String {
     switch cell {
     case .null:             return "NULL"
@@ -133,9 +137,9 @@ private func sqlLiteral(_ cell: QueryCell) -> String {
 }
 
 private func insertStatement(schema: String, table: String, columns: [QueryColumn], row: [QueryCell]) -> String {
-    let cols = columns.map { "\"\($0.name)\"" }.joined(separator: ", ")
+    let cols = columns.map { quoteIdentifier($0.name) }.joined(separator: ", ")
     let vals = row.map { sqlLiteral($0) }.joined(separator: ", ")
-    return "INSERT INTO \"\(schema)\".\"\(table)\" (\(cols)) VALUES (\(vals));"
+    return "INSERT INTO \(quoteIdentifier(schema)).\(quoteIdentifier(table)) (\(cols)) VALUES (\(vals));"
 }
 
 /// Copies a single row as a PostgreSQL INSERT statement to the clipboard.
