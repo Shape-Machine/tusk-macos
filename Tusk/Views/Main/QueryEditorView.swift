@@ -301,9 +301,11 @@ struct ResultsGrid: View {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
                         // Data rows — only rows near the viewport are materialised
-                        ForEach(Array(result.rows.enumerated()), id: \.offset) { rowIndex, row in
+                        ForEach(result.rows.indices, id: \.self) { rowIndex in
+                            let row = result.rows[rowIndex]
                             HStack(spacing: 0) {
-                                ForEach(Array(row.enumerated()), id: \.offset) { colIndex, cell in
+                                ForEach(row.indices, id: \.self) { colIndex in
+                                    let cell = row[colIndex]
                                     Text(cell.displayValue)
                                         .lineLimit(1)
                                         .truncationMode(.tail)
