@@ -9,7 +9,7 @@
 
 ---
 
-<h3 align=center><a href="https://github.com/Shape-Machine/tusk-macos/releases/download/v1.3.0/Tusk-1.3.0.dmg">Download Tusk-1.3.0.dmg</a><small> — macOS 14+</small></h3>
+<h3 align=center><a href="https://github.com/Shape-Machine/tusk-macos/releases/download/v1.4.0/Tusk-1.4.0.dmg">Download Tusk-1.4.0.dmg</a><small> — macOS 14+</small></h3>
 <p align=center>
 <em>
 Not notarized.<br/>
