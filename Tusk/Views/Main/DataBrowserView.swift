@@ -10,6 +10,8 @@ final class DataBrowserState {
     var error: String? = nil
     var offset: Int = 0
     var filterText: String = ""
+    var loadTask: Task<Void, Never>? = nil
+    var filterDebounceTask: Task<Void, Never>? = nil
 }
 
 // MARK: - Data browser view
@@ -26,8 +28,6 @@ struct DataBrowserView: View {
 
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
-    @State private var filterDebounceTask: Task<Void, Never>? = nil
-    @State private var loadTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,8 +75,8 @@ struct DataBrowserView: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
                 .onChange(of: state.filterText) { _, _ in
-                    filterDebounceTask?.cancel()
-                    filterDebounceTask = Task {
+                    state.filterDebounceTask?.cancel()
+                    state.filterDebounceTask = Task {
                         try? await Task.sleep(for: .milliseconds(300))
                         guard !Task.isCancelled else { return }
                         state.offset = 0
@@ -165,8 +165,8 @@ struct DataBrowserView: View {
 
     /// Cancels any in-flight load and starts a fresh one.
     private func triggerLoad() {
-        loadTask?.cancel()
-        loadTask = Task { await load() }
+        state.loadTask?.cancel()
+        state.loadTask = Task { await load() }
     }
 
     private func load() async {
