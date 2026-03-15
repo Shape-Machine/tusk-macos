@@ -47,8 +47,8 @@ struct DataBrowserView: View {
                             description: Text("This table has no data."))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        ResultsGrid(result: result) { row in
-                            copyRowAsInsert(schema: schemaName, table: tableName, columns: result.columns, row: row)
+                        ResultsGrid(result: result) { rows in
+                            copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
                         }
                     }
                     Divider()

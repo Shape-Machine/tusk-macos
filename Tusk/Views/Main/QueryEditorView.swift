@@ -291,7 +291,7 @@ struct QueryEditorView: View {
 
 struct ResultsGrid: View {
     let result: QueryResult
-    var copyAsInsert: (([QueryCell]) -> Void)? = nil
+    var copyAsInsert: (([[QueryCell]]) -> Void)? = nil
 
     @State private var expandedCell: CellDetailContent? = nil
     @State private var selectedRows: Set<Int> = []
@@ -348,7 +348,7 @@ struct ResultsGrid: View {
                                 }
                                 if let copyAsInsert {
                                     Button("Copy \(label) as INSERT") {
-                                        selectionRows.forEach { copyAsInsert($0) }
+                                        copyAsInsert(selectionRows)
                                     }
                                 }
                             }
