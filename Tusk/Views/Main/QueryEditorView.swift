@@ -337,7 +337,7 @@ struct ResultsGrid: View {
                                 handleRowTap(rowIndex: rowIndex)
                             }
                             .contextMenu {
-                                let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().map { result.rows[$0] }
+                                let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
                                 let count = selectedRows.isEmpty ? 1 : selectedRows.count
                                 let label = count == 1 ? "Row" : "\(count) Rows"
                                 Button("Copy \(label) as CSV") {
