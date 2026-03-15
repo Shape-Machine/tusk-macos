@@ -37,7 +37,9 @@ struct DataBrowserView: View {
                             description: Text("This table has no data."))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        ResultsGrid(result: result)
+                        ResultsGrid(result: result) { row in
+                            copyRowAsInsert(schema: schemaName, table: tableName, columns: result.columns, row: row)
+                        }
                     }
                     Divider()
                     statusBar(result: result)
@@ -112,6 +114,14 @@ struct DataBrowserView: View {
 
             Spacer()
 
+            Button {
+                copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
+            } label: {
+                Label("Copy INSERT", systemImage: "doc.on.clipboard")
+                    .font(.caption)
+            }
+            .buttonStyle(.borderless)
+            .help("Copy all rows as INSERT statements")
             Button {
                 copyRowsAsCSV(columns: result.columns, rows: result.rows)
             } label: {
