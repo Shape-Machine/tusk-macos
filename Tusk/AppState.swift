@@ -353,6 +353,9 @@ struct QueryTab: Identifiable {
     var title: String = "Query"
     var sql: String = ""
     var sourceURL: URL? = nil
+    var result: QueryResult? = nil
+    var resultIsCapped: Bool = false
+    var error: String? = nil
 }
 
 // MARK: - Detail tab model
