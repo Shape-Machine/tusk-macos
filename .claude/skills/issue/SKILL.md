@@ -20,7 +20,18 @@ gh issue view $ARGUMENTS
 
 Read the full issue body, title, labels, and any comments.
 
-### 2. Rate importance
+### 2. Check for existing work
+
+Before anything else, check if work on this issue has already started:
+
+```
+git branch -a | grep $ARGUMENTS
+gh pr list --search "$ARGUMENTS" --state all
+```
+
+If an open PR or branch already exists, report it and stop — do not duplicate work.
+
+### 3. Rate importance
 
 Score the issue on three axes, each 1–5:
 
@@ -28,9 +39,9 @@ Score the issue on three axes, each 1–5:
 - **Complexity** — how hard is this to implement correctly? (5 = very hard)
 - **Risk** — could this break existing behaviour or introduce regressions? (5 = high risk)
 
-Present as a concise table. Add a one-sentence verdict: **High / Medium / Low priority** with reasoning.
+Present as a concise table. Add a one-sentence verdict: **High / Medium / Low priority** with reasoning. This is to help the user decide whether to proceed now or defer.
 
-### 3. Review proposed UX and implementation guidelines
+### 4. Review proposed UX and implementation guidelines
 
 If the issue contains UX or implementation suggestions, extract them explicitly. Then:
 
@@ -40,7 +51,7 @@ If the issue contains UX or implementation suggestions, extract them explicitly.
 
 If the issue has no UX/implementation detail, skip this step and note that none was provided.
 
-### 4. Propose implementation path
+### 5. Propose implementation path
 
 Based on your code review, propose:
 
@@ -50,40 +61,69 @@ Based on your code review, propose:
 
 Keep this tight. No padding.
 
-### 5. Wait for approval
+### 6. Wait for approval
 
-Stop and ask the user:
-- Does the proposed UX and implementation path look right?
-- Any changes before proceeding?
+Present the user with three options:
+1. **Approve** — proceed with implementation as proposed
+2. **Revise** — user provides feedback; update the proposal and loop back to this step
+3. **Abort** — stop without implementing anything
 
 Do not write any code until the user explicitly approves.
 
-### 6. Implement in a feature branch
+### 7. Baseline build check
 
-Once approved:
+Before touching any code, confirm the current state of the repo builds cleanly:
 
-1. Derive a branch name from the issue title — lowercase, hyphenated, prefixed with `feature/` (e.g. `feature/explain-analyze-viewer`)
-2. Create and switch to the branch:
+```
+xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destination "platform=macOS" build 2>&1 | tail -3
+```
+
+If the build fails, stop and report — do not proceed on a broken baseline.
+
+### 8. Implement in a feature branch
+
+1. Branch name: `feature/$ARGUMENTS-<slug>` where slug is a short lowercase hyphenated description of the feature (e.g. `feature/33-explain-analyze-viewer`)
    ```
-   git checkout -b feature/<branch-name>
+   git checkout -b feature/$ARGUMENTS-<slug>
    ```
-3. Implement exactly what was approved — no scope creep
-4. Follow all existing patterns in the codebase (font settings via `@AppStorage`, explicit `.font()` on List rows, etc.)
-5. Build to confirm no regressions:
+2. Implement exactly what was approved — no scope creep
+3. Follow all existing patterns in the codebase (font settings via `@AppStorage`, explicit `.font()` on List rows, etc.)
+4. Build to confirm no regressions:
    ```
-   xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destination "platform=macOS" build
+   xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destination "platform=macOS" build 2>&1 | tail -3
    ```
-6. Commit:
+   Do not proceed if the build fails.
+5. Stage and commit only the files you changed:
    ```
    git add <changed files>
    git commit -m "feat: <short description>"
    ```
-7. Push and open a PR:
-   ```
-   git push -u origin feature/<branch-name>
-   gh pr create --title "<title>" --body "<summary + closes #$ARGUMENTS>"
-   ```
 
-### 7. Confirm
+### 9. Push and open PR
+
+```
+git push -u origin feature/$ARGUMENTS-<slug>
+gh pr create \
+  --title "<concise title>" \
+  --body "$(cat <<'EOF'
+## Summary
+<2–4 sentences describing what was built and why>
+
+## Changes
+- <file or component>: <what changed>
+- ...
+
+## What was not changed
+<explicitly note anything adjacent that was considered but left out>
+
+## How to test
+<short, specific steps to verify the feature works>
+
+Closes #$ARGUMENTS
+EOF
+)"
+```
+
+### 10. Confirm
 
 Report the PR URL and summarise what was implemented.
