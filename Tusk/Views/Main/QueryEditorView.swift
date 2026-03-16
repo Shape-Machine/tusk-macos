@@ -322,7 +322,8 @@ struct ResultsGrid: View {
                                             .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
                                             .border(Color(nsColor: .separatorColor), width: 0.5)
                                             .onTapGesture(count: 2) {
-                                                expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
+                                                let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
+                                                expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
                                             }
                                             .contextMenu {
                                                 Button("Copy Cell") {
@@ -330,7 +331,8 @@ struct ResultsGrid: View {
                                                     NSPasteboard.general.setString(cell.displayValue, forType: .string)
                                                 }
                                                 Button("View Full Value") {
-                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue)
+                                                    let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
+                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
                                                 }
                                             }
                                     }
@@ -397,7 +399,7 @@ struct ResultsGrid: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .sheet(item: $expandedCell) { content in
-            CellDetailView(value: content.value)
+            CellDetailView(value: content.value, columnDataType: content.columnDataType)
         }
         .onChange(of: result.id) {
             selectedRows.removeAll()
@@ -497,11 +499,28 @@ struct ResultsGrid: View {
 private struct CellDetailContent: Identifiable {
     let id: String   // "\(rowIndex):\(colIndex)" — stable across re-renders
     let value: String
+    let columnDataType: String
 }
 
 struct CellDetailView: View {
     let value: String
+    let columnDataType: String
     @Environment(\.dismiss) private var dismiss
+    @State private var showTree = true
+
+    private var parsedJSON: JSONValue? {
+        guard columnDataType == "json" || columnDataType == "jsonb" else { return nil }
+        return parseJSONValue(value)
+    }
+
+    private var prettyJSON: String {
+        guard let data = value.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+              let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: pretty, encoding: .utf8)
+        else { return value }
+        return str
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -509,6 +528,14 @@ struct CellDetailView: View {
                 Text("Cell Value")
                     .fontWeight(.semibold)
                 Spacer()
+                if parsedJSON != nil {
+                    Picker("", selection: $showTree) {
+                        Text("Tree").tag(true)
+                        Text("Raw").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(value, forType: .string)
@@ -530,24 +557,151 @@ struct CellDetailView: View {
 
             Divider()
 
-            ScrollView([.horizontal, .vertical]) {
-                if value.isEmpty {
-                    Text("''")
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .italic()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                } else {
-                    Text(value)
-                        .font(.system(.body, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+            if let json = parsedJSON, showTree {
+                JSONTreeView(value: json)
+            } else {
+                let displayText = parsedJSON != nil ? prettyJSON : value
+                ScrollView([.horizontal, .vertical]) {
+                    if displayText.isEmpty {
+                        Text("''")
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .italic()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                    } else {
+                        Text(displayText)
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                    }
                 }
+                .background(Color(nsColor: .textBackgroundColor))
             }
-            .background(Color(nsColor: .textBackgroundColor))
         }
         .frame(minWidth: 480, minHeight: 300)
+    }
+}
+
+// MARK: - JSON tree view
+
+private indirect enum JSONValue: Sendable {
+    case object([(String, JSONValue)])
+    case array([JSONValue])
+    case string(String)
+    case number(String)
+    case bool(Bool)
+    case null
+}
+
+private func parseJSONValue(_ string: String) -> JSONValue? {
+    guard let data = string.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+    else { return nil }
+    return convertAny(obj)
+}
+
+private func convertAny(_ any: Any) -> JSONValue {
+    if any is NSNull { return .null }
+    if let n = any as? NSNumber, CFGetTypeID(n) == CFBooleanGetTypeID() {
+        return .bool(n.boolValue)
+    }
+    if let n = any as? NSNumber { return .number(n.stringValue) }
+    if let s = any as? String { return .string(s) }
+    if let obj = any as? [String: Any] {
+        let pairs = obj.keys.sorted().map { k in (k, convertAny(obj[k]!)) }
+        return .object(pairs)
+    }
+    if let arr = any as? [Any] {
+        return .array(arr.map { convertAny($0) })
+    }
+    return .string(String(describing: any))
+}
+
+private struct JSONTreeView: View {
+    let value: JSONValue
+
+    var body: some View {
+        ScrollView([.horizontal, .vertical]) {
+            JSONNodeView(value: value, depth: 0)
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+}
+
+private struct JSONNodeView: View {
+    let value: JSONValue
+    let depth: Int
+    @State private var isExpanded: Bool
+
+    init(value: JSONValue, depth: Int) {
+        self.value = value
+        self.depth = depth
+        _isExpanded = State(initialValue: depth < 2)
+    }
+
+    var body: some View {
+        Group {
+            switch value {
+            case .object(let pairs):
+                DisclosureGroup(isExpanded: $isExpanded) {
+                    ForEach(Array(pairs.enumerated()), id: \.offset) { _, pair in
+                        HStack(alignment: .top, spacing: 4) {
+                            Text(pair.0 + ":")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.primary)
+                            JSONNodeView(value: pair.1, depth: depth + 1)
+                        }
+                        .padding(.leading, 16)
+                    }
+                } label: {
+                    Text(isExpanded ? "{" : "{ \(pairs.count) }")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+            case .array(let items):
+                DisclosureGroup(isExpanded: $isExpanded) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                        HStack(alignment: .top, spacing: 4) {
+                            Text("\(idx):")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                            JSONNodeView(value: item, depth: depth + 1)
+                        }
+                        .padding(.leading, 16)
+                    }
+                } label: {
+                    Text(isExpanded ? "[" : "[ \(items.count) ]")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+            case .string(let s):
+                Text("\"\(s)\"")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+
+            case .number(let n):
+                Text(n)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(Color.teal)
+
+            case .bool(let b):
+                Text(b ? "true" : "false")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(Color.blue)
+
+            case .null:
+                Text("null")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .italic()
+            }
+        }
     }
 }
