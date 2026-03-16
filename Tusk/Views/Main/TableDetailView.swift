@@ -17,6 +17,7 @@ struct TableDetailView: View {
     @State private var isLoadingMeta = false
     @State private var dataState = DataBrowserState()
     @State private var ddlText = ""
+    @State private var ddlError: String? = nil
     @State private var isLoadingDDL = false
     @State private var ddlLoadTask: Task<Void, Never>? = nil
 
@@ -41,6 +42,7 @@ struct TableDetailView: View {
             ddlLoadTask?.cancel()
             ddlLoadTask = nil
             ddlText = ""
+            ddlError = nil
         }
         .onChange(of: selectedTab) { _, newTab in
             if newTab == .ddl && ddlText.isEmpty && !isLoadingDDL {
@@ -115,7 +117,7 @@ struct TableDetailView: View {
         case .relations:
             RelationsView(client: client, schemaName: schemaName, tableName: tableName)
         case .ddl:
-            DDLTab(ddlText: ddlText, isLoading: isLoadingDDL, fontSize: contentFontSize, fontDesign: contentFontDesign)
+            DDLTab(ddlText: ddlText, ddlError: ddlError, isLoading: isLoadingDDL, fontSize: contentFontSize, fontDesign: contentFontDesign)
         }
     }
 
@@ -188,9 +190,15 @@ struct TableDetailView: View {
 
     private func loadDDL() async {
         isLoadingDDL = true
-        let result = try? await client.tableDDL(schema: schemaName, table: tableName)
-        guard !Task.isCancelled else { isLoadingDDL = false; return }
-        ddlText = result ?? ""
+        do {
+            let result = try await client.tableDDL(schema: schemaName, table: tableName)
+            guard !Task.isCancelled else { isLoadingDDL = false; return }
+            ddlText = result
+            ddlError = nil
+        } catch {
+            guard !Task.isCancelled else { isLoadingDDL = false; return }
+            ddlError = error.localizedDescription
+        }
         isLoadingDDL = false
     }
 }
@@ -199,6 +207,7 @@ struct TableDetailView: View {
 
 private struct DDLTab: View {
     let ddlText: String
+    let ddlError: String?
     let isLoading: Bool
     let fontSize: Double
     let fontDesign: TuskFontDesign
@@ -206,6 +215,10 @@ private struct DDLTab: View {
     var body: some View {
         if isLoading {
             ProgressView("Loading…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = ddlError {
+            ContentUnavailableView("Failed to load DDL", systemImage: "exclamationmark.triangle")
+                .help(error)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if ddlText.isEmpty {
             ContentUnavailableView("No DDL available", systemImage: "doc.text")
