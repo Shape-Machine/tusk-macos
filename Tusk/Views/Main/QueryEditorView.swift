@@ -531,11 +531,20 @@ struct CellDetailView: View {
             Divider()
 
             ScrollView([.horizontal, .vertical]) {
-                Text(value)
-                    .font(.system(.body, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+                if value.isEmpty {
+                    Text("''")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .italic()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                } else {
+                    Text(value)
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                }
             }
             .background(Color(nsColor: .textBackgroundColor))
         }
