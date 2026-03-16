@@ -9,13 +9,15 @@ struct TableDetailView: View {
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
-    enum Tab { case columns, keys, data, relations }
+    enum Tab { case columns, keys, relations, ddl, data }
 
     @State private var selectedTab: Tab = .columns
     @State private var columns: [ColumnInfo] = []
     @State private var foreignKeys: [ForeignKeyInfo] = []
     @State private var isLoadingMeta = false
     @State private var dataState = DataBrowserState()
+    @State private var ddlText = ""
+    @State private var isLoadingDDL = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +37,12 @@ struct TableDetailView: View {
             dataState.isLoading = false
             dataState.offset = 0
             dataState.filterText = ""
+            ddlText = ""
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            if newTab == .ddl && ddlText.isEmpty && !isLoadingDDL {
+                Task { await loadDDL() }
+            }
         }
     }
 
@@ -66,6 +74,7 @@ struct TableDetailView: View {
             tabSegment("Columns", for: .columns)
             tabSegment("Keys", for: .keys)
             tabSegment("Relations", for: .relations)
+            tabSegment("DDL", for: .ddl)
             tabSegment("Data", for: .data)
             Spacer()
         }
@@ -102,6 +111,8 @@ struct TableDetailView: View {
             keysTab
         case .relations:
             RelationsView(client: client, schemaName: schemaName, tableName: tableName)
+        case .ddl:
+            DDLTab(ddlText: ddlText, isLoading: isLoadingDDL, fontSize: contentFontSize, fontDesign: contentFontDesign)
         }
     }
 
@@ -170,5 +181,49 @@ struct TableDetailView: View {
         columns     = await cols ?? []
         foreignKeys = await fks  ?? []
         isLoadingMeta = false
+    }
+
+    private func loadDDL() async {
+        isLoadingDDL = true
+        ddlText = (try? await client.tableDDL(schema: schemaName, table: tableName)) ?? ""
+        isLoadingDDL = false
+    }
+}
+
+// MARK: - DDL tab
+
+private struct DDLTab: View {
+    let ddlText: String
+    let isLoading: Bool
+    let fontSize: Double
+    let fontDesign: TuskFontDesign
+
+    var body: some View {
+        if isLoading {
+            ProgressView("Loading…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if ddlText.isEmpty {
+            ContentUnavailableView("No DDL available", systemImage: "doc.text")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(ddlText, forType: .string)
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+                Divider()
+                SQLTextEditor(text: .constant(ddlText), fontSize: fontSize, isEditable: false)
+            }
+        }
     }
 }
