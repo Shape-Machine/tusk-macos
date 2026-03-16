@@ -189,7 +189,7 @@ actor DatabaseClient {
     }
 
     func tableDDL(schema: String, table: String) async throws -> String {
-        async let colResult = query("""
+        let cols = try await query("""
             SELECT
                 a.attname,
                 pg_catalog.format_type(a.atttypid, a.atttypmod),
@@ -207,7 +207,7 @@ actor DatabaseClient {
             ORDER BY a.attnum
             """)
 
-        async let conResult = query("""
+        let cons = try await query("""
             SELECT pg_catalog.pg_get_constraintdef(con.oid, true)
             FROM pg_catalog.pg_constraint con
             JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
@@ -215,8 +215,6 @@ actor DatabaseClient {
             WHERE n.nspname = '\(schema)' AND c.relname = '\(table)'
             ORDER BY con.contype
             """)
-
-        let (cols, cons) = try await (colResult, conResult)
 
         var lines: [String] = []
         for row in cols.rows {
