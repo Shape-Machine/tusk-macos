@@ -100,6 +100,8 @@ actor DatabaseClient {
     }
 
     func columns(schema: String, table: String) async throws -> [ColumnInfo] {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
         let result = try await query("""
             SELECT
                 c.column_name,
@@ -115,10 +117,10 @@ actor DatabaseClient {
                   ON tc.constraint_name = ku.constraint_name
                  AND tc.table_schema = ku.table_schema
                 WHERE tc.constraint_type = 'PRIMARY KEY'
-                  AND tc.table_schema = '\(schema)'
-                  AND tc.table_name   = '\(table)'
+                  AND tc.table_schema = '\(s)'
+                  AND tc.table_name   = '\(t)'
             ) pk ON c.column_name = pk.column_name
-            WHERE c.table_schema = '\(schema)' AND c.table_name = '\(table)'
+            WHERE c.table_schema = '\(s)' AND c.table_name = '\(t)'
             ORDER BY c.ordinal_position
             """)
 
@@ -134,6 +136,8 @@ actor DatabaseClient {
     }
 
     func foreignKeys(schema: String, table: String) async throws -> [ForeignKeyInfo] {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
         let result = try await query("""
             SELECT
                 tc.constraint_name,
@@ -146,8 +150,8 @@ actor DatabaseClient {
             JOIN information_schema.constraint_column_usage AS ccu
               ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
-              AND tc.table_schema = '\(schema)'
-              AND tc.table_name   = '\(table)'
+              AND tc.table_schema = '\(s)'
+              AND tc.table_name   = '\(t)'
             """)
 
         return result.rows.map { row in
@@ -161,6 +165,8 @@ actor DatabaseClient {
     }
 
     func incomingReferences(schema: String, table: String) async throws -> [IncomingReference] {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
         let result = try await query("""
             SELECT
                 tc.constraint_name,
@@ -173,8 +179,8 @@ actor DatabaseClient {
             JOIN information_schema.constraint_column_usage AS ccu
               ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
-              AND ccu.table_schema = '\(schema)'
-              AND ccu.table_name   = '\(table)'
+              AND ccu.table_schema = '\(s)'
+              AND ccu.table_name   = '\(t)'
             ORDER BY tc.table_name
             """)
 
@@ -189,6 +195,8 @@ actor DatabaseClient {
     }
 
     func tableDDL(schema: String, table: String) async throws -> String {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
         let cols = try await query("""
             SELECT
                 a.attname,
@@ -202,7 +210,7 @@ actor DatabaseClient {
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             LEFT JOIN pg_catalog.pg_attrdef ad
               ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
-            WHERE n.nspname = '\(schema)' AND c.relname = '\(table)'
+            WHERE n.nspname = '\(s)' AND c.relname = '\(t)'
               AND a.attnum > 0 AND NOT a.attisdropped
             ORDER BY a.attnum
             """)
@@ -212,7 +220,7 @@ actor DatabaseClient {
             FROM pg_catalog.pg_constraint con
             JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = '\(schema)' AND c.relname = '\(table)'
+            WHERE n.nspname = '\(s)' AND c.relname = '\(t)'
             ORDER BY con.contype
             """)
 
@@ -285,6 +293,14 @@ private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+// MARK: - SQL string literal escaping
+
+private extension String {
+    /// Escapes a value for embedding inside a SQL single-quoted string literal
+    /// by doubling any single quotes, e.g. "user's" → "user''s".
+    var sqlEscaped: String { replacingOccurrences(of: "'", with: "''") }
 }
 
 // MARK: - PostgreSQL binary date/time decoding
