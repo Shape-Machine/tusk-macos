@@ -314,10 +314,9 @@ struct ResultsGrid: View {
                                 HStack(spacing: 0) {
                                     ForEach(row.indices, id: \.self) { colIndex in
                                         let cell = row[colIndex]
-                                        Text(cell.displayValue)
+                                        cellText(cell)
                                             .lineLimit(1)
                                             .truncationMode(.tail)
-                                            .foregroundStyle(cell.isNull ? .tertiary : .primary)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
                                             .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
@@ -405,6 +404,18 @@ struct ResultsGrid: View {
             lastSelectedRow = nil
             keyboardCursor = nil
         }
+    }
+
+    // MARK: - Cell rendering
+
+    private func cellText(_ cell: QueryCell) -> Text {
+        if cell.isNull {
+            return Text("NULL").foregroundStyle(.tertiary).italic()
+        }
+        if case .text(let s) = cell, s.isEmpty {
+            return Text("''").foregroundStyle(.tertiary).italic()
+        }
+        return Text(cell.displayValue).foregroundStyle(.primary)
     }
 
     // MARK: - Row background
