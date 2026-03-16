@@ -523,12 +523,13 @@ struct CellDetailView: View {
     }
 
     var body: some View {
+        let json = parsedJSON   // parse exactly once per render
         VStack(spacing: 0) {
             HStack {
                 Text("Cell Value")
                     .fontWeight(.semibold)
                 Spacer()
-                if parsedJSON != nil {
+                if json != nil {
                     Picker("", selection: $showTree) {
                         Text("Tree").tag(true)
                         Text("Raw").tag(false)
@@ -557,10 +558,10 @@ struct CellDetailView: View {
 
             Divider()
 
-            if let json = parsedJSON, showTree {
-                JSONTreeView(value: json)
+            if let j = json, showTree {
+                JSONTreeView(value: j)
             } else {
-                let displayText = parsedJSON != nil ? prettyJSON : value
+                let displayText = json != nil ? prettyJSON : value
                 ScrollView([.horizontal, .vertical]) {
                     if displayText.isEmpty {
                         Text("''")
