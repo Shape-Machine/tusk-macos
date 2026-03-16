@@ -231,7 +231,7 @@ actor DatabaseClient {
             let notNull = (row[safe: 2]?.displayValue ?? "false") == "true"
             let defVal  = row[safe: 3]?.isNull == true ? nil : row[safe: 3]?.displayValue
 
-            var line = "    \"\(name)\" \(type)"
+            var line = "    \(quoteIdentifier(name)) \(type)"
             if notNull  { line += " NOT NULL" }
             if let d = defVal { line += " DEFAULT \(d)" }
             lines.append(line)
@@ -241,9 +241,7 @@ actor DatabaseClient {
             lines.append("    \(def)")
         }
 
-        let schemaQ = "\"\(schema)\""
-        let tableQ  = "\"\(table)\""
-        return "CREATE TABLE \(schemaQ).\(tableQ) (\n\(lines.joined(separator: ",\n"))\n);"
+        return "CREATE TABLE \(quoteIdentifier(schema)).\(quoteIdentifier(table)) (\n\(lines.joined(separator: ",\n"))\n);"
     }
 
     // MARK: - Raw query
@@ -301,6 +299,12 @@ private extension String {
     /// Escapes a value for embedding inside a SQL single-quoted string literal
     /// by doubling any single quotes, e.g. "user's" → "user''s".
     var sqlEscaped: String { replacingOccurrences(of: "'", with: "''") }
+}
+
+// MARK: - SQL identifier quoting
+
+private func quoteIdentifier(_ name: String) -> String {
+    "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }
 
 // MARK: - PostgreSQL binary date/time decoding
