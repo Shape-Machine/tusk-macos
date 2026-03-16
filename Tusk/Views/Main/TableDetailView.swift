@@ -18,6 +18,7 @@ struct TableDetailView: View {
     @State private var dataState = DataBrowserState()
     @State private var ddlText = ""
     @State private var isLoadingDDL = false
+    @State private var ddlLoadTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,11 +38,13 @@ struct TableDetailView: View {
             dataState.isLoading = false
             dataState.offset = 0
             dataState.filterText = ""
+            ddlLoadTask?.cancel()
+            ddlLoadTask = nil
             ddlText = ""
         }
         .onChange(of: selectedTab) { _, newTab in
             if newTab == .ddl && ddlText.isEmpty && !isLoadingDDL {
-                Task { await loadDDL() }
+                ddlLoadTask = Task { await loadDDL() }
             }
         }
     }
@@ -185,7 +188,9 @@ struct TableDetailView: View {
 
     private func loadDDL() async {
         isLoadingDDL = true
-        ddlText = (try? await client.tableDDL(schema: schemaName, table: tableName)) ?? ""
+        let result = try? await client.tableDDL(schema: schemaName, table: tableName)
+        guard !Task.isCancelled else { isLoadingDDL = false; return }
+        ddlText = result ?? ""
         isLoadingDDL = false
     }
 }
