@@ -188,6 +188,58 @@ actor DatabaseClient {
         }
     }
 
+    func tableDDL(schema: String, table: String) async throws -> String {
+        async let colResult = query("""
+            SELECT
+                a.attname,
+                pg_catalog.format_type(a.atttypid, a.atttypmod),
+                a.attnotnull,
+                CASE WHEN ad.adbin IS NOT NULL
+                     THEN pg_catalog.pg_get_expr(ad.adbin, ad.adrelid)
+                     ELSE NULL END
+            FROM pg_catalog.pg_attribute a
+            JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            LEFT JOIN pg_catalog.pg_attrdef ad
+              ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+            WHERE n.nspname = '\(schema)' AND c.relname = '\(table)'
+              AND a.attnum > 0 AND NOT a.attisdropped
+            ORDER BY a.attnum
+            """)
+
+        async let conResult = query("""
+            SELECT pg_catalog.pg_get_constraintdef(con.oid, true)
+            FROM pg_catalog.pg_constraint con
+            JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = '\(schema)' AND c.relname = '\(table)'
+            ORDER BY con.contype
+            """)
+
+        let (cols, cons) = try await (colResult, conResult)
+
+        var lines: [String] = []
+        for row in cols.rows {
+            let name    = row[safe: 0]?.displayValue ?? ""
+            let type    = row[safe: 1]?.displayValue ?? ""
+            let notNull = (row[safe: 2]?.displayValue ?? "false") == "true"
+            let defVal  = row[safe: 3]?.isNull == true ? nil : row[safe: 3]?.displayValue
+
+            var line = "    \"\(name)\" \(type)"
+            if notNull  { line += " NOT NULL" }
+            if let d = defVal { line += " DEFAULT \(d)" }
+            lines.append(line)
+        }
+        for row in cons.rows {
+            let def = row[safe: 0]?.displayValue ?? ""
+            lines.append("    \(def)")
+        }
+
+        let schemaQ = "\"\(schema)\""
+        let tableQ  = "\"\(table)\""
+        return "CREATE TABLE \(schemaQ).\(tableQ) (\n\(lines.joined(separator: ",\n"))\n);"
+    }
+
     // MARK: - Raw query
 
     func query(_ sql: String, rowLimit: Int? = nil) async throws -> QueryResult {

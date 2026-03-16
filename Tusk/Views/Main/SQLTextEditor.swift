@@ -5,6 +5,7 @@ import AppKit
 struct SQLTextEditor: NSViewRepresentable {
     @Binding var text: String
     var fontSize: Double = Double(NSFont.systemFontSize)
+    var isEditable: Bool = true
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -15,6 +16,7 @@ struct SQLTextEditor: NSViewRepresentable {
         textView.backgroundColor = .textBackgroundColor
         textView.textColor = .labelColor
         textView.textContainerInset = NSSize(width: 4, height: 8)
+        textView.isEditable = isEditable
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticSpellingCorrectionEnabled = false
