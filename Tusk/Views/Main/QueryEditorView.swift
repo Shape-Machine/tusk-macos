@@ -617,8 +617,27 @@ struct QueryEditorView: View {
             }
         }
 
-        // Cursor is in the final statement (no trailing semicolon)
-        return cursor >= stmtStart ? stmtSubstring() : nil
+        // Cursor is in the final segment (no trailing semicolon).
+        // Guard: cursor must be at or after the first actual content character —
+        // not just in leading whitespace or comments before the next statement.
+        guard cursor >= stmtStart else { return nil }
+        var ci = stmtStart
+        while ci < len {
+            let c  = ns.character(at: ci)
+            let n2 = ci + 1 < len ? ns.character(at: ci + 1) : 0
+            if c == 32 || c == 9 || c == 10 || c == 13 {
+                ci += 1
+            } else if c == hyphen && n2 == hyphen {
+                ci += 2
+                while ci < len && ns.character(at: ci) != newline && ns.character(at: ci) != cr { ci += 1 }
+            } else if c == slash && n2 == asterisk {
+                ci += 2
+                while ci + 1 < len && !(ns.character(at: ci) == asterisk && ns.character(at: ci + 1) == slash) { ci += 1 }
+                ci += 2
+            } else { break }
+        }
+        guard cursor >= ci else { return nil }
+        return stmtSubstring()
     }
 }
 
