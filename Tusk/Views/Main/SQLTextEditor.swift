@@ -4,8 +4,22 @@ import AppKit
 /// An NSTextView-backed editor with live SQL syntax highlighting.
 struct SQLTextEditor: NSViewRepresentable {
     @Binding var text: String
+    @Binding var selectedRange: NSRange
     var fontSize: Double = Double(NSFont.systemFontSize)
     var isEditable: Bool = true
+
+    /// Convenience init so existing call sites that don't need selectedRange compile unchanged.
+    init(
+        text: Binding<String>,
+        selectedRange: Binding<NSRange> = .constant(NSRange()),
+        fontSize: Double = Double(NSFont.systemFontSize),
+        isEditable: Bool = true
+    ) {
+        _text = text
+        _selectedRange = selectedRange
+        self.fontSize = fontSize
+        self.isEditable = isEditable
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -23,6 +37,13 @@ struct SQLTextEditor: NSViewRepresentable {
         textView.isAutomaticTextCompletionEnabled = false
         textView.isGrammarCheckingEnabled = false
         textView.allowsUndo = true
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.selectionDidChange(_:)),
+            name: NSTextView.didChangeSelectionNotification,
+            object: textView
+        )
 
         scrollView.backgroundColor = .textBackgroundColor
         scrollView.drawsBackground = true
@@ -77,6 +98,11 @@ struct SQLTextEditor: NSViewRepresentable {
             // character never inherits stale colour from a deleted token.
             textView.typingAttributes = parent.baseTypingAttributes
             textView.setSelectedRange(sel)
+        }
+
+        @objc func selectionDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.selectedRange = textView.selectedRange()
         }
     }
 

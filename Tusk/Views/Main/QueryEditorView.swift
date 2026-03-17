@@ -7,6 +7,7 @@ struct QueryEditorView: View {
     let client: DatabaseClient?
 
     @State private var sql: String = ""
+    @State private var selectedRange: NSRange = NSRange()
     @State private var result: QueryResult? = nil
     @State private var resultIsCapped = false
     @State private var error: String? = nil
@@ -75,6 +76,16 @@ struct QueryEditorView: View {
                     ProgressView().controlSize(.small)
                 }
                 Button {
+                    Task { await runCurrentQuery() }
+                } label: {
+                    Label("Run Current", systemImage: "play")
+                        .font(.callout)
+                }
+                .keyboardShortcut(.return, modifiers: [.command, .shift])
+                .disabled(client == nil || sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                Button {
                     Task { await runQuery() }
                 } label: {
                     Label("Run", systemImage: "play.fill")
@@ -92,9 +103,9 @@ struct QueryEditorView: View {
             Divider()
 
             ZStack(alignment: .topLeading) {
-                SQLTextEditor(text: $sql, fontSize: contentFontSize)
+                SQLTextEditor(text: $sql, selectedRange: $selectedRange, fontSize: contentFontSize)
                 if sql.isEmpty {
-                    Text("-- Write SQL here · ⌘↵ to run")
+                    Text("-- Write SQL here · ⌘↵ to run · ⌘⇧↵ for current")
                         .font(.system(size: contentFontSize, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 9)
@@ -261,6 +272,42 @@ struct QueryEditorView: View {
         appState.queryTabs[index].error = error
     }
 
+    private func runCurrentQuery() async {
+        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
+        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
+
+        let candidate: String
+        let nsSQL = sql as NSString
+        if selectedRange.length > 0 {
+            let safeLocation = min(selectedRange.location, nsSQL.length)
+            let safeLength   = min(selectedRange.length, nsSQL.length - safeLocation)
+            candidate = nsSQL.substring(with: NSRange(location: safeLocation, length: safeLength))
+        } else {
+            candidate = statementAtCursor(in: sql, cursorLocation: selectedRange.location) ?? sql
+        }
+
+        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        isRunning = true
+        error = nil
+        result = nil
+        resultIsCapped = false
+        persistResultStateToTab()
+
+        let (finalSQL, capped) = cappedSQL(trimmed)
+        do {
+            let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
+            result = r
+            resultIsCapped = capped && r.rows.count == tuskPageSize
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        isRunning = false
+        persistResultStateToTab()
+    }
+
     /// Wraps SELECT/WITH queries in a subquery capped at `tuskPageSize`.
     /// Non-SELECT statements are returned unchanged.
     /// Note: the subquery wrapping is a DB-side optimisation; the hard row cap
@@ -284,6 +331,101 @@ struct QueryEditorView: View {
 
     private func exportCSV(_ result: QueryResult) {
         exportResultAsCSV(result, defaultName: "query_result")
+    }
+
+    // MARK: - Statement at cursor
+
+    /// Returns the SQL statement that contains `cursorLocation` (UTF-16 offset),
+    /// or nil if the position is empty. Handles single-quoted strings, dollar-quoted
+    /// strings, line comments, and block comments; semicolons only terminate
+    /// statements in the normal state.
+    private func statementAtCursor(in sql: String, cursorLocation: Int) -> String? {
+        let ns  = sql as NSString
+        let len = ns.length
+        guard len > 0, cursorLocation >= 0 else { return nil }
+        let cursor = min(cursorLocation, len)
+
+        let apostrophe = unichar(UnicodeScalar("'").value)
+        let dollar     = unichar(UnicodeScalar("$").value)
+        let semicolon  = unichar(UnicodeScalar(";").value)
+        let hyphen     = unichar(UnicodeScalar("-").value)
+        let slash      = unichar(UnicodeScalar("/").value)
+        let asterisk   = unichar(UnicodeScalar("*").value)
+        let newline    = unichar(UnicodeScalar("\n").value)
+        let cr         = unichar(UnicodeScalar("\r").value)
+        let underscore = unichar(UnicodeScalar("_").value)
+
+        enum State { case normal, singleQuote, dollarQuote([unichar]), lineComment, blockComment }
+
+        var state: State = .normal
+        var stmtStart = 0
+        var i = 0
+
+        func stmtSubstring() -> String? {
+            let s = ns.substring(with: NSRange(location: stmtStart, length: i - stmtStart))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return s.isEmpty ? nil : s
+        }
+
+        while i < len {
+            let ch   = ns.character(at: i)
+            let next = i + 1 < len ? ns.character(at: i + 1) : 0
+
+            switch state {
+            case .normal:
+                if ch == apostrophe {
+                    state = .singleQuote; i += 1
+                } else if ch == hyphen && next == hyphen {
+                    state = .lineComment; i += 2
+                } else if ch == slash && next == asterisk {
+                    state = .blockComment; i += 2
+                } else if ch == dollar {
+                    // Try to match $tag$ or $$
+                    var j = i + 1
+                    while j < len {
+                        let jc = ns.character(at: j)
+                        let isIdent = (jc >= 65 && jc <= 90) || (jc >= 97 && jc <= 122) ||
+                                      (jc >= 48 && jc <= 57) || jc == underscore
+                        guard isIdent else { break }
+                        j += 1
+                    }
+                    if j < len && ns.character(at: j) == dollar {
+                        var tag: [unichar] = []
+                        for k in i...j { tag.append(ns.character(at: k)) }
+                        state = .dollarQuote(tag); i = j + 1
+                    } else {
+                        i += 1
+                    }
+                } else if ch == semicolon {
+                    if cursor >= stmtStart && cursor <= i { return stmtSubstring() }
+                    stmtStart = i + 1; i += 1
+                } else {
+                    i += 1
+                }
+
+            case .singleQuote:
+                if ch == apostrophe && next == apostrophe { i += 2 }
+                else if ch == apostrophe { state = .normal; i += 1 }
+                else { i += 1 }
+
+            case .dollarQuote(let tag):
+                let tl = tag.count
+                if i + tl <= len && (0..<tl).allSatisfy({ ns.character(at: i + $0) == tag[$0] }) {
+                    state = .normal; i += tl
+                } else { i += 1 }
+
+            case .lineComment:
+                if ch == newline || ch == cr { state = .normal }
+                i += 1
+
+            case .blockComment:
+                if ch == asterisk && next == slash { state = .normal; i += 2 }
+                else { i += 1 }
+            }
+        }
+
+        // Cursor is in the final statement (no trailing semicolon)
+        return cursor >= stmtStart ? stmtSubstring() : nil
     }
 }
 
