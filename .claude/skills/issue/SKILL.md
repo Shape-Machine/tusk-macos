@@ -1,63 +1,67 @@
 ---
 name: issue
-description: Review a GitHub issue, rate its importance, validate UX/implementation guidelines against the codebase, propose the best implementation path, then implement on approval
+description: Review one or more GitHub issues, rate them, validate UX/implementation guidelines against the codebase, propose the best implementation path, then implement all in a single PR on approval
 disable-model-invocation: false
-argument-hint: <issue-number>
+argument-hint: <issue-number> [issue-number ...]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, ExitPlanMode
 ---
 
 # Issue Review & Implementation
 
-Work through a GitHub issue end-to-end: understand it, rate it, validate any proposed approach against the real codebase, propose the best path forward, and implement on approval.
+Work through one or more GitHub issues end-to-end: understand them, rate them, validate any proposed approach against the real codebase, propose the best path forward, and implement all in a single PR on approval.
+
+Parse `$ARGUMENTS` as a space-separated list of issue numbers. All steps below apply to every issue in the list.
 
 ## Steps
 
-### 1. Fetch the issue
+### 1. Fetch all issues
 
+For each issue number in `$ARGUMENTS`:
 ```
-gh issue view $ARGUMENTS
+gh issue view <number>
 ```
 
-Read the full issue body, title, labels, and any comments.
+Read the full issue body, title, labels, and any comments for each.
 
 ### 2. Check for existing work
 
-Before anything else, check if work on this issue has already started:
+For each issue number, check if work has already started:
 
 ```
-git branch -a | grep $ARGUMENTS
-gh pr list --search "$ARGUMENTS" --state all
+git branch -a | grep <number>
+gh pr list --search "<number>" --state all
 ```
 
-If an open PR or branch already exists, report it and stop — do not duplicate work.
+If an open PR or branch already exists for any issue, report it and stop — do not duplicate work.
 
 ### 3. Rate importance
 
-Score the issue on three axes, each 1–5:
+For each issue, score on three axes, each 1–5:
 
 - **Impact** — how many users does this affect, and how much does it improve their workflow?
 - **Complexity** — how hard is this to implement correctly? (5 = very hard)
 - **Risk** — could this break existing behaviour or introduce regressions? (5 = high risk)
 
-Present as a concise table. Add a one-sentence verdict: **High / Medium / Low priority** with reasoning. This is to help the user decide whether to proceed now or defer.
+Present as a concise table with one row per issue. Add a one-sentence verdict per issue: **High / Medium / Low priority** with reasoning.
 
 ### 4. Review proposed UX and implementation guidelines
 
-If the issue contains UX or implementation suggestions, extract them explicitly. Then:
+For each issue, extract any UX or implementation suggestions explicitly. Then:
 
 - Search the codebase for the relevant files, views, and patterns that would be touched
 - Assess whether the proposed approach fits the existing architecture and SwiftUI patterns used in the project
 - Call out anything that looks off — wrong layer, inconsistent with how similar features work, or likely to cause SwiftUI state bugs
+- Identify shared infrastructure or patterns across the issues that can be implemented once
 
-If the issue has no UX/implementation detail, skip this step and note that none was provided.
+If an issue has no UX/implementation detail, skip that step for it and note that none was provided.
 
 ### 5. Propose implementation path
 
-Based on your code review, propose:
+Propose a single combined implementation covering all issues:
 
-- **UX** — exactly what the user sees and how they interact with it. Be specific: which view, which control, what triggers what.
-- **Implementation** — which files change, what new types or views are needed, how state flows. Reference actual file paths and existing patterns in the codebase.
-- **What to avoid** — flag any traps or anti-patterns specific to this codebase (e.g. SwiftUI List font propagation, stale coordinator patterns, etc.)
+- **UX** — for each issue, exactly what the user sees and how they interact with it. Be specific: which view, which control, what triggers what.
+- **Implementation** — which files change, what new types or views are needed, how state flows. Reference actual file paths and existing patterns. Call out shared infrastructure that serves multiple issues.
+- **What to avoid** — flag any traps or anti-patterns specific to this codebase.
 
 Keep this tight. No padding.
 
@@ -70,16 +74,16 @@ Present the user with three options:
 
 Do not write any code until the user explicitly approves.
 
-### 7. Update the GitHub issue with the approved plan
+### 7. Update each GitHub issue with the approved plan
 
-Post a comment on the issue summarising the approved implementation plan:
+For each issue number, post a comment summarising the approved plan:
 
 ```
-gh issue comment $ARGUMENTS --body "$(cat <<'EOF'
+gh issue comment <number> --body "$(cat <<'EOF'
 ## Approved Implementation Plan
 
 ### UX
-<exact UX as approved — which view, which control, what triggers what>
+<exact UX as approved for this issue>
 
 ### Implementation
 <files that will change, new types/views, how state flows>
@@ -88,12 +92,12 @@ gh issue comment $ARGUMENTS --body "$(cat <<'EOF'
 <anything explicitly out of scope>
 
 ---
-*Implementation starting now.*
+*Implementation starting now (combined PR with issues <all numbers>).*
 EOF
 )"
 ```
 
-### 9. Baseline build check
+### 8. Baseline build check
 
 Before touching any code, confirm the current state of the repo builds cleanly:
 
@@ -103,31 +107,33 @@ xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destinat
 
 If the build fails, stop and report — do not proceed on a broken baseline.
 
-### 9. Implement in a feature branch
+### 9. Implement in a single feature branch
 
-1. Branch name: `feature/$ARGUMENTS-<slug>` where slug is a short lowercase hyphenated description of the feature (e.g. `feature/33-explain-analyze-viewer`)
+1. Branch name:
+   - Single issue: `feature/#<number>-<slug>`
+   - Multiple issues: `feature/#<first-number>-#<second-number>-...-<slug>` where slug describes the combined work
    ```
-   git checkout -b feature/$ARGUMENTS-<slug>
+   git checkout -b feature/<branch-name>
    ```
-2. Implement exactly what was approved — no scope creep
+2. Implement exactly what was approved for all issues — no scope creep
 3. Follow all existing patterns in the codebase (font settings via `@AppStorage`, explicit `.font()` on List rows, etc.)
 4. Build to confirm no regressions:
    ```
    xcodebuild -project Tusk.xcodeproj -scheme Tusk -configuration Release -destination "platform=macOS" build 2>&1 | tail -3
    ```
    Do not proceed if the build fails.
-5. Stage and commit only the files you changed:
+5. Stage and commit only the files you changed. Use one commit per issue if the changes are cleanly separable, or a single commit if they share infrastructure:
    ```
    git add <changed files>
    git commit -m "feat: <short description>"
    ```
 
-### 10. Push and open PR
+### 10. Push and open a single PR
 
 ```
-git push -u origin feature/$ARGUMENTS-<slug>
+git push -u origin feature/<branch-name>
 gh pr create \
-  --title "<concise title>" \
+  --title "<concise title covering all issues>" \
   --body "$(cat <<'EOF'
 ## Summary
 <2–4 sentences describing what was built and why>
@@ -140,13 +146,15 @@ gh pr create \
 <explicitly note anything adjacent that was considered but left out>
 
 ## How to test
-<short, specific steps to verify the feature works>
+<short, specific steps to verify each feature works>
 
-Closes #$ARGUMENTS
+Closes #<number1>
+Closes #<number2>
+...
 EOF
 )"
 ```
 
 ### 11. Confirm
 
-Report the PR URL and summarise what was implemented.
+Report the PR URL and summarise what was implemented for each issue.
