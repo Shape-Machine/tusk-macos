@@ -392,7 +392,7 @@ struct QueryEditorView: View {
             let (finalSQL, capped) = cappedSQL(stmt)
             do {
                 let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
-                if r.columns.isEmpty {
+                if !capped && r.columns.isEmpty {
                     executions[entryIndex].outcome = .ok(duration: r.duration)
                 } else {
                     executions[entryIndex].outcome = .rows(r, isCapped: capped && r.rows.count == tuskPageSize)
