@@ -8,9 +8,8 @@ struct QueryEditorView: View {
 
     @State private var sql: String = ""
     @State private var selectedRange: NSRange = NSRange()
-    @State private var result: QueryResult? = nil
-    @State private var resultIsCapped = false
-    @State private var error: String? = nil
+    @State private var executions: [ExecutionEntry] = []
+    @State private var selectedResultTab: Int = 0   // 0 = Log, 1+ = Result N
     @State private var isRunning = false
     @State private var autoSaveTask: Task<Void, Never>? = nil
     @State private var savedIndicatorTask: Task<Void, Never>? = nil
@@ -29,9 +28,7 @@ struct QueryEditorView: View {
         }
         .onAppear {
             sql = tab.sql
-            result = tab.result
-            resultIsCapped = tab.resultIsCapped
-            error = tab.error
+            executions = tab.executions
         }
         .onChange(of: sql) { _, newValue in
             // Sync in-memory state
@@ -134,9 +131,8 @@ struct QueryEditorView: View {
                                 connectionID: connection.id,
                                 name: connection.name
                             )
-                            result = nil
-                            error = nil
-                            resultIsCapped = false
+                            executions = []
+                            selectedResultTab = 0
                             persistResultStateToTab()
                         } label: {
                             if tab.connectionID == connection.id {
@@ -166,118 +162,196 @@ struct QueryEditorView: View {
 
     private var resultsPane: some View {
         VStack(spacing: 0) {
-            HStack {
-                if let result {
-                    Text("\(result.rows.count) row\(result.rows.count == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text(String(format: "%.3fs", result.duration))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if resultIsCapped {
-                        Text("·")
-                            .foregroundStyle(.tertiary)
-                        Text("Showing first \(tuskPageSize) rows")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                if let error {
-                    Image(systemName: "exclamationmark.circle")
-                        .foregroundStyle(.red)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .lineLimit(1)
-                }
-                Spacer()
-                if let result, !result.rows.isEmpty {
-                    Button {
-                        copyRowsAsCSV(columns: result.columns, rows: result.rows)
-                    } label: {
-                        Label("Copy CSV", systemImage: "doc.on.clipboard")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                    .help("Copy all rows as CSV")
-                    Button {
-                        copyRowsAsJSON(columns: result.columns, rows: result.rows)
-                    } label: {
-                        Label("Copy JSON", systemImage: "doc.on.clipboard")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                    .help("Copy all rows as JSON")
-                    Button {
-                        exportCSV(result)
-                    } label: {
-                        Label("Export CSV", systemImage: "square.and.arrow.up")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                }
+            if !executions.isEmpty {
+                resultTabBar
+                Divider()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(.bar)
+            resultContent
+        }
+    }
 
-            Divider()
+    private var resultTabBar: some View {
+        HStack(spacing: 2) {
+            resultTabSegment("Log", index: 0)
+            ForEach(Array(resultEntries.enumerated()), id: \.element.id) { n, _ in
+                resultTabSegment("Result \(n + 1)", index: n + 1)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
+        .background(.bar)
+    }
 
-            if let result {
-                ResultsGrid(result: result)
+    private func resultTabSegment(_ title: String, index: Int) -> some View {
+        Button { selectedResultTab = index } label: {
+            Text(title)
+                .font(.system(size: contentFontSize - 1))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
+                .background(
+                    selectedResultTab == index ? Color(nsColor: .selectedControlColor) : .clear,
+                    in: RoundedRectangle(cornerRadius: 5)
+                )
+                .foregroundStyle(selectedResultTab == index ? .primary : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var resultContent: some View {
+        if executions.isEmpty {
+            Color(nsColor: .textBackgroundColor)
+        } else if selectedResultTab == 0 {
+            executionLog
+        } else {
+            let idx = selectedResultTab - 1
+            if idx < resultEntries.count, case .rows(let r, let isCapped) = resultEntries[idx].outcome {
+                resultTabContent(result: r, isCapped: isCapped)
             } else {
                 Color(nsColor: .textBackgroundColor)
             }
         }
     }
 
+    private var resultEntries: [ExecutionEntry] {
+        executions.filter { if case .rows = $0.outcome { true } else { false } }
+    }
+
+    // MARK: - Execution log
+
+    private var executionLog: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(executions) { entry in
+                    executionLogRow(entry)
+                    Divider()
+                }
+            }
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private func executionLogRow(_ entry: ExecutionEntry) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("[\(entry.index)]")
+                .foregroundStyle(.tertiary)
+                .frame(width: 28, alignment: .trailing)
+            Text(sqlPreview(entry.sql))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 12)
+            logOutcomeView(entry)
+        }
+        .font(.system(size: contentFontSize - 1, design: .monospaced))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private func logOutcomeView(_ entry: ExecutionEntry) -> some View {
+        switch entry.outcome {
+        case .running:
+            ProgressView().controlSize(.mini)
+        case .rows(let r, let isCapped):
+            HStack(spacing: 6) {
+                Text("\(r.rows.count) row\(r.rows.count == 1 ? "" : "s") · \(String(format: "%.3fs", r.duration))")
+                    .foregroundStyle(.secondary)
+                if isCapped {
+                    Text("(capped)").foregroundStyle(.orange)
+                }
+                if let tabIdx = resultTabIndex(for: entry) {
+                    Button("→ Result \(tabIdx)") { selectedResultTab = tabIdx }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.tint)
+                }
+            }
+        case .ok(let dur):
+            Text("OK · \(String(format: "%.3fs", dur))")
+                .foregroundStyle(.secondary)
+        case .error(let msg):
+            Text(msg)
+                .foregroundStyle(.red)
+                .lineLimit(3)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func sqlPreview(_ sql: String) -> String {
+        let first = sql.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? sql
+        let t = first.trimmingCharacters(in: .whitespaces)
+        return t.count > 80 ? String(t.prefix(77)) + "…" : t
+    }
+
+    private func resultTabIndex(for entry: ExecutionEntry) -> Int? {
+        var count = 0
+        for e in executions {
+            if case .rows = e.outcome {
+                count += 1
+                if e.id == entry.id { return count }
+            } else if e.id == entry.id {
+                return nil
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Result tab content
+
+    private func resultTabContent(result: QueryResult, isCapped: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("\(result.rows.count) row\(result.rows.count == 1 ? "" : "s")")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("·").foregroundStyle(.tertiary)
+                Text(String(format: "%.3fs", result.duration))
+                    .font(.caption).foregroundStyle(.secondary)
+                if isCapped {
+                    Text("·").foregroundStyle(.tertiary)
+                    Text("Showing first \(tuskPageSize) rows")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if !result.rows.isEmpty {
+                    Button {
+                        copyRowsAsCSV(columns: result.columns, rows: result.rows)
+                    } label: {
+                        Label("Copy CSV", systemImage: "doc.on.clipboard").font(.caption)
+                    }
+                    .buttonStyle(.borderless).controlSize(.small)
+                    .help("Copy all rows as CSV")
+                    Button {
+                        copyRowsAsJSON(columns: result.columns, rows: result.rows)
+                    } label: {
+                        Label("Copy JSON", systemImage: "doc.on.clipboard").font(.caption)
+                    }
+                    .buttonStyle(.borderless).controlSize(.small)
+                    .help("Copy all rows as JSON")
+                    Button {
+                        exportCSV(result)
+                    } label: {
+                        Label("Export CSV", systemImage: "square.and.arrow.up").font(.caption)
+                    }
+                    .buttonStyle(.borderless).controlSize(.small)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.bar)
+            Divider()
+            ResultsGrid(result: result)
+        }
+    }
+
     // MARK: - Run query
 
     private func runQuery() async {
-        // Read the live connectionID from appState rather than the prop, which
-        // may be a stale copy if the connection picker was just changed.
-        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
-        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
-        let trimmed = sql.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        isRunning = true
-        error = nil
-        result = nil
-        resultIsCapped = false
-        persistResultStateToTab()
-
-        let (finalSQL, capped) = cappedSQL(trimmed)
-        do {
-            let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
-            result = r
-            resultIsCapped = capped && r.rows.count == tuskPageSize
-        } catch {
-            self.error = error.localizedDescription
-        }
-
-        isRunning = false
-        persistResultStateToTab()
-    }
-
-    private func persistResultStateToTab() {
-        guard let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) else { return }
-        appState.queryTabs[index].result = result
-        appState.queryTabs[index].resultIsCapped = resultIsCapped
-        appState.queryTabs[index].error = error
+        await execute(sql: sql)
     }
 
     private func runCurrentQuery() async {
-        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
-        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
-
-        let candidate: String
         let nsSQL = sql as NSString
+        let candidate: String
         if selectedRange.length > 0 {
             let safeLocation = min(selectedRange.location, nsSQL.length)
             let safeLength   = min(selectedRange.length, nsSQL.length - safeLocation)
@@ -285,27 +359,145 @@ struct QueryEditorView: View {
         } else {
             candidate = statementAtCursor(in: sql, cursorLocation: selectedRange.location) ?? sql
         }
-
         let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        await execute(sql: trimmed)
+    }
 
+    private func persistResultStateToTab() {
+        guard let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        appState.queryTabs[index].executions = executions
+    }
+
+    /// Shared execution engine used by both Run All and Run Current.
+    /// Splits `sql` into statements, runs them sequentially, stops on first error.
+    private func execute(sql: String) async {
+        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
+        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
+
+        let statements = splitStatements(sql)
+        guard !statements.isEmpty else { return }
+
+        executions = []
+        selectedResultTab = 0
         isRunning = true
-        error = nil
-        result = nil
-        resultIsCapped = false
         persistResultStateToTab()
 
-        let (finalSQL, capped) = cappedSQL(trimmed)
-        do {
-            let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
-            result = r
-            resultIsCapped = capped && r.rows.count == tuskPageSize
-        } catch {
-            self.error = error.localizedDescription
+        for stmt in statements {
+            let idx = executions.count + 1
+            executions.append(ExecutionEntry(index: idx, sql: stmt, outcome: .running))
+            let entryIndex = executions.count - 1
+
+            let (finalSQL, capped) = cappedSQL(stmt)
+            do {
+                let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
+                if r.columns.isEmpty {
+                    executions[entryIndex].outcome = .ok(duration: r.duration)
+                } else {
+                    executions[entryIndex].outcome = .rows(r, isCapped: capped && r.rows.count == tuskPageSize)
+                }
+            } catch {
+                executions[entryIndex].outcome = .error(error.localizedDescription)
+                break
+            }
+            persistResultStateToTab()
         }
 
         isRunning = false
+
+        // Auto-switch to Result 1 for the common single-SELECT-no-error case
+        let hasError = executions.contains { if case .error = $0.outcome { true } else { false } }
+        let resultCount = executions.filter { if case .rows = $0.outcome { true } else { false } }.count
+        if resultCount == 1 && !hasError { selectedResultTab = 1 }
+
         persistResultStateToTab()
+    }
+
+    // MARK: - Statement splitting
+
+    /// Splits `sql` into trimmed statements using the same quote-aware state
+    /// machine as `statementAtCursor`. Empty segments are excluded.
+    private func splitStatements(_ sql: String) -> [String] {
+        let ns  = sql as NSString
+        let len = ns.length
+        guard len > 0 else { return [] }
+
+        let apostrophe = unichar(UnicodeScalar("'").value)
+        let dollar     = unichar(UnicodeScalar("$").value)
+        let semicolon  = unichar(UnicodeScalar(";").value)
+        let hyphen     = unichar(UnicodeScalar("-").value)
+        let slash      = unichar(UnicodeScalar("/").value)
+        let asterisk   = unichar(UnicodeScalar("*").value)
+        let newline    = unichar(UnicodeScalar("\n").value)
+        let cr         = unichar(UnicodeScalar("\r").value)
+        let underscore = unichar(UnicodeScalar("_").value)
+
+        enum State { case normal, singleQuote, dollarQuote([unichar]), lineComment, blockComment }
+
+        var results: [String] = []
+        var state: State = .normal
+        var stmtStart = 0
+        var i = 0
+
+        func flush() {
+            let s = ns.substring(with: NSRange(location: stmtStart, length: i - stmtStart))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !s.isEmpty { results.append(s) }
+        }
+
+        while i < len {
+            let ch   = ns.character(at: i)
+            let next = i + 1 < len ? ns.character(at: i + 1) : 0
+
+            switch state {
+            case .normal:
+                if ch == apostrophe {
+                    state = .singleQuote; i += 1
+                } else if ch == hyphen && next == hyphen {
+                    state = .lineComment; i += 2
+                } else if ch == slash && next == asterisk {
+                    state = .blockComment; i += 2
+                } else if ch == dollar {
+                    var j = i + 1
+                    while j < len {
+                        let jc = ns.character(at: j)
+                        let isIdent = (jc >= 65 && jc <= 90) || (jc >= 97 && jc <= 122) ||
+                                      (jc >= 48 && jc <= 57) || jc == underscore
+                        guard isIdent else { break }
+                        j += 1
+                    }
+                    if j < len && ns.character(at: j) == dollar {
+                        var tag: [unichar] = []
+                        for k in i...j { tag.append(ns.character(at: k)) }
+                        state = .dollarQuote(tag); i = j + 1
+                    } else { i += 1 }
+                } else if ch == semicolon {
+                    flush(); stmtStart = i + 1; i += 1
+                } else { i += 1 }
+
+            case .singleQuote:
+                if ch == apostrophe && next == apostrophe { i += 2 }
+                else if ch == apostrophe { state = .normal; i += 1 }
+                else { i += 1 }
+
+            case .dollarQuote(let tag):
+                let tl = tag.count
+                if i + tl <= len && (0..<tl).allSatisfy({ ns.character(at: i + $0) == tag[$0] }) {
+                    state = .normal; i += tl
+                } else { i += 1 }
+
+            case .lineComment:
+                if ch == newline || ch == cr { state = .normal }
+                i += 1
+
+            case .blockComment:
+                if ch == asterisk && next == slash { state = .normal; i += 2 }
+                else { i += 1 }
+            }
+        }
+
+        flush()
+        return results
     }
 
     /// Wraps SELECT/WITH queries in a subquery capped at `tuskPageSize`.

@@ -158,6 +158,23 @@ func copyRowsAsInsert(schema: String, table: String, columns: [QueryColumn], row
     NSPasteboard.general.setString(statements, forType: .string)
 }
 
+// MARK: - Multi-statement execution
+
+struct ExecutionEntry: Identifiable, Sendable {
+    let id: UUID = UUID()
+    let index: Int      // 1-based
+    let sql: String     // trimmed statement text
+
+    enum Outcome: Sendable {
+        case running
+        case rows(QueryResult, isCapped: Bool)
+        case ok(duration: TimeInterval)     // DML/DDL — no result set
+        case error(String)
+    }
+
+    var outcome: Outcome = .running
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {
