@@ -357,7 +357,8 @@ struct QueryEditorView: View {
             let safeLength   = min(selectedRange.length, nsSQL.length - safeLocation)
             candidate = nsSQL.substring(with: NSRange(location: safeLocation, length: safeLength))
         } else {
-            candidate = statementAtCursor(in: sql, cursorLocation: selectedRange.location) ?? sql
+            guard let found = statementAtCursor(in: sql, cursorLocation: selectedRange.location) else { return }
+            candidate = found
         }
         let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
