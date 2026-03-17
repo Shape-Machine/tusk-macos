@@ -1,28 +1,71 @@
 # Tusk — Features
 
 ### Connections
-PostgreSQL connections with name, host, port, credentials, SSL toggle, and color tagging (six colors). Passwords and SSH passphrases stored in macOS Keychain. SSH tunnel support with automatic port forwarding, key-based auth, and configurable passphrase. Multiple connections can be open simultaneously. Test-connection validates the full config — including SSL and SSH — before saving, with descriptive error messages for common failures.
+Manage multiple PostgreSQL connections with full SSH tunnel and SSL support.
+- Name, host, port, database, username, password, SSL toggle, color tag (6 colors)
+- Passwords and SSH passphrases stored in macOS Keychain
+- SSH tunnel: host, port, user, key file (browse picker), passphrase
+- Test connection validates full config (including SSL/SSH) before saving
+- Multiple connections open simultaneously
+- Right-click to connect, disconnect, refresh schema, edit, or delete
 
 ### Schema Browser
-Full schema tree in the sidebar — schemas → tables. Public schema auto-expands; others collapsed by default. Click a table to open it in a detail tab. Manual schema refresh via ⌘R or the right-click context menu. Schemas auto-refresh on connect.
+Navigate schemas and tables directly from the sidebar.
+- Schemas → tables tree; public schema auto-expands, others collapsed
+- Click a table to open its detail tab
+- `⌘R` or right-click to refresh schema
+- Auto-refreshes on connect
 
 ### Table Detail
-Five tabs per table. **Columns** shows types, nullability, defaults, and primary key indicators. **Keys** lists all foreign key constraints with their referenced columns. **Relations** renders incoming and outgoing foreign key relationships as a radial graph with directional arrows and column labels. **DDL** shows the generated `CREATE TABLE` statement in a read-only syntax-highlighted editor with a one-click Copy button. **Data** opens the full data browser.
+Five tabs per table for complete introspection.
+- **Columns** — name, type, nullability, default value, primary key indicator
+- **Keys** — foreign key constraints with referenced table and column
+- **Relations** — radial graph of incoming and outgoing foreign key relationships with column labels
+- **DDL** — generated `CREATE TABLE` statement in a read-only syntax-highlighted editor; one-click copy
+- **Data** — full paginated data browser (see below)
 
 ### Data Browser
-Paginated grid (1000 rows/page) with previous/next navigation. Real-time text filter searches all columns via PostgreSQL ILIKE with 300ms debounce. Copy all visible rows as CSV, JSON, or INSERT statements. Export to CSV via save panel. Right-click any row for per-row copy actions (CSV, JSON, INSERT). Double-click any cell to view the full value in a modal; JSON and JSONB cells show an interactive tree view with expandable nodes alongside the raw text.
+Paginated, filterable grid for browsing and exporting table data.
+- 1000 rows/page with previous/next navigation
+- Real-time text filter across all columns (PostgreSQL ILIKE, 300ms debounce)
+- Double-click any cell to view the full value in a modal
+- JSON/JSONB cells show an interactive expandable tree alongside raw text
+- Right-click rows: copy as CSV, JSON, or INSERT (single or multi-row)
+- Copy all visible rows as CSV, JSON, or INSERT; export to CSV via save panel
 
 ### Query Editor
-SQL editor with live syntax highlighting. Two run modes: **Run All** (`⌘↵`) executes the entire buffer; **Run Current** (`⌘⇧↵`) executes the selection (which may span multiple statements) or the single statement the cursor is inside, detected by a quote-aware splitter that correctly handles single-quoted strings, dollar-quoted blocks, and SQL comments. Both modes execute statements sequentially and stop on the first error. Results appear in a tabbed panel: a live **Log** tab showing every statement's index, truncated SQL, outcome (row count and duration, OK, or error in red), and clickable links to result tabs; plus a **Result N** tab per SELECT with the full interactive grid. Running a single SELECT auto-switches to Result 1, preserving the single-query feel. SELECT/WITH queries are automatically capped at 1000 rows. Per-tab connection picker lets you switch databases without leaving the editor. File-backed queries autosave to disk every 500ms with a brief visual confirmation. Copy results as CSV or JSON; export to CSV via save panel.
+Full SQL editor with multi-statement execution and per-statement results.
+- Live syntax highlighting (keywords, strings, numbers, comments)
+- `⌘↵` runs all statements; `⌘⇧↵` runs the selection or statement at cursor
+- Quote-aware statement splitter handles `''`, `$tag$`, `--`, and `/* */`
+- Statements execute sequentially; stops on first error
+- **Log tab** — live per-statement outcome (row count · duration, OK, or error in red)
+- **Result N tabs** — one interactive grid per SELECT result; clickable from the log
+- Single SELECT auto-switches to Result 1 for a clean single-query feel
+- SELECT/WITH results capped at 1000 rows with indicator
+- Per-tab connection picker — switch databases without leaving the editor
+- File-backed queries autosave every 500ms with a brief visual confirmation
+- Copy results as CSV or JSON; export to CSV via save panel
 
 ### File Explorer
-Local filesystem browser in the sidebar. Navigate directories, create and rename SQL files and folders inline, and delete with confirmation. Open `.sql` files directly into a query editor tab with auto-save wired to disk. Last visited directory persisted across sessions.
+Local filesystem browser for opening and managing SQL files.
+- Navigate directories from home; last visited directory persisted
+- Create SQL files and folders inline; rename inline; delete with confirmation
+- Open `.sql` files directly into a query editor tab with auto-save wired to disk
 
 ### Tabs
-Unlimited tabs — table browsers and query editors co-exist in the same tab bar. Color-coded connection dots per tab. `⌘T` opens a new query tab, `⌘W` closes, `⌘[` / `⌘]` navigate. Tab titles reflect file names for file-backed queries.
+Unlimited tabs mixing table browsers and query editors.
+- `⌘T` new query tab · `⌘W` close · `⌘[` / `⌘]` navigate
+- Color-coded connection dot per tab
+- Tab title shows file name for file-backed queries
 
 ### Appearance
-Font size (11–17pt) and font design (sans-serif, monospaced, serif) configurable independently for sidebar and content. Changes apply immediately and persist across sessions.
+Font settings for sidebar and content areas, configurable independently.
+- Font design: sans-serif, monospaced, or serif
+- Font size: 11–17pt in 1pt increments
+- Changes apply immediately and persist across sessions
 
 ### Updates
-Built-in update checker fetches the latest release from GitHub. Shows current status — up to date, update available with version number, or error — and links directly to the GitHub release when an update is found.
+Built-in update checker against the GitHub releases feed.
+- Shows: up to date, update available (with version), or error
+- Links directly to the GitHub release when an update is found

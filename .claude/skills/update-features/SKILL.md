@@ -26,8 +26,9 @@ Overwrite `docs/features.md` with a fresh, accurate feature summary. Use the fol
 
 - Top-level heading: `# Tusk — Features`
 - One `###` section per logical feature group (e.g. Connections, Schema Browser, Data Browser, Query Editor, File Explorer, Tabs, Appearance)
-- Each section: 2–5 sentences, dense and factual, written as if briefing a technical CEO
-- No bullet lists — prose only
+- Each section: one short sentence introducing the feature group, followed by a tight bullet list of capabilities
+- Bullets are concise — one feature per bullet, no padding
+- Include keyboard shortcuts inline where relevant (e.g. `⌘↵ run all`)
 - Do not invent features; only document what is actually in the code
 
 ### 3. Commit and push
