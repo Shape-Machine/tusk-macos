@@ -74,7 +74,10 @@ private struct ConnectionSection: View {
         let all      = appState.schemaTables[connection.id] ?? []
         let allEnums = appState.schemaEnums[connection.id] ?? []
         let allSeqs  = appState.schemaSequences[connection.id] ?? []
-        let uniqueSchemas = Array(Set(all.map { $0.schema })).sorted {
+        let allSchemas = Set(all.map { $0.schema })
+            .union(allEnums.map { $0.schema })
+            .union(allSeqs.map { $0.schema })
+        let uniqueSchemas = allSchemas.sorted {
             if $0 == "public" { return true }
             if $1 == "public" { return false }
             return $0 < $1
