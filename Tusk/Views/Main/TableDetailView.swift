@@ -105,7 +105,7 @@ struct TableDetailView: View {
     private var tabPicker: some View {
         HStack(spacing: 2) {
             tabSegment("Columns", for: .columns)
-            tabSegment("Keys", for: .keys)
+            tabSegment("Foreign Keys", for: .keys)
             tabSegment("Relations", for: .relations)
             tabSegment("Indexes", for: .indexes)
             tabSegment("Triggers", for: .triggers)
