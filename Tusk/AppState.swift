@@ -24,10 +24,11 @@ final class AppState {
     // MARK: - Query tabs (stores editor state; paired with a DetailTab)
     var queryTabs: [QueryTab] = []
 
-    // MARK: - Schema cache  (connectionID → tables / enums / sequences)
-    var schemaTables:    [UUID: [TableInfo]]    = [:]
-    var schemaEnums:     [UUID: [EnumInfo]]     = [:]
-    var schemaSequences: [UUID: [SequenceInfo]] = [:]
+    // MARK: - Schema cache  (connectionID → tables / enums / sequences / functions)
+    var schemaTables:    [UUID: [TableInfo]]     = [:]
+    var schemaEnums:     [UUID: [EnumInfo]]      = [:]
+    var schemaSequences: [UUID: [SequenceInfo]]  = [:]
+    var schemaFunctions: [UUID: [FunctionInfo]]  = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -133,6 +134,7 @@ final class AppState {
         schemaTables.removeValue(forKey: connection.id)
         schemaEnums.removeValue(forKey: connection.id)
         schemaSequences.removeValue(forKey: connection.id)
+        schemaFunctions.removeValue(forKey: connection.id)
 
         // Close all detail tabs belonging to this connection
         let tabsToClose = openTabs.filter { tab in
@@ -161,9 +163,11 @@ final class AppState {
         async let tables    = try client.tables()
         async let enums     = try client.enums()
         async let sequences = try client.sequences()
+        async let functions = try client.functions()
         schemaTables[connection.id]    = try await tables
         schemaEnums[connection.id]     = try await enums
         schemaSequences[connection.id] = try await sequences
+        schemaFunctions[connection.id] = try await functions
     }
 
     // MARK: - Query tabs

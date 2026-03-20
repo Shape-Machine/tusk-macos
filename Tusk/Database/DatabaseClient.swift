@@ -340,6 +340,29 @@ actor DatabaseClient {
         }
     }
 
+    func functions() async throws -> [FunctionInfo] {
+        let result = try await query("""
+            SELECT n.nspname,
+                   p.proname,
+                   pg_catalog.pg_get_function_arguments(p.oid),
+                   CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END
+            FROM pg_catalog.pg_proc p
+            JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+              AND p.prokind IN ('f', 'p')
+            ORDER BY n.nspname, p.proname
+            """)
+
+        return result.rows.map { row in
+            let schema  = row[safe: 0]?.displayValue ?? ""
+            let name    = row[safe: 1]?.displayValue ?? ""
+            let args    = row[safe: 2]?.displayValue ?? ""
+            let ret     = row[safe: 3]?.displayValue ?? ""
+            let sig     = ret.isEmpty ? "\(name)(\(args))" : "\(name)(\(args)) → \(ret)"
+            return FunctionInfo(schema: schema, name: name, signature: sig)
+        }
+    }
+
     // MARK: - Raw query
 
     func query(_ sql: String, rowLimit: Int? = nil) async throws -> QueryResult {
