@@ -158,7 +158,7 @@ private struct SchemaRow: View {
                 ))
             }
             if !views.isEmpty {
-                DisclosureGroup("Views") {
+                DisclosureGroup {
                     ForEach(views) { view in
                         Label {
                             Text(view.name)
@@ -172,10 +172,13 @@ private struct SchemaRow: View {
                             tableName: view.name
                         ))
                     }
+                } label: {
+                    Text("Views")
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                 }
             }
             if !enums.isEmpty {
-                DisclosureGroup("Enums") {
+                DisclosureGroup {
                     ForEach(enums) { enumInfo in
                         DisclosureGroup {
                             ForEach(enumInfo.values, id: \.self) { value in
@@ -193,10 +196,13 @@ private struct SchemaRow: View {
                             }
                         }
                     }
+                } label: {
+                    Text("Enums")
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                 }
             }
             if !sequences.isEmpty {
-                DisclosureGroup("Sequences") {
+                DisclosureGroup {
                     ForEach(sequences) { seq in
                         Label {
                             Text(seq.name)
@@ -205,6 +211,9 @@ private struct SchemaRow: View {
                             Image(systemName: "number")
                         }
                     }
+                } label: {
+                    Text("Sequences")
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                 }
             }
         } label: {
