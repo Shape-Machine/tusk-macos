@@ -39,8 +39,10 @@ struct TableDetailView: View {
             content
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: tableName) { await loadMeta() }
+        .task(id: schemaName + "." + tableName) { await loadMeta() }
         .onChange(of: schemaName + "." + tableName) { _, _ in
+            columns = []
+            foreignKeys = []
             dataState.loadTask?.cancel()
             dataState.filterDebounceTask?.cancel()
             dataState.result = nil
