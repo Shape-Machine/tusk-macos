@@ -21,6 +21,7 @@ struct DataBrowserView: View {
     let connectionID: UUID
     let schemaName: String
     let tableName: String
+    var isView: Bool = false
     @Bindable var state: DataBrowserState
 
     private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
@@ -47,9 +48,9 @@ struct DataBrowserView: View {
                             description: Text("This table has no data."))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        ResultsGrid(result: result) { rows in
+                        ResultsGrid(result: result, copyAsInsert: isView ? nil : { rows in
                             copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
-                        }
+                        })
                     }
                     Divider()
                     statusBar(result: result)
@@ -124,14 +125,16 @@ struct DataBrowserView: View {
 
             Spacer()
 
-            Button {
-                copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
-            } label: {
-                Label("Copy INSERT", systemImage: "doc.on.clipboard")
-                    .font(.caption)
+            if !isView {
+                Button {
+                    copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
+                } label: {
+                    Label("Copy INSERT", systemImage: "doc.on.clipboard")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Copy all rows as INSERT statements")
             }
-            .buttonStyle(.borderless)
-            .help("Copy all rows as INSERT statements")
             Button {
                 copyRowsAsCSV(columns: result.columns, rows: result.rows)
             } label: {

@@ -73,7 +73,9 @@ struct DetailView: View {
         switch tab.kind {
         case .table(let connID, let schema, let tableName):
             if let client = appState.clients[connID] {
-                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName)
+                let isView = appState.schemaTables[connID]?
+                    .first(where: { $0.schema == schema && $0.name == tableName })?.type == .view
+                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName, isView: isView)
             } else {
                 VStack(spacing: 12) {
                     ProgressView()

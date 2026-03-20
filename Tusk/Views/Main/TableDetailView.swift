@@ -5,6 +5,7 @@ struct TableDetailView: View {
     let connectionID: UUID
     let schemaName: String
     let tableName: String
+    var isView: Bool = false
 
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
@@ -109,7 +110,7 @@ struct TableDetailView: View {
     private var content: some View {
         switch selectedTab {
         case .data:
-            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, state: dataState)
+            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, isView: isView, state: dataState)
         case .columns:
             columnsTab
         case .keys:
