@@ -15,7 +15,9 @@ struct QueryEditorView: View {
     @State private var savedIndicatorTask: Task<Void, Never>? = nil
     @State private var savedIndicator = false
     @State private var copiedCSV = false
+    @State private var copiedCSVTask: Task<Void, Never>? = nil
     @State private var copiedJSON = false
+    @State private var copiedJSONTask: Task<Void, Never>? = nil
 
     var body: some View {
         VSplitView {
@@ -318,7 +320,8 @@ struct QueryEditorView: View {
                     Button {
                         copyRowsAsCSV(columns: result.columns, rows: result.rows)
                         copiedCSV = true
-                        Task { try? await Task.sleep(for: .milliseconds(1500)); copiedCSV = false }
+                        copiedCSVTask?.cancel()
+                        copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
                     } label: {
                         Label(copiedCSV ? "Copied!" : "Copy CSV",
                               systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard").font(.caption)
@@ -328,7 +331,8 @@ struct QueryEditorView: View {
                     Button {
                         copyRowsAsJSON(columns: result.columns, rows: result.rows)
                         copiedJSON = true
-                        Task { try? await Task.sleep(for: .milliseconds(1500)); copiedJSON = false }
+                        copiedJSONTask?.cancel()
+                        copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
                     } label: {
                         Label(copiedJSON ? "Copied!" : "Copy JSON",
                               systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard").font(.caption)
