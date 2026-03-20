@@ -30,8 +30,11 @@ struct DataBrowserView: View {
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
     @State private var copiedInsert = false
+    @State private var copiedInsertTask: Task<Void, Never>? = nil
     @State private var copiedCSV = false
+    @State private var copiedCSVTask: Task<Void, Never>? = nil
     @State private var copiedJSON = false
+    @State private var copiedJSONTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -140,7 +143,8 @@ struct DataBrowserView: View {
                 Button {
                     copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
                     copiedInsert = true
-                    Task { try? await Task.sleep(for: .milliseconds(1500)); copiedInsert = false }
+                    copiedInsertTask?.cancel()
+                    copiedInsertTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedInsert = false } }
                 } label: {
                     Label(copiedInsert ? "Copied!" : "Copy INSERT",
                           systemImage: copiedInsert ? "checkmark" : "doc.on.clipboard")
@@ -152,7 +156,8 @@ struct DataBrowserView: View {
             Button {
                 copyRowsAsCSV(columns: result.columns, rows: result.rows)
                 copiedCSV = true
-                Task { try? await Task.sleep(for: .milliseconds(1500)); copiedCSV = false }
+                copiedCSVTask?.cancel()
+                copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
             } label: {
                 Label(copiedCSV ? "Copied!" : "Copy CSV",
                       systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard")
@@ -163,7 +168,8 @@ struct DataBrowserView: View {
             Button {
                 copyRowsAsJSON(columns: result.columns, rows: result.rows)
                 copiedJSON = true
-                Task { try? await Task.sleep(for: .milliseconds(1500)); copiedJSON = false }
+                copiedJSONTask?.cancel()
+                copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
             } label: {
                 Label(copiedJSON ? "Copied!" : "Copy JSON",
                       systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard")
