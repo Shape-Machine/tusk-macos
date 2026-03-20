@@ -84,6 +84,7 @@ struct QueryEditorView: View {
                 }
                 .keyboardShortcut(.return, modifiers: [.command, .shift])
                 .disabled(client == nil || sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .help(client == nil ? "Select a connection above to run queries" : "")
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 Button {
@@ -94,6 +95,7 @@ struct QueryEditorView: View {
                 }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(client == nil || sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .help(client == nil ? "Select a connection above to run queries" : "")
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
             }

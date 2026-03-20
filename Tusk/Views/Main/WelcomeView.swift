@@ -43,6 +43,7 @@ struct WelcomeView: View {
                     shortcutRow("⇧⌘N", "New connection")
                     shortcutRow("⌘T", "New query tab")
                     shortcutRow("⌘↵", "Run query")
+                    shortcutRow("⌘⇧↵", "Run current query")
                     shortcutRow("⌘W", "Close tab")
                     shortcutRow("⌘[ / ⌘]", "Previous / next tab")
                 }
