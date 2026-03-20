@@ -161,7 +161,6 @@ final class AppState {
     // MARK: - Schema refresh
 
     func refreshSchema(for connection: Connection) async throws {
-        schemaRefreshErrors.removeValue(forKey: connection.id)
         guard let client = clients[connection.id] else { return }
         do {
             async let tables    = try client.tables()
@@ -177,6 +176,7 @@ final class AppState {
             schemaEnums[connection.id]     = e
             schemaSequences[connection.id] = s
             schemaFunctions[connection.id] = f
+            schemaRefreshErrors.removeValue(forKey: connection.id)
         } catch {
             schemaRefreshErrors[connection.id] = error.localizedDescription
             throw error
