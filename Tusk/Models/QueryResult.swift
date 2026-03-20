@@ -175,6 +175,21 @@ struct ExecutionEntry: Identifiable, Sendable {
     var outcome: Outcome = .running
 }
 
+// MARK: - Schema object models
+
+struct EnumInfo: Identifiable {
+    var id: String { "\(schema).\(name)" }
+    let schema: String
+    let name: String
+    let values: [String]
+}
+
+struct SequenceInfo: Identifiable {
+    var id: String { "\(schema).\(name)" }
+    let schema: String
+    let name: String
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {
