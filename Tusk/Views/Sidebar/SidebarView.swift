@@ -70,13 +70,15 @@ private struct ConnectionSection: View {
     var isConnected: Bool { appState.isConnected(connection) }
 
     /// All schemas present in the cache, public first then alphabetical.
-    var schemas: [(id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo])] {
-        let all      = appState.schemaTables[connection.id] ?? []
-        let allEnums = appState.schemaEnums[connection.id] ?? []
-        let allSeqs  = appState.schemaSequences[connection.id] ?? []
+    var schemas: [(id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo])] {
+        let all       = appState.schemaTables[connection.id] ?? []
+        let allEnums  = appState.schemaEnums[connection.id] ?? []
+        let allSeqs   = appState.schemaSequences[connection.id] ?? []
+        let allFuncs  = appState.schemaFunctions[connection.id] ?? []
         let allSchemas = Set(all.map { $0.schema })
             .union(allEnums.map { $0.schema })
             .union(allSeqs.map { $0.schema })
+            .union(allFuncs.map { $0.schema })
         let uniqueSchemas = allSchemas.sorted {
             if $0 == "public" { return true }
             if $1 == "public" { return false }
@@ -86,6 +88,7 @@ private struct ConnectionSection: View {
         let viewsBySchema  = Dictionary(grouping: all.filter { $0.type == .view },  by: { $0.schema })
         let enumsBySchema  = Dictionary(grouping: allEnums, by: { $0.schema })
         let seqsBySchema   = Dictionary(grouping: allSeqs,  by: { $0.schema })
+        let funcsBySchema  = Dictionary(grouping: allFuncs, by: { $0.schema })
         // Include connection.id in the row ID so that identically-named schemas
         // across different connections get distinct SwiftUI identities in the
         // flattened List — otherwise @State (isExpanded) is shared between them.
@@ -95,7 +98,8 @@ private struct ConnectionSection: View {
             tables:    tablesBySchema[$0] ?? [],
             views:     viewsBySchema[$0]  ?? [],
             enums:     enumsBySchema[$0]  ?? [],
-            sequences: seqsBySchema[$0]   ?? []
+            sequences: seqsBySchema[$0]   ?? [],
+            functions: funcsBySchema[$0]  ?? []
         ) }
     }
 
@@ -109,6 +113,7 @@ private struct ConnectionSection: View {
                         views: schema.views,
                         enums: schema.enums,
                         sequences: schema.sequences,
+                        functions: schema.functions,
                         connection: connection
                     )
                 }
@@ -127,23 +132,25 @@ private struct SchemaRow: View {
     let views: [TableInfo]
     let enums: [EnumInfo]
     let sequences: [SequenceInfo]
+    let functions: [FunctionInfo]
     let connection: Connection
 
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded: Bool
 
-    init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], connection: Connection) {
+    init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection) {
         self.schema = schema
         self.tables = tables
         self.views = views
         self.enums = enums
         self.sequences = sequences
+        self.functions = functions
         self.connection = connection
         _isExpanded = State(initialValue: schema == "public")
     }
 
-    var isEmpty: Bool { tables.isEmpty && views.isEmpty && enums.isEmpty && sequences.isEmpty }
+    var isEmpty: Bool { tables.isEmpty && views.isEmpty && enums.isEmpty && sequences.isEmpty && functions.isEmpty }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -223,6 +230,21 @@ private struct SchemaRow: View {
                     }
                 } label: {
                     Text("Sequences")
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                }
+            }
+            if !functions.isEmpty {
+                DisclosureGroup {
+                    ForEach(functions) { fn in
+                        Label {
+                            Text(fn.signature)
+                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        } icon: {
+                            Image(systemName: "function")
+                        }
+                    }
+                } label: {
+                    Text("Functions")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                 }
             }

@@ -190,6 +190,13 @@ struct SequenceInfo: Identifiable, Sendable {
     let name: String
 }
 
+struct FunctionInfo: Identifiable, Sendable {
+    var id: String { "\(schema).\(signature)" }
+    let schema: String
+    let name: String
+    let signature: String   // e.g. "my_func(integer, text) → boolean"
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {
