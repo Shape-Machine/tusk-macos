@@ -244,6 +244,58 @@ actor DatabaseClient {
         return "CREATE TABLE \(quoteIdentifier(schema)).\(quoteIdentifier(table)) (\n\(lines.joined(separator: ",\n"))\n);"
     }
 
+    func enums() async throws -> [EnumInfo] {
+        let result = try await query("""
+            SELECT n.nspname, t.typname, e.enumlabel
+            FROM pg_type t
+            JOIN pg_enum e ON e.enumtypid = t.oid
+            JOIN pg_namespace n ON n.oid = t.typnamespace
+            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+            ORDER BY n.nspname, t.typname, e.enumsortorder
+            """)
+
+        var infos: [EnumInfo] = []
+        var currentSchema = ""
+        var currentName = ""
+        var currentValues: [String] = []
+
+        for row in result.rows {
+            let schema = row[safe: 0]?.displayValue ?? ""
+            let name   = row[safe: 1]?.displayValue ?? ""
+            let value  = row[safe: 2]?.displayValue ?? ""
+            if schema == currentSchema && name == currentName {
+                currentValues.append(value)
+            } else {
+                if !currentName.isEmpty {
+                    infos.append(EnumInfo(schema: currentSchema, name: currentName, values: currentValues))
+                }
+                currentSchema = schema
+                currentName   = name
+                currentValues = [value]
+            }
+        }
+        if !currentName.isEmpty {
+            infos.append(EnumInfo(schema: currentSchema, name: currentName, values: currentValues))
+        }
+        return infos
+    }
+
+    func sequences() async throws -> [SequenceInfo] {
+        let result = try await query("""
+            SELECT sequence_schema, sequence_name
+            FROM information_schema.sequences
+            WHERE sequence_schema NOT IN ('pg_catalog', 'information_schema')
+            ORDER BY sequence_schema, sequence_name
+            """)
+
+        return result.rows.map { row in
+            SequenceInfo(
+                schema: row[safe: 0]?.displayValue ?? "",
+                name:   row[safe: 1]?.displayValue ?? ""
+            )
+        }
+    }
+
     // MARK: - Raw query
 
     func query(_ sql: String, rowLimit: Int? = nil) async throws -> QueryResult {
