@@ -35,7 +35,7 @@ struct RelationsView: View {
     // MARK: - Edge model
 
     struct Edge: Identifiable {
-        let id = UUID()
+        var id: String { "\(isOutgoing ? "out" : "in"):\(relatedTable):\(label)" }
         let relatedTable: String
         let label: String       // "fromCol → toCol"
         let isOutgoing: Bool    // true = arrow points away from focal node
