@@ -144,18 +144,25 @@ private struct SchemaRow: View {
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
-            ForEach(tables) { table in
-                Label {
-                    Text(table.name)
+            if !tables.isEmpty {
+                DisclosureGroup {
+                    ForEach(tables) { table in
+                        Label {
+                            Text(table.name)
+                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        } icon: {
+                            Image(systemName: "tablecells")
+                        }
+                        .tag(SidebarItem.table(
+                            connectionID: connection.id,
+                            schema: table.schema,
+                            tableName: table.name
+                        ))
+                    }
+                } label: {
+                    Text("Tables")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
-                } icon: {
-                    Image(systemName: "tablecells")
                 }
-                .tag(SidebarItem.table(
-                    connectionID: connection.id,
-                    schema: table.schema,
-                    tableName: table.name
-                ))
             }
             if !views.isEmpty {
                 DisclosureGroup {
