@@ -54,14 +54,17 @@ struct TableDetailView: View {
             indexesLoadTask = nil
             indexes = []
             indexesError = nil
+            isLoadingIndexes = false
             triggersLoadTask?.cancel()
             triggersLoadTask = nil
             triggers = []
             triggersError = nil
+            isLoadingTriggers = false
             ddlLoadTask?.cancel()
             ddlLoadTask = nil
             ddlText = ""
             ddlError = nil
+            isLoadingDDL = false
         }
         .onChange(of: selectedTab) { _, newTab in
             if newTab == .indexes && indexes.isEmpty && !isLoadingIndexes {
