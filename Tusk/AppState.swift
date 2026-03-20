@@ -122,7 +122,7 @@ final class AppState {
             queryTabs[idx].connectionName = connection.name
         }
 
-        try await refreshSchema(for: connection)
+        try? await refreshSchema(for: connection)
     }
 
     func disconnect(_ connection: Connection) {
