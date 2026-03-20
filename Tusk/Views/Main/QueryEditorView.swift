@@ -414,7 +414,7 @@ struct QueryEditorView: View {
             return ddlPrefixes.contains { prefix.hasPrefix($0) }
         }
         if hasDDL,
-           let connID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID,
+           let connID = liveConnectionID,
            let connection = appState.connections.first(where: { $0.id == connID }) {
             Task { try? await appState.refreshSchema(for: connection) }
         }
