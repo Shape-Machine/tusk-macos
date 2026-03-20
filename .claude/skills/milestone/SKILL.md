@@ -16,7 +16,7 @@ Display a grouped summary of all issues in a milestone.
 
 If `$ARGUMENTS` is non-empty, use it as the milestone title.
 
-If `$ARGUMENTS` is empty, find the current milestone — the open milestone with the most open issues:
+If `$ARGUMENTS` is empty, find the current milestone — based on date:
 
 ```
 gh api repos/Shape-Machine/tusk-macos/milestones --jq 'sort_by(.open_issues) | reverse | .[0].title'
@@ -31,7 +31,17 @@ gh issue list --milestone "<milestone>" --state open --json number,title,labels,
 gh issue list --milestone "<milestone>" --state closed --json number,title,labels --limit 100
 ```
 
-### 3. Group open issues by implementation affinity
+### 3. Check for open PRs
+
+For each open issue, check if there is already an open PR referencing it:
+
+```
+gh pr list --state open --json number,title,headRefName --limit 100
+```
+
+Match PRs to issues by looking for the issue number in the branch name (`feature/#<number>-...`) or PR title. Mark any matched issues as **in progress**.
+
+### 4. Group open issues by implementation affinity
 
 Analyse the open issues and group them by which ones can be implemented together in the same feature branch. Use your knowledge of the codebase to reason about:
 
@@ -46,7 +56,7 @@ Each group gets:
 
 Issues that are genuinely standalone get their own single-issue group.
 
-### 4. Display the summary
+### 5. Display the summary
 
 Print the milestone title as a heading.
 
@@ -56,10 +66,10 @@ Print the milestone title as a heading.
 ### <Group name>
 <rationale>
   #<number>  <title>
-  #<number>  <title>
+  #<number>  <title>  [PR #<pr-number> in progress]
 ```
 
-After all groups, print a total: `<N> open across <M> groups`.
+Mark issues that have an open PR with `[PR #<pr-number> in progress]`. After all groups, print a total: `<N> open across <M> groups (K in progress)`.
 
 **Closed issues** — flat list, no grouping:
 

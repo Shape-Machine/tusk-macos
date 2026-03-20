@@ -15,6 +15,7 @@ Work directly on the `main` branch (no feature branch needed for releases).
 ## Steps
 
 ### 1. Verify starting state
+- Pull the latest changes: `git pull`
 - Confirm the current branch is `main` and the working tree is clean
 - If not, stop and tell the user what needs to be resolved first
 
@@ -51,6 +52,11 @@ Confirm `** BUILD SUCCEEDED **` before continuing.
   ```
   defaults read "$(pwd)/dist/dmg-staging/Tusk.app/Contents/Info.plist" CFBundleShortVersionString
   ```
+- Check the DMG doesn't already exist:
+  ```
+  ls dist/Tusk-$ARGUMENTS.dmg 2>/dev/null && echo "DMG already exists — stop" || echo "OK"
+  ```
+  If the file already exists, stop and ask the user before overwriting.
 - Create the DMG:
   ```
   hdiutil create -volname "Tusk" -srcfolder dist/dmg-staging -ov -format UDZO dist/Tusk-$ARGUMENTS.dmg

@@ -45,7 +45,7 @@ Write a concise, specific fix plan:
 
 Keep it tight. This becomes the implementation plan in the issue.
 
-### 4. Determine labels
+### 4. Determine labels and milestone
 
 Select appropriate labels from the available set:
 
@@ -55,12 +55,21 @@ gh label list
 
 Always include `bug`. Add any other relevant labels (e.g. `data-browser`, `query-editor`, `schema`, `operations`).
 
+Find the current milestone (the open milestone with the most open issues):
+
+```
+gh api repos/Shape-Machine/tusk-macos/milestones --jq 'sort_by(.open_issues) | reverse | .[0].title'
+```
+
+If no open milestones exist, omit the `--milestone` flag.
+
 ### 5. File the GitHub issue
 
 ```
 gh issue create \
   --title "<concise title describing the bug>" \
   --label "<labels>" \
+  --milestone "<current-milestone-title>" \
   --body "$(cat <<'EOF'
 ## Description
 <1–3 sentences describing what is broken and the impact>
