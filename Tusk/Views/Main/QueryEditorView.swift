@@ -14,6 +14,8 @@ struct QueryEditorView: View {
     @State private var autoSaveTask: Task<Void, Never>? = nil
     @State private var savedIndicatorTask: Task<Void, Never>? = nil
     @State private var savedIndicator = false
+    @State private var copiedCSV = false
+    @State private var copiedJSON = false
 
     var body: some View {
         VSplitView {
@@ -315,15 +317,21 @@ struct QueryEditorView: View {
                 if !result.rows.isEmpty {
                     Button {
                         copyRowsAsCSV(columns: result.columns, rows: result.rows)
+                        copiedCSV = true
+                        Task { try? await Task.sleep(for: .milliseconds(1500)); copiedCSV = false }
                     } label: {
-                        Label("Copy CSV", systemImage: "doc.on.clipboard").font(.caption)
+                        Label(copiedCSV ? "Copied!" : "Copy CSV",
+                              systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard").font(.caption)
                     }
                     .buttonStyle(.borderless).controlSize(.small)
                     .help("Copy all rows as CSV")
                     Button {
                         copyRowsAsJSON(columns: result.columns, rows: result.rows)
+                        copiedJSON = true
+                        Task { try? await Task.sleep(for: .milliseconds(1500)); copiedJSON = false }
                     } label: {
-                        Label("Copy JSON", systemImage: "doc.on.clipboard").font(.caption)
+                        Label(copiedJSON ? "Copied!" : "Copy JSON",
+                              systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard").font(.caption)
                     }
                     .buttonStyle(.borderless).controlSize(.small)
                     .help("Copy all rows as JSON")
