@@ -25,7 +25,15 @@ Read the full issue body, title, labels, and any comments for each.
 
 ### 2. Check for existing work
 
-For each issue number, check if work has already started:
+For each issue number, verify the issue is still open:
+
+```
+gh issue view <number> --json state --jq '.state'
+```
+
+If any issue is already closed, report it and stop — do not work on a closed issue.
+
+Check if work has already started:
 
 ```
 git branch -a | grep <number>
@@ -130,10 +138,17 @@ If the build fails, stop and report — do not proceed on a broken baseline.
 
 ### 10. Push and open a single PR
 
+Find the current milestone (the open milestone with the most open issues):
+
+```
+gh api repos/Shape-Machine/tusk-macos/milestones --jq 'sort_by(.open_issues) | reverse | .[0].title'
+```
+
 ```
 git push -u origin feature/<branch-name>
 gh pr create \
   --title "<concise title covering all issues>" \
+  --milestone "<current-milestone-title>" \
   --body "$(cat <<'EOF'
 ## Summary
 <2–4 sentences describing what was built and why>

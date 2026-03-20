@@ -34,5 +34,13 @@ Rename all screenshots in `screenshots/` to use the versioned naming scheme `$AR
     ...
     ```
 
-### 3. Confirm
-Report the list of renamed files and confirm README was updated.
+### 3. Commit and push
+
+```
+git add screenshots/ README.md
+git commit -m "docs: update screenshots to $ARGUMENTS"
+git push
+```
+
+### 4. Confirm
+Report the list of renamed files and confirm the push succeeded.
