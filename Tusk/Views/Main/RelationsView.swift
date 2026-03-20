@@ -15,6 +15,23 @@ struct RelationsView: View {
     @State private var isLoading = true
     @State private var loadError: String? = nil
 
+    // MARK: - Zoom / pan state
+
+    @State private var scale: CGFloat = 1.0
+    @State private var gestureScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var gestureOffset: CGSize = .zero
+
+    private var effectiveScale: CGFloat {
+        max(0.3, min(3.0, scale * gestureScale))
+    }
+    private var effectiveOffset: CGSize {
+        CGSize(
+            width:  offset.width  + gestureOffset.width,
+            height: offset.height + gestureOffset.height
+        )
+    }
+
     // MARK: - Edge model
 
     struct Edge: Identifiable {
@@ -63,15 +80,19 @@ struct RelationsView: View {
                 diagram
             }
         }
-        .task(id: "\(schemaName).\(tableName)") { await loadRelations() }
+        .task(id: "\(schemaName).\(tableName)") {
+            scale = 1.0
+            offset = .zero
+            await loadRelations()
+        }
     }
 
     // MARK: - Diagram
 
     private var diagram: some View {
         GeometryReader { geo in
-            let center   = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let radius   = min(geo.size.width, geo.size.height) * 0.36
+            let center    = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            let radius    = min(geo.size.width, geo.size.height) * 0.36
             let positions = radialPositions(count: edges.count, center: center, radius: radius)
 
             ZStack {
@@ -107,9 +128,77 @@ struct RelationsView: View {
                 focalNodeView
                     .position(center)
             }
+            .scaleEffect(effectiveScale)
+            .offset(effectiveOffset)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { value in
+                        gestureScale = value
+                    }
+                    .onEnded { value in
+                        scale = max(0.3, min(3.0, scale * value))
+                        gestureScale = 1.0
+                    }
+                    .simultaneously(with:
+                        DragGesture()
+                            .onChanged { value in
+                                gestureOffset = CGSize(
+                                    width:  value.translation.width,
+                                    height: value.translation.height
+                                )
+                            }
+                            .onEnded { value in
+                                offset = CGSize(
+                                    width:  offset.width  + value.translation.width,
+                                    height: offset.height + value.translation.height
+                                )
+                                gestureOffset = .zero
+                            }
+                    )
+            )
+            .onTapGesture(count: 2) {
+                scale = 1.0
+                gestureScale = 1.0
+                offset = .zero
+                gestureOffset = .zero
+            }
         }
         .padding(32)
         .background(Color(nsColor: .textBackgroundColor))
+        .overlay(alignment: .bottomTrailing) { zoomControls }
+    }
+
+    // MARK: - Zoom controls overlay
+
+    private var zoomControls: some View {
+        HStack(spacing: 2) {
+            Button {
+                scale = max(0.3, scale / 1.25)
+            } label: {
+                Image(systemName: "minus")
+                    .frame(width: 20, height: 20)
+            }
+            Button {
+                scale = 1.0
+                gestureScale = 1.0
+                offset = .zero
+                gestureOffset = .zero
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .frame(width: 20, height: 20)
+            }
+            Button {
+                scale = min(3.0, scale * 1.25)
+            } label: {
+                Image(systemName: "plus")
+                    .frame(width: 20, height: 20)
+            }
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .padding(6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .padding(12)
     }
 
     // MARK: - Node views
@@ -241,6 +330,11 @@ struct RelationsView: View {
             async let inc = try await client.incomingReferences(schema: schemaName, table: tableName)
             outgoing = try await out
             incoming = try await inc
+            // Auto-scale for dense graphs
+            let edgeCount = outgoing.count + incoming.count
+            if edgeCount > 6 {
+                scale = max(0.4, 6.0 / CGFloat(edgeCount))
+            }
         } catch {
             outgoing = []
             incoming = []
