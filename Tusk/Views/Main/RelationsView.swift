@@ -82,7 +82,9 @@ struct RelationsView: View {
         }
         .task(id: "\(schemaName).\(tableName)") {
             scale = 1.0
+            gestureScale = 1.0
             offset = .zero
+            gestureOffset = .zero
             await loadRelations()
         }
     }
