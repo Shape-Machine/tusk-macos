@@ -25,10 +25,11 @@ final class AppState {
     var queryTabs: [QueryTab] = []
 
     // MARK: - Schema cache  (connectionID → tables / enums / sequences / functions)
-    var schemaTables:    [UUID: [TableInfo]]     = [:]
-    var schemaEnums:     [UUID: [EnumInfo]]      = [:]
-    var schemaSequences: [UUID: [SequenceInfo]]  = [:]
-    var schemaFunctions: [UUID: [FunctionInfo]]  = [:]
+    var schemaTables:       [UUID: [TableInfo]]     = [:]
+    var schemaEnums:        [UUID: [EnumInfo]]      = [:]
+    var schemaSequences:    [UUID: [SequenceInfo]]  = [:]
+    var schemaFunctions:    [UUID: [FunctionInfo]]  = [:]
+    var schemaRefreshErrors:[UUID: String]          = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -135,6 +136,7 @@ final class AppState {
         schemaEnums.removeValue(forKey: connection.id)
         schemaSequences.removeValue(forKey: connection.id)
         schemaFunctions.removeValue(forKey: connection.id)
+        schemaRefreshErrors.removeValue(forKey: connection.id)
 
         // Close all detail tabs belonging to this connection
         let tabsToClose = openTabs.filter { tab in
@@ -159,20 +161,26 @@ final class AppState {
     // MARK: - Schema refresh
 
     func refreshSchema(for connection: Connection) async throws {
+        schemaRefreshErrors.removeValue(forKey: connection.id)
         guard let client = clients[connection.id] else { return }
-        async let tables    = try client.tables()
-        async let enums     = try client.enums()
-        async let sequences = try client.sequences()
-        async let functions = try client.functions()
-        // Collect all results before writing — all-or-nothing to avoid partial cache state
-        let t = try await tables
-        let e = try await enums
-        let s = try await sequences
-        let f = try await functions
-        schemaTables[connection.id]    = t
-        schemaEnums[connection.id]     = e
-        schemaSequences[connection.id] = s
-        schemaFunctions[connection.id] = f
+        do {
+            async let tables    = try client.tables()
+            async let enums     = try client.enums()
+            async let sequences = try client.sequences()
+            async let functions = try client.functions()
+            // Collect all results before writing — all-or-nothing to avoid partial cache state
+            let t = try await tables
+            let e = try await enums
+            let s = try await sequences
+            let f = try await functions
+            schemaTables[connection.id]    = t
+            schemaEnums[connection.id]     = e
+            schemaSequences[connection.id] = s
+            schemaFunctions[connection.id] = f
+        } catch {
+            schemaRefreshErrors[connection.id] = error.localizedDescription
+            throw error
+        }
     }
 
     // MARK: - Query tabs
