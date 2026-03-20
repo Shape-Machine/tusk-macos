@@ -244,6 +244,50 @@ actor DatabaseClient {
         return "CREATE TABLE \(quoteIdentifier(schema)).\(quoteIdentifier(table)) (\n\(lines.joined(separator: ",\n"))\n);"
     }
 
+    func fetchIndexes(schema: String, table: String) async throws -> [IndexInfo] {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
+        let result = try await query("""
+            SELECT pi.indexname, pi.indexdef, ix.indisunique, ix.indisprimary
+            FROM pg_indexes pi
+            JOIN pg_namespace n ON n.nspname = pi.schemaname
+            JOIN pg_class tc ON tc.relname = pi.tablename AND tc.relnamespace = n.oid
+            JOIN pg_class ic ON ic.relname = pi.indexname AND ic.relnamespace = n.oid
+            JOIN pg_index ix ON ix.indexrelid = ic.oid AND ix.indrelid = tc.oid
+            WHERE pi.schemaname = '\(s)' AND pi.tablename = '\(t)'
+            ORDER BY pi.indexname
+            """)
+
+        return result.rows.map { row in
+            IndexInfo(
+                name:       row[safe: 0]?.displayValue ?? "",
+                definition: row[safe: 1]?.displayValue ?? "",
+                isUnique:   (row[safe: 2]?.displayValue ?? "false") == "true",
+                isPrimary:  (row[safe: 3]?.displayValue ?? "false") == "true"
+            )
+        }
+    }
+
+    func fetchTriggers(schema: String, table: String) async throws -> [TriggerInfo] {
+        let s = schema.sqlEscaped
+        let t = table.sqlEscaped
+        let result = try await query("""
+            SELECT trigger_name, event_manipulation, action_timing, action_statement
+            FROM information_schema.triggers
+            WHERE trigger_schema = '\(s)' AND event_object_table = '\(t)'
+            ORDER BY trigger_name, event_manipulation
+            """)
+
+        return result.rows.map { row in
+            TriggerInfo(
+                name:      row[safe: 0]?.displayValue ?? "",
+                event:     row[safe: 1]?.displayValue ?? "",
+                timing:    row[safe: 2]?.displayValue ?? "",
+                statement: row[safe: 3]?.displayValue ?? ""
+            )
+        }
+    }
+
     func enums() async throws -> [EnumInfo] {
         let result = try await query("""
             SELECT n.nspname, t.typname, e.enumlabel

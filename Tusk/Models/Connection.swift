@@ -74,9 +74,19 @@ struct ColumnInfo: Identifiable, Sendable {
 struct IndexInfo: Identifiable, Sendable {
     var id: String { name }
     let name: String
-    let columns: [String]
+    let definition: String
     let isUnique: Bool
     let isPrimary: Bool
+}
+
+// MARK: - Trigger info
+
+struct TriggerInfo: Identifiable, Sendable {
+    var id: String { "\(name)-\(event)" }
+    let name: String
+    let event: String    // INSERT, UPDATE, DELETE
+    let timing: String   // BEFORE, AFTER, INSTEAD OF
+    let statement: String
 }
 
 // MARK: - Foreign key info

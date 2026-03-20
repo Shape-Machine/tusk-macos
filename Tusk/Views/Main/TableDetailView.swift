@@ -10,13 +10,21 @@ struct TableDetailView: View {
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
-    enum Tab { case columns, keys, relations, ddl, data }
+    enum Tab { case columns, keys, relations, indexes, triggers, ddl, data }
 
     @State private var selectedTab: Tab = .columns
     @State private var columns: [ColumnInfo] = []
     @State private var foreignKeys: [ForeignKeyInfo] = []
     @State private var isLoadingMeta = false
     @State private var dataState = DataBrowserState()
+    @State private var indexes: [IndexInfo] = []
+    @State private var indexesError: String? = nil
+    @State private var isLoadingIndexes = false
+    @State private var indexesLoadTask: Task<Void, Never>? = nil
+    @State private var triggers: [TriggerInfo] = []
+    @State private var triggersError: String? = nil
+    @State private var isLoadingTriggers = false
+    @State private var triggersLoadTask: Task<Void, Never>? = nil
     @State private var ddlText = ""
     @State private var ddlError: String? = nil
     @State private var isLoadingDDL = false
@@ -40,12 +48,26 @@ struct TableDetailView: View {
             dataState.isLoading = false
             dataState.offset = 0
             dataState.filterText = ""
+            indexesLoadTask?.cancel()
+            indexesLoadTask = nil
+            indexes = []
+            indexesError = nil
+            triggersLoadTask?.cancel()
+            triggersLoadTask = nil
+            triggers = []
+            triggersError = nil
             ddlLoadTask?.cancel()
             ddlLoadTask = nil
             ddlText = ""
             ddlError = nil
         }
         .onChange(of: selectedTab) { _, newTab in
+            if newTab == .indexes && indexes.isEmpty && !isLoadingIndexes {
+                indexesLoadTask = Task { await loadIndexes() }
+            }
+            if newTab == .triggers && triggers.isEmpty && !isLoadingTriggers {
+                triggersLoadTask = Task { await loadTriggers() }
+            }
             if newTab == .ddl && ddlText.isEmpty && !isLoadingDDL {
                 ddlLoadTask = Task { await loadDDL() }
             }
@@ -80,6 +102,8 @@ struct TableDetailView: View {
             tabSegment("Columns", for: .columns)
             tabSegment("Keys", for: .keys)
             tabSegment("Relations", for: .relations)
+            tabSegment("Indexes", for: .indexes)
+            tabSegment("Triggers", for: .triggers)
             tabSegment("DDL", for: .ddl)
             tabSegment("Data", for: .data)
             Spacer()
@@ -117,6 +141,10 @@ struct TableDetailView: View {
             keysTab
         case .relations:
             RelationsView(client: client, schemaName: schemaName, tableName: tableName)
+        case .indexes:
+            indexesTab
+        case .triggers:
+            triggersTab
         case .ddl:
             DDLTab(ddlText: ddlText, ddlError: ddlError, isLoading: isLoadingDDL, fontSize: contentFontSize, fontDesign: contentFontDesign)
         }
@@ -178,6 +206,62 @@ struct TableDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Indexes tab
+
+    private var indexesTab: some View {
+        Group {
+            if isLoadingIndexes {
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = indexesError {
+                ContentUnavailableView("Failed to load indexes", systemImage: "exclamationmark.triangle")
+                    .help(error)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if indexes.isEmpty {
+                ContentUnavailableView("No indexes", systemImage: "magnifyingglass")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Table(indexes) {
+                    TableColumn("Name", value: \.name)
+                    TableColumn("Unique") { idx in
+                        Text(idx.isUnique ? "YES" : "NO")
+                            .foregroundStyle(idx.isUnique ? .primary : .secondary)
+                    }
+                    TableColumn("Primary") { idx in
+                        Text(idx.isPrimary ? "YES" : "NO")
+                            .foregroundStyle(idx.isPrimary ? .primary : .secondary)
+                    }
+                    TableColumn("Definition", value: \.definition)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Triggers tab
+
+    private var triggersTab: some View {
+        Group {
+            if isLoadingTriggers {
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = triggersError {
+                ContentUnavailableView("Failed to load triggers", systemImage: "exclamationmark.triangle")
+                    .help(error)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if triggers.isEmpty {
+                ContentUnavailableView("No triggers", systemImage: "bolt.slash")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Table(triggers) {
+                    TableColumn("Name", value: \.name)
+                    TableColumn("Timing", value: \.timing)
+                    TableColumn("Event", value: \.event)
+                    TableColumn("Statement", value: \.statement)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     // MARK: - Load metadata
 
     private func loadMeta() async {
@@ -187,6 +271,34 @@ struct TableDetailView: View {
         columns     = await cols ?? []
         foreignKeys = await fks  ?? []
         isLoadingMeta = false
+    }
+
+    private func loadIndexes() async {
+        isLoadingIndexes = true
+        do {
+            let result = try await client.fetchIndexes(schema: schemaName, table: tableName)
+            guard !Task.isCancelled else { isLoadingIndexes = false; return }
+            indexes = result
+            indexesError = nil
+        } catch {
+            guard !Task.isCancelled else { isLoadingIndexes = false; return }
+            indexesError = error.localizedDescription
+        }
+        isLoadingIndexes = false
+    }
+
+    private func loadTriggers() async {
+        isLoadingTriggers = true
+        do {
+            let result = try await client.fetchTriggers(schema: schemaName, table: tableName)
+            guard !Task.isCancelled else { isLoadingTriggers = false; return }
+            triggers = result
+            triggersError = nil
+        } catch {
+            guard !Task.isCancelled else { isLoadingTriggers = false; return }
+            triggersError = error.localizedDescription
+        }
+        isLoadingTriggers = false
     }
 
     private func loadDDL() async {
