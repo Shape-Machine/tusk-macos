@@ -177,14 +177,14 @@ struct ExecutionEntry: Identifiable, Sendable {
 
 // MARK: - Schema object models
 
-struct EnumInfo: Identifiable {
+struct EnumInfo: Identifiable, Sendable {
     var id: String { "\(schema).\(name)" }
     let schema: String
     let name: String
     let values: [String]
 }
 
-struct SequenceInfo: Identifiable {
+struct SequenceInfo: Identifiable, Sendable {
     var id: String { "\(schema).\(name)" }
     let schema: String
     let name: String
