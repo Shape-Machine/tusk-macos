@@ -70,26 +70,44 @@ private struct ConnectionSection: View {
     var isConnected: Bool { appState.isConnected(connection) }
 
     /// All schemas present in the cache, public first then alphabetical.
-    /// Each entry pairs a schema name with its BASE TABLE items only.
-    var schemas: [(id: String, name: String, tables: [TableInfo])] {
-        let all = appState.schemaTables[connection.id] ?? []
+    var schemas: [(id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo])] {
+        let all      = appState.schemaTables[connection.id] ?? []
+        let allEnums = appState.schemaEnums[connection.id] ?? []
+        let allSeqs  = appState.schemaSequences[connection.id] ?? []
         let uniqueSchemas = Array(Set(all.map { $0.schema })).sorted {
             if $0 == "public" { return true }
             if $1 == "public" { return false }
             return $0 < $1
         }
         let tablesBySchema = Dictionary(grouping: all.filter { $0.type == .table }, by: { $0.schema })
+        let viewsBySchema  = Dictionary(grouping: all.filter { $0.type == .view },  by: { $0.schema })
+        let enumsBySchema  = Dictionary(grouping: allEnums, by: { $0.schema })
+        let seqsBySchema   = Dictionary(grouping: allSeqs,  by: { $0.schema })
         // Include connection.id in the row ID so that identically-named schemas
         // across different connections get distinct SwiftUI identities in the
         // flattened List — otherwise @State (isExpanded) is shared between them.
-        return uniqueSchemas.map { (id: "\(connection.id)-\($0)", name: $0, tables: tablesBySchema[$0] ?? []) }
+        return uniqueSchemas.map { (
+            id:        "\(connection.id)-\($0)",
+            name:      $0,
+            tables:    tablesBySchema[$0] ?? [],
+            views:     viewsBySchema[$0]  ?? [],
+            enums:     enumsBySchema[$0]  ?? [],
+            sequences: seqsBySchema[$0]   ?? []
+        ) }
     }
 
     var body: some View {
         Section {
             if isConnected {
                 ForEach(schemas, id: \.id) { schema in
-                    SchemaRow(schema: schema.name, tables: schema.tables, connection: connection)
+                    SchemaRow(
+                        schema: schema.name,
+                        tables: schema.tables,
+                        views: schema.views,
+                        enums: schema.enums,
+                        sequences: schema.sequences,
+                        connection: connection
+                    )
                 }
             }
         } header: {
@@ -103,20 +121,26 @@ private struct ConnectionSection: View {
 private struct SchemaRow: View {
     let schema: String
     let tables: [TableInfo]
+    let views: [TableInfo]
+    let enums: [EnumInfo]
+    let sequences: [SequenceInfo]
     let connection: Connection
 
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded: Bool
 
-    init(schema: String, tables: [TableInfo], connection: Connection) {
+    init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], connection: Connection) {
         self.schema = schema
         self.tables = tables
+        self.views = views
+        self.enums = enums
+        self.sequences = sequences
         self.connection = connection
         _isExpanded = State(initialValue: schema == "public")
     }
 
-    var isEmpty: Bool { tables.isEmpty }
+    var isEmpty: Bool { tables.isEmpty && views.isEmpty && enums.isEmpty && sequences.isEmpty }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -132,6 +156,56 @@ private struct SchemaRow: View {
                     schema: table.schema,
                     tableName: table.name
                 ))
+            }
+            if !views.isEmpty {
+                DisclosureGroup("Views") {
+                    ForEach(views) { view in
+                        Label {
+                            Text(view.name)
+                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        } icon: {
+                            Image(systemName: "eye")
+                        }
+                        .tag(SidebarItem.table(
+                            connectionID: connection.id,
+                            schema: view.schema,
+                            tableName: view.name
+                        ))
+                    }
+                }
+            }
+            if !enums.isEmpty {
+                DisclosureGroup("Enums") {
+                    ForEach(enums) { enumInfo in
+                        DisclosureGroup {
+                            ForEach(enumInfo.values, id: \.self) { value in
+                                Text(value)
+                                    .font(.system(size: sidebarFontSize - 1, design: sidebarFontDesign.design))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 4)
+                            }
+                        } label: {
+                            Label {
+                                Text(enumInfo.name)
+                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            } icon: {
+                                Image(systemName: "list.bullet")
+                            }
+                        }
+                    }
+                }
+            }
+            if !sequences.isEmpty {
+                DisclosureGroup("Sequences") {
+                    ForEach(sequences) { seq in
+                        Label {
+                            Text(seq.name)
+                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        } icon: {
+                            Image(systemName: "number")
+                        }
+                    }
+                }
             }
         } label: {
             HStack(spacing: 6) {
