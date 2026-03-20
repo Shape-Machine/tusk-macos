@@ -406,6 +406,19 @@ struct QueryEditorView: View {
 
         isRunning = false
 
+        // Auto-refresh schema if any DDL statement succeeded
+        let ddlPrefixes = ["CREATE", "DROP", "ALTER"]
+        let hasDDL = executions.contains { entry in
+            guard case .ok = entry.outcome else { return false }
+            let prefix = entry.sql.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return ddlPrefixes.contains { prefix.hasPrefix($0) }
+        }
+        if hasDDL,
+           let connID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID,
+           let connection = appState.connections.first(where: { $0.id == connID }) {
+            Task { try? await appState.refreshSchema(for: connection) }
+        }
+
         // Auto-switch to Result 1 for the common single-SELECT-no-error case
         let hasError = executions.contains { if case .error = $0.outcome { true } else { false } }
         let resultCount = executions.filter { if case .rows = $0.outcome { true } else { false } }.count
