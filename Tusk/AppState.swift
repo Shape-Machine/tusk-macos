@@ -164,10 +164,15 @@ final class AppState {
         async let enums     = try client.enums()
         async let sequences = try client.sequences()
         async let functions = try client.functions()
-        schemaTables[connection.id]    = try await tables
-        schemaEnums[connection.id]     = try await enums
-        schemaSequences[connection.id] = try await sequences
-        schemaFunctions[connection.id] = try await functions
+        // Collect all results before writing — all-or-nothing to avoid partial cache state
+        let t = try await tables
+        let e = try await enums
+        let s = try await sequences
+        let f = try await functions
+        schemaTables[connection.id]    = t
+        schemaEnums[connection.id]     = e
+        schemaSequences[connection.id] = s
+        schemaFunctions[connection.id] = f
     }
 
     // MARK: - Query tabs
