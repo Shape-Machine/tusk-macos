@@ -330,12 +330,14 @@ struct RelationsView: View {
             async let inc = try await client.incomingReferences(schema: schemaName, table: tableName)
             outgoing = try await out
             incoming = try await inc
+            guard !Task.isCancelled else { isLoading = false; return }
             // Auto-scale for dense graphs
             let edgeCount = outgoing.count + incoming.count
             if edgeCount > 6 {
                 scale = max(0.4, 6.0 / CGFloat(edgeCount))
             }
         } catch {
+            guard !Task.isCancelled else { isLoading = false; return }
             outgoing = []
             incoming = []
             loadError = error.localizedDescription
