@@ -29,6 +29,9 @@ struct DataBrowserView: View {
 
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
+    @State private var copiedInsert = false
+    @State private var copiedCSV = false
+    @State private var copiedJSON = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,10 +75,18 @@ struct DataBrowserView: View {
         HStack(spacing: 10) {
             Spacer()
 
-            TextField("Filter…", text: $state.filterText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 180)
-                .onChange(of: state.filterText) { _, _ in
+            ZStack(alignment: .trailing) {
+                TextField("Filter…", text: $state.filterText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 180)
+                if state.isLoading && !state.filterText.isEmpty {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .padding(.trailing, 6)
+                }
+            }
+            .frame(width: 180)
+            .onChange(of: state.filterText) { _, _ in
                     state.filterDebounceTask?.cancel()
                     state.filterDebounceTask = Task {
                         try? await Task.sleep(for: .milliseconds(300))
@@ -128,8 +139,11 @@ struct DataBrowserView: View {
             if !isView {
                 Button {
                     copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
+                    copiedInsert = true
+                    Task { try? await Task.sleep(for: .milliseconds(1500)); copiedInsert = false }
                 } label: {
-                    Label("Copy INSERT", systemImage: "doc.on.clipboard")
+                    Label(copiedInsert ? "Copied!" : "Copy INSERT",
+                          systemImage: copiedInsert ? "checkmark" : "doc.on.clipboard")
                         .font(.caption)
                 }
                 .buttonStyle(.borderless)
@@ -137,16 +151,22 @@ struct DataBrowserView: View {
             }
             Button {
                 copyRowsAsCSV(columns: result.columns, rows: result.rows)
+                copiedCSV = true
+                Task { try? await Task.sleep(for: .milliseconds(1500)); copiedCSV = false }
             } label: {
-                Label("Copy CSV", systemImage: "doc.on.clipboard")
+                Label(copiedCSV ? "Copied!" : "Copy CSV",
+                      systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard")
                     .font(.caption)
             }
             .buttonStyle(.borderless)
             .help("Copy all rows as CSV")
             Button {
                 copyRowsAsJSON(columns: result.columns, rows: result.rows)
+                copiedJSON = true
+                Task { try? await Task.sleep(for: .milliseconds(1500)); copiedJSON = false }
             } label: {
-                Label("Copy JSON", systemImage: "doc.on.clipboard")
+                Label(copiedJSON ? "Copied!" : "Copy JSON",
+                      systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard")
                     .font(.caption)
             }
             .buttonStyle(.borderless)
