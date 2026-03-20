@@ -304,6 +304,13 @@ private struct ConnectionHeader: View {
                 .font(.system(size: sidebarFontSize, weight: .semibold, design: sidebarFontDesign.design))
                 .lineLimit(1)
 
+            if let errorMsg = appState.schemaRefreshErrors[connection.id] {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: sidebarFontSize - 3))
+                    .foregroundStyle(.orange)
+                    .help("Schema refresh failed: \(errorMsg)")
+            }
+
             Spacer()
         }
         .contentShape(Rectangle())

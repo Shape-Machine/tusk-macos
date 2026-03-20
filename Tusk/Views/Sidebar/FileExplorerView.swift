@@ -161,7 +161,7 @@ struct FileExplorerView: View {
                     }
                     .padding(.vertical, 1)
                 }
-                ForEach(items) { item in
+                ForEach(items, id: \.id) { (item: FileItem) in
                     if renamingItem?.id == item.id {
                         HStack(spacing: 6) {
                             Image(systemName: item.icon)
@@ -182,10 +182,17 @@ struct FileExplorerView: View {
                             }
                         } label: {
                             Label {
-                                Text(item.name)
-                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
-                                    .foregroundStyle(item.isInteractable ? .primary : .tertiary)
-                                    .lineLimit(1)
+                                HStack(spacing: 4) {
+                                    Text(item.name)
+                                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                                        .foregroundStyle(item.isInteractable ? .primary : .tertiary)
+                                        .lineLimit(1)
+                                    if item.isSql && appState.queryTabs.contains(where: { $0.sourceURL == item.url }) {
+                                        Image(systemName: "circle.fill")
+                                            .font(.system(size: 5))
+                                            .foregroundStyle(Color.accentColor)
+                                    }
+                                }
                             } icon: {
                                 Image(systemName: item.icon)
                                     .foregroundStyle(item.isInteractable ? .secondary : .quaternary)
