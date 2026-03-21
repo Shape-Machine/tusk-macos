@@ -71,7 +71,6 @@ struct QueryEditorView: View {
                     Label("Saved", systemImage: "checkmark.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .transition(.opacity)
                 }
                 if isRunning {
                     ProgressView().controlSize(.small)
