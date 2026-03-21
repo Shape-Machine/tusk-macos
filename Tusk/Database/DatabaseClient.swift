@@ -420,11 +420,7 @@ private extension String {
     var sqlEscaped: String { replacingOccurrences(of: "'", with: "''") }
 }
 
-// MARK: - SQL identifier quoting
-
-private func quoteIdentifier(_ name: String) -> String {
-    "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
-}
+// quoteIdentifier is defined in QueryResult.swift (module-wide)
 
 // MARK: - PostgreSQL binary date/time decoding
 //
