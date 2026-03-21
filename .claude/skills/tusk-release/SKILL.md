@@ -19,8 +19,19 @@ Work directly on the `main` branch (no feature branch needed for releases).
 - Confirm the current branch is `main` and the working tree is clean
 - If not, stop and tell the user what needs to be resolved first
 
-### 2. Bump version everywhere
-Update the following files — replace the old `CFBundleShortVersionString` with `$ARGUMENTS` and increment `CFBundleVersion` by 1:
+### 2. Determine version
+Version scheme is `YYYY.MM.DD-NN` (e.g. `2026.03.21-00`). NN is a zero-padded counter starting at 00 for each day.
+
+- If `$ARGUMENTS` is provided, use it as the version.
+- If `$ARGUMENTS` is empty, auto-derive it:
+  - Get today's date: `date +%Y.%m.%d`
+  - List existing tags for today: `git tag | grep "^v$(date +%Y.%m.%d)-"`
+  - If no tags exist for today, use `YYYY.MM.DD-00`
+  - If tags exist, increment the NN counter (e.g. `-00` → `-01`)
+  - Confirm the derived version with the user before proceeding.
+
+### 3. Bump version everywhere
+Update the following files — replace the old `CFBundleShortVersionString` with the new version and increment `CFBundleVersion` by 1:
 - `Tusk/Resources/Info.plist` — `CFBundleShortVersionString` and `CFBundleVersion`
 - `project.yml` — same two keys under `info:`
 - `README.md` — update the download link filename and URL (both the display text `Tusk-X.X.X.dmg` and the URL path `vX.X.X/Tusk-X.X.X.dmg`)
