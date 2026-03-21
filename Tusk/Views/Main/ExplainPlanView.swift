@@ -101,6 +101,7 @@ private struct ExplainNodeRow: View {
 
     private var nodeColor: Color {
         if node.isSeqScan { return .orange }
+        if node.nodeType == "Hash Join" { return .orange }
         // Flag nodes that account for >50% of total plan cost
         if totalCost > 0 && node.totalCost / totalCost > 0.5 { return .orange }
         return .primary
