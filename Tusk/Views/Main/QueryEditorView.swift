@@ -898,7 +898,7 @@ struct ResultsGrid: View {
             return
         }
 
-        let sql = "UPDATE \(qualifiedTableName) SET \"\(colName)\" = \(newValueSQL) WHERE \(whereClause)"
+        let sql = "UPDATE \(qualifiedTableName) SET \(quoteIdentifier(colName)) = \(newValueSQL) WHERE \(whereClause)"
 
         isSavingEdit = true
         editError = nil
@@ -939,7 +939,7 @@ struct ResultsGrid: View {
             guard let resultColIndex = result.columns.firstIndex(where: { $0.name == pkCol.name }),
                   resultColIndex < row.count else { return nil }
             let cell = row[resultColIndex]
-            parts.append("\"\(pkCol.name)\" = \(sqlLiteralForWhere(cell))")
+            parts.append("\(quoteIdentifier(pkCol.name)) = \(sqlLiteralForWhere(cell))")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " AND ")
     }

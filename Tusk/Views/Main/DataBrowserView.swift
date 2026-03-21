@@ -25,7 +25,7 @@ struct DataBrowserView: View {
     var columns: [ColumnInfo] = []
     @Bindable var state: DataBrowserState
 
-    private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
+    private var qualifiedName: String { "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))" }
     private let pageSize = tuskPageSize
 
     @State private var sortColumn: String? = nil
@@ -288,7 +288,7 @@ private struct InsertRowSheet: View {
     @State private var isInserting = false
     @State private var insertError: String? = nil
 
-    private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
+    private var qualifiedName: String { "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))" }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -374,7 +374,7 @@ private struct InsertRowSheet: View {
     }
 
     private func commitInsert() async {
-        let colNames = columns.map { "\"\($0.name)\"" }.joined(separator: ", ")
+        let colNames = columns.map { quoteIdentifier($0.name) }.joined(separator: ", ")
         let values: [String] = columns.map { col in
             if nullFields.contains(col.name) { return "NULL" }
             let raw = fieldValues[col.name] ?? ""

@@ -122,7 +122,7 @@ func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
 
 // MARK: - INSERT copy helpers
 
-private func quoteIdentifier(_ name: String) -> String {
+func quoteIdentifier(_ name: String) -> String {
     "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }
 
