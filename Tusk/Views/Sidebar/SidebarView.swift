@@ -178,7 +178,7 @@ private struct SchemaRow: View {
                                 Text(table.name)
                                     .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                                 if showTableSizes, let info = tableSizes["\(table.schema).\(table.name)"] {
-                                    Text(info.totalSize)
+                                    Text("\(info.totalSize) · \(info.rowEstimate.formatted()) rows · idx \(info.indexSize)")
                                         .font(.system(size: sidebarFontSize - 2, design: sidebarFontDesign.design))
                                         .foregroundStyle(.tertiary)
                                 }
