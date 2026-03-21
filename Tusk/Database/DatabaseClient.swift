@@ -421,7 +421,7 @@ actor DatabaseClient {
         return result.rows.map { row in
             ActivityEntry(
                 pid:             { if case .integer(let i) = row[safe: 0] { return Int(i) }; return 0 }(),
-                applicationName: row[safe: 1]?.displayValue ?? "",
+                applicationName: row[safe: 1].flatMap { $0.isNull ? nil : $0.displayValue } ?? "",
                 state:           row[safe: 2]?.displayValue ?? "",
                 query:           row[safe: 3]?.displayValue ?? "",
                 durationSeconds: { if case .integer(let i) = row[safe: 4] { return Int(i) }; return nil }(),
