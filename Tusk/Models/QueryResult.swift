@@ -170,9 +170,72 @@ struct ExecutionEntry: Identifiable, Sendable {
         case rows(QueryResult, isCapped: Bool)
         case ok(duration: TimeInterval)     // DML/DDL — no result set
         case error(String)
+        case explain(ExplainResult)
     }
 
     var outcome: Outcome = .running
+}
+
+// MARK: - Explain plan models
+
+struct ExplainNode: Sendable {
+    let nodeType: String
+    let relationName: String?
+    let indexName: String?
+    let alias: String?
+    let startupCost: Double
+    let totalCost: Double
+    let planRows: Int
+    let planWidth: Int
+    // Populated only when ANALYZE is used
+    let actualStartupTime: Double?
+    let actualTotalTime: Double?
+    let actualRows: Int?
+    let actualLoops: Int?
+    let children: [ExplainNode]
+
+    var isSeqScan: Bool { nodeType == "Seq Scan" }
+
+    /// Parse from the dictionary produced by JSONSerialization on Postgres EXPLAIN FORMAT JSON output.
+    static func parse(_ d: [String: Any]) -> ExplainNode {
+        let children = (d["Plans"] as? [[String: Any]] ?? []).map { parse($0) }
+        return ExplainNode(
+            nodeType:           d["Node Type"]          as? String ?? "?",
+            relationName:       d["Relation Name"]      as? String,
+            indexName:          d["Index Name"]         as? String,
+            alias:              d["Alias"]              as? String,
+            startupCost:        d["Startup Cost"]       as? Double ?? 0,
+            totalCost:          d["Total Cost"]         as? Double ?? 0,
+            planRows:           d["Plan Rows"]          as? Int    ?? 0,
+            planWidth:          d["Plan Width"]         as? Int    ?? 0,
+            actualStartupTime:  d["Actual Startup Time"] as? Double,
+            actualTotalTime:    d["Actual Total Time"]   as? Double,
+            actualRows:         d["Actual Rows"]         as? Int,
+            actualLoops:        d["Actual Loops"]        as? Int,
+            children:           children
+        )
+    }
+}
+
+struct ExplainResult: Sendable {
+    let plan: ExplainNode
+    let planningMs: Double?
+    let executionMs: Double?
+    let duration: TimeInterval   // wall-clock time of the EXPLAIN query itself
+
+    static func parse(jsonText: String, duration: TimeInterval) -> ExplainResult? {
+        guard let data = jsonText.data(using: .utf8),
+              let top = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let first = top.first,
+              let planDict = first["Plan"] as? [String: Any]
+        else { return nil }
+        return ExplainResult(
+            plan:        ExplainNode.parse(planDict),
+            planningMs:  first["Planning Time"]  as? Double,
+            executionMs: first["Execution Time"] as? Double,
+            duration:    duration
+        )
+    }
 }
 
 // MARK: - Schema object models
