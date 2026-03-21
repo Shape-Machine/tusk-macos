@@ -181,6 +181,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { tablesExpanded.toggle() }
                 }
+                .animation(nil, value: tablesExpanded)
             }
             if !views.isEmpty {
                 DisclosureGroup(isExpanded: $viewsExpanded) {
@@ -204,6 +205,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { viewsExpanded.toggle() }
                 }
+                .animation(nil, value: viewsExpanded)
             }
             if !enums.isEmpty {
                 DisclosureGroup(isExpanded: $enumsExpanded) {
@@ -231,6 +233,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { enumsExpanded.toggle() }
                 }
+                .animation(nil, value: enumsExpanded)
             }
             if !sequences.isEmpty {
                 DisclosureGroup(isExpanded: $sequencesExpanded) {
@@ -249,6 +252,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { sequencesExpanded.toggle() }
                 }
+                .animation(nil, value: sequencesExpanded)
             }
             if !functions.isEmpty {
                 DisclosureGroup(isExpanded: $functionsExpanded) {
@@ -267,6 +271,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { functionsExpanded.toggle() }
                 }
+                .animation(nil, value: functionsExpanded)
             }
         } label: {
             HStack(spacing: 6) {
