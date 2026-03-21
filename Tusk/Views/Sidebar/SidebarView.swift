@@ -138,6 +138,11 @@ private struct SchemaRow: View {
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded: Bool
+    @State private var tablesExpanded: Bool = true
+    @State private var viewsExpanded: Bool = true
+    @State private var enumsExpanded: Bool = true
+    @State private var sequencesExpanded: Bool = true
+    @State private var functionsExpanded: Bool = true
 
     init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection) {
         self.schema = schema
@@ -155,7 +160,7 @@ private struct SchemaRow: View {
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             if !tables.isEmpty {
-                DisclosureGroup {
+                DisclosureGroup(isExpanded: $tablesExpanded) {
                     ForEach(tables) { table in
                         Label {
                             Text(table.name)
@@ -172,10 +177,13 @@ private struct SchemaRow: View {
                 } label: {
                     Text("Tables")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { tablesExpanded.toggle() }
                 }
             }
             if !views.isEmpty {
-                DisclosureGroup {
+                DisclosureGroup(isExpanded: $viewsExpanded) {
                     ForEach(views) { view in
                         Label {
                             Text(view.name)
@@ -192,10 +200,13 @@ private struct SchemaRow: View {
                 } label: {
                     Text("Views")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { viewsExpanded.toggle() }
                 }
             }
             if !enums.isEmpty {
-                DisclosureGroup {
+                DisclosureGroup(isExpanded: $enumsExpanded) {
                     ForEach(enums) { enumInfo in
                         DisclosureGroup {
                             ForEach(enumInfo.values, id: \.self) { value in
@@ -216,10 +227,13 @@ private struct SchemaRow: View {
                 } label: {
                     Text("Enums")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { enumsExpanded.toggle() }
                 }
             }
             if !sequences.isEmpty {
-                DisclosureGroup {
+                DisclosureGroup(isExpanded: $sequencesExpanded) {
                     ForEach(sequences) { seq in
                         Label {
                             Text(seq.name)
@@ -231,10 +245,13 @@ private struct SchemaRow: View {
                 } label: {
                     Text("Sequences")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { sequencesExpanded.toggle() }
                 }
             }
             if !functions.isEmpty {
-                DisclosureGroup {
+                DisclosureGroup(isExpanded: $functionsExpanded) {
                     ForEach(functions) { fn in
                         Label {
                             Text(fn.signature)
@@ -246,6 +263,9 @@ private struct SchemaRow: View {
                 } label: {
                     Text("Functions")
                         .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { functionsExpanded.toggle() }
                 }
             }
         } label: {
