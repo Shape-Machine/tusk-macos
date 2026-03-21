@@ -495,9 +495,17 @@ struct QueryEditorView: View {
             guard let found = statementAtCursor(in: sql, cursorLocation: selectedRange.location) else { return }
             candidate = found
         }
-        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        await executeExplain(sql: trimmed)
+        let stmts = splitStatements(candidate)
+        guard stmts.count == 1 else {
+            executions = [ExecutionEntry(index: 1, sql: candidate,
+                                         outcome: .error(stmts.isEmpty
+                                             ? "Nothing to explain"
+                                             : "Explain requires exactly one statement — select a single statement"))]
+            selectedResultTab = 0
+            return
+        }
+        let (clean, _) = cappedSQL(stmts[0])
+        await executeExplain(sql: clean)
     }
 
     private func executeExplain(sql: String) async {
