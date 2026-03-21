@@ -866,6 +866,8 @@ struct ResultsGrid: View {
     }
 
     private func startEditing(rowIndex: Int, colIndex: Int, cell: QueryCell) {
+        // Binary data cannot be round-tripped through a text field — skip silently.
+        if case .bytes = cell { return }
         editingRowIndex = rowIndex
         editingColIndex = colIndex
         editingIsNull = cell.isNull
@@ -949,7 +951,7 @@ struct ResultsGrid: View {
         case .integer(let i):  return String(i)
         case .double(let d):   return String(d)
         case .bool(let b):     return b ? "TRUE" : "FALSE"
-        case .bytes:           return "NULL"
+        case .bytes(let data): return "'\\x\(data.map { String(format: "%02x", $0) }.joined())'"
         }
     }
 
