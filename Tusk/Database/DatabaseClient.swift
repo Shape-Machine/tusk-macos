@@ -432,11 +432,17 @@ actor DatabaseClient {
     }
 
     func cancelBackend(pid: Int) async throws {
-        _ = try await query("SELECT pg_cancel_backend(\(pid))")
+        let result = try await query("SELECT pg_cancel_backend(\(pid))")
+        guard case .bool(true) = result.rows.first?.first else {
+            throw TuskError.queryFailed("pg_cancel_backend returned false — query may have already finished")
+        }
     }
 
     func terminateBackend(pid: Int) async throws {
-        _ = try await query("SELECT pg_terminate_backend(\(pid))")
+        let result = try await query("SELECT pg_terminate_backend(\(pid))")
+        guard case .bool(true) = result.rows.first?.first else {
+            throw TuskError.queryFailed("pg_terminate_backend returned false — backend may have already exited")
+        }
     }
 
     // MARK: - Table sizes
