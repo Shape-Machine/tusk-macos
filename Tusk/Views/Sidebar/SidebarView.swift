@@ -291,6 +291,7 @@ private struct SchemaRow: View {
             .contentShape(Rectangle())
             .onTapGesture { isExpanded.toggle() }
         }
+        .animation(nil, value: isExpanded)
     }
 }
 
