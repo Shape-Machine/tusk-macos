@@ -93,7 +93,8 @@ private struct ExplainNodeRow: View {
         if let rel = node.relationName {
             parts.append("on \(rel)")
             if let alias = node.alias, alias != rel { parts.append("(\(alias))") }
-        } else if let idx = node.indexName {
+        }
+        if let idx = node.indexName {
             parts.append("using \(idx)")
         }
         return parts.joined(separator: " ")
