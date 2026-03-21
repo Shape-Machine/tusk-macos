@@ -210,21 +210,7 @@ private struct SchemaRow: View {
             if !enums.isEmpty {
                 DisclosureGroup(isExpanded: $enumsExpanded) {
                     ForEach(enums) { enumInfo in
-                        DisclosureGroup {
-                            ForEach(enumInfo.values, id: \.self) { value in
-                                Text(value)
-                                    .font(.system(size: sidebarFontSize - 1, design: sidebarFontDesign.design))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.leading, 4)
-                            }
-                        } label: {
-                            Label {
-                                Text(enumInfo.name)
-                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
-                            } icon: {
-                                Image(systemName: "list.bullet")
-                            }
-                        }
+                        EnumValueRow(enumInfo: enumInfo)
                     }
                 } label: {
                     Text("Enums")
@@ -290,6 +276,34 @@ private struct SchemaRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { isExpanded.toggle() }
+        }
+        .animation(nil, value: isExpanded)
+    }
+}
+
+// MARK: - Per-enum value row (needs own @State to suppress animation)
+
+private struct EnumValueRow: View {
+    let enumInfo: EnumInfo
+    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @State private var isExpanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            ForEach(enumInfo.values, id: \.self) { value in
+                Text(value)
+                    .font(.system(size: sidebarFontSize - 1, design: sidebarFontDesign.design))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 4)
+            }
+        } label: {
+            Label {
+                Text(enumInfo.name)
+                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+            } icon: {
+                Image(systemName: "list.bullet")
+            }
         }
         .animation(nil, value: isExpanded)
     }
