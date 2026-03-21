@@ -97,6 +97,17 @@ struct QueryEditorView: View {
                 .help(client == nil ? "Select a connection above to run queries" : "")
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
+                Button {
+                    Task { await explainCurrentQuery() }
+                } label: {
+                    Label("Explain", systemImage: "chart.bar.doc.horizontal")
+                        .font(.callout)
+                }
+                .keyboardShortcut(.return, modifiers: [.command, .option])
+                .disabled(client == nil || sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+                .help(client == nil ? "Select a connection above to run queries" : "EXPLAIN ANALYZE the current query")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -178,8 +189,8 @@ struct QueryEditorView: View {
     private var resultTabBar: some View {
         HStack(spacing: 2) {
             resultTabSegment("Log", index: 0)
-            ForEach(Array(resultEntries.enumerated()), id: \.element.id) { n, _ in
-                resultTabSegment("Result \(n + 1)", index: n + 1)
+            ForEach(Array(viewableTabs.enumerated()), id: \.element.entry.id) { n, tab in
+                resultTabSegment(tab.label, index: n + 1)
             }
             Spacer()
         }
@@ -211,16 +222,38 @@ struct QueryEditorView: View {
             executionLog
         } else {
             let idx = selectedResultTab - 1
-            if idx < resultEntries.count, case .rows(let r, let isCapped) = resultEntries[idx].outcome {
-                resultTabContent(result: r, isCapped: isCapped)
+            if idx < viewableTabs.count {
+                let entry = viewableTabs[idx].entry
+                switch entry.outcome {
+                case .rows(let r, let isCapped):
+                    resultTabContent(result: r, isCapped: isCapped)
+                case .explain(let er):
+                    ExplainPlanView(result: er)
+                default:
+                    Color(nsColor: .textBackgroundColor)
+                }
             } else {
                 Color(nsColor: .textBackgroundColor)
             }
         }
     }
 
-    private var resultEntries: [ExecutionEntry] {
-        executions.filter { if case .rows = $0.outcome { true } else { false } }
+    /// Unified ordered list of tabs that have a dedicated view (rows or explain plan).
+    private var viewableTabs: [(label: String, entry: ExecutionEntry)] {
+        var resultCount = 0
+        var explainCount = 0
+        return executions.compactMap { entry in
+            switch entry.outcome {
+            case .rows:
+                resultCount += 1
+                return ("Result \(resultCount)", entry)
+            case .explain:
+                explainCount += 1
+                return ("Plan \(explainCount)", entry)
+            default:
+                return nil
+            }
+        }
     }
 
     // MARK: - Execution log
@@ -279,6 +312,19 @@ struct QueryEditorView: View {
                 .foregroundStyle(.red)
                 .lineLimit(3)
                 .multilineTextAlignment(.trailing)
+        case .explain(let er):
+            HStack(spacing: 6) {
+                if let exec = er.executionMs {
+                    Text(String(format: "%.3f ms", exec)).foregroundStyle(.secondary)
+                } else {
+                    Text(String(format: "%.3fs", er.duration)).foregroundStyle(.secondary)
+                }
+                if let tabIdx = viewableTabIndex(for: entry) {
+                    Button("→ Plan \(tabIdx)") { selectedResultTab = tabIdx }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.tint)
+                }
+            }
         }
     }
 
@@ -289,16 +335,12 @@ struct QueryEditorView: View {
     }
 
     private func resultTabIndex(for entry: ExecutionEntry) -> Int? {
-        var count = 0
-        for e in executions {
-            if case .rows = e.outcome {
-                count += 1
-                if e.id == entry.id { return count }
-            } else if e.id == entry.id {
-                return nil
-            }
-        }
-        return nil
+        viewableTabIndex(for: entry)
+    }
+
+    private func viewableTabIndex(for entry: ExecutionEntry) -> Int? {
+        guard let idx = viewableTabs.firstIndex(where: { $0.entry.id == entry.id }) else { return nil }
+        return idx + 1  // 1-based; 0 is the Log tab
     }
 
     // MARK: - Result tab content
@@ -437,6 +479,55 @@ struct QueryEditorView: View {
         let resultCount = executions.filter { if case .rows = $0.outcome { true } else { false } }.count
         if resultCount == 1 && !hasError { selectedResultTab = 1 }
 
+        persistResultStateToTab()
+    }
+
+    // MARK: - Explain
+
+    private func explainCurrentQuery() async {
+        let nsSQL = sql as NSString
+        let candidate: String
+        if selectedRange.length > 0 {
+            let safeLocation = min(selectedRange.location, nsSQL.length)
+            let safeLength   = min(selectedRange.length, nsSQL.length - safeLocation)
+            candidate = nsSQL.substring(with: NSRange(location: safeLocation, length: safeLength))
+        } else {
+            guard let found = statementAtCursor(in: sql, cursorLocation: selectedRange.location) else { return }
+            candidate = found
+        }
+        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        await executeExplain(sql: trimmed)
+    }
+
+    private func executeExplain(sql: String) async {
+        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
+        guard let client = liveConnectionID.flatMap({ appState.clients[$0] }) else { return }
+
+        executions = []
+        selectedResultTab = 0
+        isRunning = true
+        persistResultStateToTab()
+
+        let idx = 1
+        executions.append(ExecutionEntry(index: idx, sql: sql, outcome: .running))
+
+        let explainSQL = "EXPLAIN (FORMAT JSON, ANALYZE, BUFFERS) \(sql)"
+        do {
+            let r = try await client.query(explainSQL)
+            if let jsonText = r.rows.first?.first.flatMap({ if case .text(let s) = $0 { return s }; return nil }),
+               let er = ExplainResult.parse(jsonText: jsonText, duration: r.duration) {
+                executions[0].outcome = .explain(er)
+            } else {
+                executions[0].outcome = .error("Could not parse EXPLAIN output")
+            }
+        } catch {
+            executions[0].outcome = .error(error.localizedDescription)
+        }
+
+        isRunning = false
+        // Auto-switch to the plan tab
+        if case .explain = executions[0].outcome { selectedResultTab = 1 }
         persistResultStateToTab()
     }
 
