@@ -21,6 +21,7 @@
 		7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */; };
 		8579F3571057CAD4338D6EB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */; };
 		88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B49B9D6360FE850DD93363 /* AppState.swift */; };
+		8BC64A5B72B6437F52A7EC49 /* ActivityMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B070C67054E9379142805B /* ActivityMonitorView.swift */; };
 		8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */; };
 		A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */; };
 		B2123B053A58F7D78FEE550A /* SettingsPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1C8E9BF3BF31794B0FF27A /* SettingsPopover.swift */; };
@@ -51,6 +52,7 @@
 		64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewAutosave.swift; sourceTree = "<group>"; };
 		67200EE52B28AE64A17D09E7 /* TuskFontDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskFontDesign.swift; sourceTree = "<group>"; };
 		6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHTunnel.swift; sourceTree = "<group>"; };
+		75B070C67054E9379142805B /* ActivityMonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityMonitorView.swift; sourceTree = "<group>"; };
 		7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLHighlighter.swift; sourceTree = "<group>"; };
 		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
 		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 		C26728883657235882AE0D7B /* Main */ = {
 			isa = PBXGroup;
 			children = (
+				75B070C67054E9379142805B /* ActivityMonitorView.swift */,
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
@@ -268,6 +271,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BDF57DF2459313BCFB4DDD3D /* AboutView.swift in Sources */,
+				8BC64A5B72B6437F52A7EC49 /* ActivityMonitorView.swift in Sources */,
 				19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */,
 				88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */,
 				B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */,

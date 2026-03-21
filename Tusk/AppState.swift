@@ -30,6 +30,8 @@ final class AppState {
     var schemaSequences:    [UUID: [SequenceInfo]]  = [:]
     var schemaFunctions:    [UUID: [FunctionInfo]]  = [:]
     var schemaRefreshErrors:[UUID: String]          = [:]
+    /// keyed by connectionID → "schema.table" → TableSizeInfo
+    var schemaTableSizes:   [UUID: [String: TableSizeInfo]] = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -123,6 +125,9 @@ final class AppState {
         }
 
         try? await refreshSchema(for: connection)
+        if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
+            await loadTableSizes(for: connection)
+        }
     }
 
     func disconnect(_ connection: Connection) {
@@ -137,11 +142,13 @@ final class AppState {
         schemaSequences.removeValue(forKey: connection.id)
         schemaFunctions.removeValue(forKey: connection.id)
         schemaRefreshErrors.removeValue(forKey: connection.id)
+        schemaTableSizes.removeValue(forKey: connection.id)
 
         // Close all detail tabs belonging to this connection
         let tabsToClose = openTabs.filter { tab in
             switch tab.kind {
             case .table(let cid, _, _): return cid == connection.id
+            case .activityMonitor(let cid): return cid == connection.id
             case .queryEditor(let qid):
                 return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
             }
@@ -243,6 +250,33 @@ final class AppState {
         activateDetailTab(detailTab)
     }
 
+    func openActivityMonitor(for connection: Connection) {
+        // If one is already open, just activate it.
+        if let existing = openTabs.first(where: {
+            if case .activityMonitor(let cid) = $0.kind { return cid == connection.id }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: "Activity",
+            icon: "waveform.path.ecg",
+            kind: .activityMonitor(connectionID: connection.id)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
+    }
+
+    func loadTableSizes(for connection: Connection) async {
+        guard let client = clients[connection.id] else { return }
+        guard let sizes = try? await client.tableSizes() else { return }
+        var dict: [String: TableSizeInfo] = [:]
+        for s in sizes { dict["\(s.schema).\(s.name)"] = s }
+        schemaTableSizes[connection.id] = dict
+    }
+
     func openQueryTab(for connection: Connection) {
         var queryTab = QueryTab()
         queryTab.connectionID = connection.id
@@ -342,6 +376,9 @@ final class AppState {
         case .table(let cid, let s, let n):
             selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: n)
             selectedConnectionID = cid
+        case .activityMonitor(let cid):
+            selectedSidebarItem = nil
+            selectedConnectionID = cid
         case .queryEditor(let qid):
             selectedSidebarItem = nil
             if let connID = queryTabs.first(where: { $0.id == qid })?.connectionID {
@@ -392,6 +429,7 @@ struct DetailTab: Identifiable, Hashable {
 
     enum Kind: Hashable {
         case table(connectionID: UUID, schema: String, tableName: String)
+        case activityMonitor(connectionID: UUID)
         case queryEditor(queryTabID: UUID)
     }
 

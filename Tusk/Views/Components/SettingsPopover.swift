@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct SettingsPopover: View {
-    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
-    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
-    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
-    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.fontSize")       private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign")     private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.content.fontSize")       private var contentFontSize   = 13.0
+    @AppStorage("tusk.content.fontDesign")     private var contentFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -12,6 +13,9 @@ struct SettingsPopover: View {
                 .font(.headline)
 
             settingsSection("Sidebar", fontDesign: $sidebarFontDesign, fontSize: $sidebarFontSize)
+            Toggle("Show table sizes", isOn: $showTableSizes)
+                .toggleStyle(.checkbox)
+                .font(.callout)
             Divider()
             settingsSection("Content", fontDesign: $contentFontDesign, fontSize: $contentFontSize)
         }
