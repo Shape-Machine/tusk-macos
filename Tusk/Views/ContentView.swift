@@ -85,6 +85,11 @@ struct DetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        case .activityMonitor(let connID):
+            if let client = appState.clients[connID],
+               let connection = appState.connections.first(where: { $0.id == connID }) {
+                ActivityMonitorView(client: client, connection: connection)
+            }
         case .queryEditor(let queryTabID):
             if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
                 let client = queryTab.connectionID.flatMap { appState.clients[$0] }
@@ -137,6 +142,8 @@ private struct DetailTabItem: View {
     var connectionColor: Color? {
         switch tab.kind {
         case .table(let connID, _, _):
+            return connection(for: connID)?.color.color
+        case .activityMonitor(let connID):
             return connection(for: connID)?.color.color
         case .queryEditor:
             guard let connID = queryTab?.connectionID else { return nil }
