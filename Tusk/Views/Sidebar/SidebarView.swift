@@ -138,11 +138,11 @@ private struct SchemaRow: View {
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded: Bool
-    @State private var tablesExpanded: Bool = true
-    @State private var viewsExpanded: Bool = true
-    @State private var enumsExpanded: Bool = true
-    @State private var sequencesExpanded: Bool = true
-    @State private var functionsExpanded: Bool = true
+    @State private var tablesExpanded: Bool = false
+    @State private var viewsExpanded: Bool = false
+    @State private var enumsExpanded: Bool = false
+    @State private var sequencesExpanded: Bool = false
+    @State private var functionsExpanded: Bool = false
 
     init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection) {
         self.schema = schema
