@@ -86,7 +86,7 @@ struct DataBrowserView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            if !isView && !columns.isEmpty {
+            if !isView && columns.contains(where: { $0.isPrimaryKey }) {
                 Button {
                     showingInsertSheet = true
                 } label: {
