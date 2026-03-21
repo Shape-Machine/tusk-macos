@@ -891,9 +891,8 @@ struct ResultsGrid: View {
 
         let colName = result.columns[colIndex].name
         let newValueSQL = editingIsNull ? "NULL" : "'\(editingText.replacingOccurrences(of: "'", with: "''"))'"
-        let whereClause = buildWhereClause(row: result.rows[rowIndex])
-        guard !whereClause.isEmpty else {
-            editError = "Cannot update: no primary key columns found in result."
+        guard let whereClause = buildWhereClause(row: result.rows[rowIndex]) else {
+            editError = "Cannot update: one or more primary key columns are missing from the result."
             return
         }
 
@@ -912,9 +911,8 @@ struct ResultsGrid: View {
 
     private func commitDelete(rowIndex: Int) async {
         guard rowIndex < result.rows.count, let execute = onExecuteSQL else { return }
-        let whereClause = buildWhereClause(row: result.rows[rowIndex])
-        guard !whereClause.isEmpty else {
-            deleteError = "Cannot delete: no primary key columns found in result."
+        guard let whereClause = buildWhereClause(row: result.rows[rowIndex]) else {
+            deleteError = "Cannot delete: one or more primary key columns are missing from the result."
             deletingRowIndex = nil
             return
         }
@@ -930,16 +928,18 @@ struct ResultsGrid: View {
     }
 
     /// Builds `"pk1" = val1 AND "pk2" = val2` using the primary-key columns.
-    private func buildWhereClause(row: [QueryCell]) -> String {
+    /// Returns `nil` if any PK column is absent from the result — callers must treat this as an error
+    /// rather than executing a potentially under-constrained WHERE clause.
+    private func buildWhereClause(row: [QueryCell]) -> String? {
         let pkCols = primaryKeyColumns
         var parts: [String] = []
         for pkCol in pkCols {
             guard let resultColIndex = result.columns.firstIndex(where: { $0.name == pkCol.name }),
-                  resultColIndex < row.count else { continue }
+                  resultColIndex < row.count else { return nil }
             let cell = row[resultColIndex]
             parts.append("\"\(pkCol.name)\" = \(sqlLiteralForWhere(cell))")
         }
-        return parts.joined(separator: " AND ")
+        return parts.isEmpty ? nil : parts.joined(separator: " AND ")
     }
 
     private func sqlLiteralForWhere(_ cell: QueryCell) -> String {
