@@ -2,8 +2,9 @@ import SwiftUI
 
 struct SidebarView: View {
     @Bindable var appState: AppState
-    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
-    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.fontSize")       private var sidebarFontSize    = 13.0
+    @AppStorage("tusk.sidebar.fontDesign")     private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes     = false
 
     var body: some View {
         VSplitView {
@@ -35,6 +36,12 @@ struct SidebarView: View {
                 .frame(minHeight: 120)
                 .splitViewAutosaveName("tusk.sidebar.split")
                 .environment(\.font, .system(size: sidebarFontSize, design: sidebarFontDesign.design))
+        }
+        .onChange(of: showTableSizes) { _, enabled in
+            guard enabled else { return }
+            for connection in appState.connections where appState.isConnected(connection) {
+                Task { await appState.loadTableSizes(for: connection) }
+            }
         }
         .navigationTitle("Tusk")
         .toolbar {
@@ -114,7 +121,8 @@ private struct ConnectionSection: View {
                         enums: schema.enums,
                         sequences: schema.sequences,
                         functions: schema.functions,
-                        connection: connection
+                        connection: connection,
+                        tableSizes: appState.schemaTableSizes[connection.id] ?? [:]
                     )
                 }
             }
@@ -134,9 +142,11 @@ private struct SchemaRow: View {
     let sequences: [SequenceInfo]
     let functions: [FunctionInfo]
     let connection: Connection
+    var tableSizes: [String: TableSizeInfo] = [:]
 
-    @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
-    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.fontSize")      private var sidebarFontSize    = 13.0
+    @AppStorage("tusk.sidebar.fontDesign")    private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
     @State private var isExpanded: Bool
     @State private var tablesExpanded: Bool = false
     @State private var viewsExpanded: Bool = false
@@ -144,7 +154,7 @@ private struct SchemaRow: View {
     @State private var sequencesExpanded: Bool = false
     @State private var functionsExpanded: Bool = false
 
-    init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection) {
+    init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection, tableSizes: [String: TableSizeInfo] = [:]) {
         self.schema = schema
         self.tables = tables
         self.views = views
@@ -152,6 +162,7 @@ private struct SchemaRow: View {
         self.sequences = sequences
         self.functions = functions
         self.connection = connection
+        self.tableSizes = tableSizes
         _isExpanded = State(initialValue: schema == "public")
     }
 
@@ -163,8 +174,15 @@ private struct SchemaRow: View {
                 DisclosureGroup(isExpanded: $tablesExpanded) {
                     ForEach(tables) { table in
                         Label {
-                            Text(table.name)
-                                .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            HStack(spacing: 4) {
+                                Text(table.name)
+                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                                if showTableSizes, let info = tableSizes["\(table.schema).\(table.name)"] {
+                                    Text(info.totalSize)
+                                        .font(.system(size: sidebarFontSize - 2, design: sidebarFontDesign.design))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
                         } icon: {
                             Image(systemName: "tablecells")
                         }
@@ -376,6 +394,8 @@ private struct ConnectionHeader: View {
         .contextMenu {
             if isConnected {
                 Button("New Query") { appState.openQueryTab(for: connection) }
+                Button("Activity Monitor") { appState.openActivityMonitor(for: connection) }
+                Divider()
                 Button("Disconnect") { appState.disconnect(connection) }
                 Divider()
                 Button("Refresh Schema") {

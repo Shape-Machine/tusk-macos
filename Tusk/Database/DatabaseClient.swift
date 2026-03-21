@@ -402,6 +402,65 @@ actor DatabaseClient {
         let duration = Date().timeIntervalSince(start)
         return QueryResult(columns: columns, rows: rows, duration: duration)
     }
+
+    // MARK: - Activity monitor
+
+    func activityMonitor() async throws -> [ActivityEntry] {
+        let result = try await query("""
+            SELECT pid,
+                   application_name,
+                   COALESCE(state, ''),
+                   COALESCE(query, ''),
+                   EXTRACT(EPOCH FROM (now() - query_start))::bigint,
+                   wait_event_type,
+                   wait_event
+            FROM pg_stat_activity
+            WHERE pid <> pg_backend_pid()
+            ORDER BY query_start NULLS LAST
+            """)
+        return result.rows.map { row in
+            ActivityEntry(
+                pid:             { if case .integer(let i) = row[safe: 0] { return Int(i) }; return 0 }(),
+                applicationName: row[safe: 1]?.displayValue ?? "",
+                state:           row[safe: 2]?.displayValue ?? "",
+                query:           row[safe: 3]?.displayValue ?? "",
+                durationSeconds: { if case .integer(let i) = row[safe: 4] { return Int(i) }; return nil }(),
+                waitEventType:   row[safe: 5].flatMap { $0.isNull ? nil : $0.displayValue },
+                waitEvent:       row[safe: 6].flatMap { $0.isNull ? nil : $0.displayValue }
+            )
+        }
+    }
+
+    func cancelBackend(pid: Int) async throws {
+        _ = try await query("SELECT pg_cancel_backend(\(pid))")
+    }
+
+    func terminateBackend(pid: Int) async throws {
+        _ = try await query("SELECT pg_terminate_backend(\(pid))")
+    }
+
+    // MARK: - Table sizes
+
+    func tableSizes() async throws -> [TableSizeInfo] {
+        let result = try await query("""
+            SELECT schemaname,
+                   relname,
+                   pg_size_pretty(pg_total_relation_size(relid)),
+                   n_live_tup,
+                   pg_size_pretty(pg_indexes_size(relid))
+            FROM pg_stat_user_tables
+            ORDER BY schemaname, relname
+            """)
+        return result.rows.map { row in
+            TableSizeInfo(
+                schema:      row[safe: 0]?.displayValue ?? "",
+                name:        row[safe: 1]?.displayValue ?? "",
+                totalSize:   row[safe: 2]?.displayValue ?? "",
+                rowEstimate: { if case .integer(let i) = row[safe: 3] { return Int(i) }; return 0 }(),
+                indexSize:   row[safe: 4]?.displayValue ?? ""
+            )
+        }
+    }
 }
 
 // MARK: - Safe array subscript

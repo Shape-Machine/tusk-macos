@@ -117,3 +117,26 @@ struct TableSchema: Sendable {
     var indexes: [IndexInfo] = []
     var foreignKeys: [ForeignKeyInfo] = []
 }
+
+// MARK: - Activity monitor entry
+
+struct ActivityEntry: Identifiable, Sendable {
+    let pid: Int
+    var id: Int { pid }
+    let applicationName: String
+    let state: String           // active, idle, idle in transaction, …
+    let query: String
+    let durationSeconds: Int?   // nil when query_start is NULL
+    let waitEventType: String?
+    let waitEvent: String?
+}
+
+// MARK: - Table size info
+
+struct TableSizeInfo: Sendable {
+    let schema: String
+    let name: String
+    let totalSize: String       // pg_size_pretty formatted
+    let rowEstimate: Int        // n_live_tup
+    let indexSize: String       // pg_size_pretty formatted
+}
