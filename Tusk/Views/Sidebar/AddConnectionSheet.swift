@@ -96,7 +96,7 @@ struct AddConnectionSheet: View {
                 }
 
                 Section("SSH Tunnel") {
-                    Toggle("Use SSH Tunnel", isOn: $sshEnabled)
+                    Toggle("Use SSH Tunnel", isOn: $sshEnabled.animation(.default))
 
                     if sshEnabled {
                         HStack {
