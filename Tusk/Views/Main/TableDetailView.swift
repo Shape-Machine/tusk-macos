@@ -139,7 +139,7 @@ struct TableDetailView: View {
     private var content: some View {
         switch selectedTab {
         case .data:
-            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, isView: isView, state: dataState)
+            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, isView: isView, columns: columns, state: dataState)
         case .columns:
             columnsTab
         case .keys:
