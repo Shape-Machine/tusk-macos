@@ -672,6 +672,12 @@ struct QueryEditorView: View {
 struct ResultsGrid: View {
     let result: QueryResult
     var copyAsInsert: (([[QueryCell]]) -> Void)? = nil
+    /// Schema column metadata — when provided with `onExecuteSQL`, enables edit/delete.
+    var tableColumns: [ColumnInfo] = []
+    /// Qualified table name (e.g. `"public"."users"`) used in generated SQL.
+    var qualifiedTableName: String = ""
+    /// Called with a SQL string (UPDATE or DELETE) to execute and refresh.
+    var onExecuteSQL: ((String) async throws -> Void)? = nil
 
     @State private var expandedCell: CellDetailContent? = nil
     @State private var selectedRows: Set<Int> = []
@@ -680,6 +686,28 @@ struct ResultsGrid: View {
     @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
     @State private var scrollProxy: ScrollViewProxy? = nil
     @State private var keyboardCursor: Int? = nil
+
+    // Edit-cell sheet state
+    @State private var editingRowIndex: Int? = nil
+    @State private var editingColIndex: Int? = nil
+    @State private var editingText: String = ""
+    @State private var editingIsNull: Bool = false
+    @State private var isSavingEdit = false
+    @State private var editError: String? = nil
+
+    // Delete confirmation state
+    @State private var deletingRowIndex: Int? = nil
+    @State private var isDeletingRow = false
+    @State private var deleteError: String? = nil
+
+    /// True when the table has at least one primary-key column and we have an executor.
+    private var canEdit: Bool {
+        onExecuteSQL != nil && tableColumns.contains { $0.isPrimaryKey }
+    }
+
+    private var primaryKeyColumns: [ColumnInfo] {
+        tableColumns.filter { $0.isPrimaryKey }
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -702,8 +730,12 @@ struct ResultsGrid: View {
                                             .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
                                             .border(Color(nsColor: .separatorColor), width: 0.5)
                                             .onTapGesture(count: 2) {
-                                                let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
-                                                expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
+                                                if canEdit {
+                                                    startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
+                                                } else {
+                                                    let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
+                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
+                                                }
                                             }
                                             .contextMenu {
                                                 Button("Copy Cell") {
@@ -713,6 +745,12 @@ struct ResultsGrid: View {
                                                 Button("View Full Value") {
                                                     let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
                                                     expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
+                                                }
+                                                if canEdit {
+                                                    Divider()
+                                                    Button("Edit Cell…") {
+                                                        startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
+                                                    }
                                                 }
                                             }
                                     }
@@ -737,6 +775,12 @@ struct ResultsGrid: View {
                                     if let copyAsInsert {
                                         Button("Copy \(label) as INSERT") {
                                             copyAsInsert(selectionRows)
+                                        }
+                                    }
+                                    if canEdit {
+                                        Divider()
+                                        Button("Delete Row…", role: .destructive) {
+                                            deletingRowIndex = rowIndex
                                         }
                                     }
                                 }
@@ -781,12 +825,134 @@ struct ResultsGrid: View {
         .sheet(item: $expandedCell) { content in
             CellDetailView(value: content.value, columnDataType: content.columnDataType)
         }
+        .sheet(isPresented: Binding(get: { editingRowIndex != nil }, set: { if !$0 { clearEditing() } })) {
+            EditCellSheet(
+                columnName: editingColName,
+                text: $editingText,
+                isNull: $editingIsNull,
+                isSaving: isSavingEdit,
+                error: editError,
+                onSave: { await commitEdit() },
+                onCancel: { clearEditing() }
+            )
+        }
+        .alert("Delete Row?", isPresented: Binding(get: { deletingRowIndex != nil }, set: { if !$0 { deletingRowIndex = nil } })) {
+            Button("Delete", role: .destructive) {
+                if let rowIndex = deletingRowIndex {
+                    Task { await commitDelete(rowIndex: rowIndex) }
+                }
+            }
+            Button("Cancel", role: .cancel) { deletingRowIndex = nil }
+        } message: {
+            Text("This will permanently delete the row from the database.")
+        }
+        .alert("Delete Failed", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK") { deleteError = nil }
+        } message: {
+            Text(deleteError ?? "")
+        }
         .onChange(of: result.id) {
             selectedRows.removeAll()
             lastSelectedRow = nil
             keyboardCursor = nil
         }
     }
+
+    // MARK: - Edit helpers
+
+    private var editingColName: String {
+        guard let c = editingColIndex, c < result.columns.count else { return "" }
+        return result.columns[c].name
+    }
+
+    private func startEditing(rowIndex: Int, colIndex: Int, cell: QueryCell) {
+        editingRowIndex = rowIndex
+        editingColIndex = colIndex
+        editingIsNull = cell.isNull
+        editingText = cell.isNull ? "" : cell.displayValue
+        editError = nil
+    }
+
+    private func clearEditing() {
+        editingRowIndex = nil
+        editingColIndex = nil
+        editingText = ""
+        editingIsNull = false
+        isSavingEdit = false
+        editError = nil
+    }
+
+    private func commitEdit() async {
+        guard let rowIndex = editingRowIndex,
+              let colIndex = editingColIndex,
+              rowIndex < result.rows.count,
+              colIndex < result.columns.count,
+              let execute = onExecuteSQL else { return }
+
+        let colName = result.columns[colIndex].name
+        let newValueSQL = editingIsNull ? "NULL" : "'\(editingText.replacingOccurrences(of: "'", with: "''"))'"
+        let whereClause = buildWhereClause(row: result.rows[rowIndex])
+        guard !whereClause.isEmpty else {
+            editError = "Cannot update: no primary key columns found in result."
+            return
+        }
+
+        let sql = "UPDATE \(qualifiedTableName) SET \"\(colName)\" = \(newValueSQL) WHERE \(whereClause)"
+
+        isSavingEdit = true
+        editError = nil
+        do {
+            try await execute(sql)
+            clearEditing()
+        } catch {
+            isSavingEdit = false
+            editError = error.localizedDescription
+        }
+    }
+
+    private func commitDelete(rowIndex: Int) async {
+        guard rowIndex < result.rows.count, let execute = onExecuteSQL else { return }
+        let whereClause = buildWhereClause(row: result.rows[rowIndex])
+        guard !whereClause.isEmpty else {
+            deleteError = "Cannot delete: no primary key columns found in result."
+            deletingRowIndex = nil
+            return
+        }
+        let sql = "DELETE FROM \(qualifiedTableName) WHERE \(whereClause)"
+        isDeletingRow = true
+        do {
+            try await execute(sql)
+        } catch {
+            deleteError = error.localizedDescription
+        }
+        isDeletingRow = false
+        deletingRowIndex = nil
+    }
+
+    /// Builds `"pk1" = val1 AND "pk2" = val2` using the primary-key columns.
+    private func buildWhereClause(row: [QueryCell]) -> String {
+        let pkCols = primaryKeyColumns
+        var parts: [String] = []
+        for pkCol in pkCols {
+            guard let resultColIndex = result.columns.firstIndex(where: { $0.name == pkCol.name }),
+                  resultColIndex < row.count else { continue }
+            let cell = row[resultColIndex]
+            parts.append("\"\(pkCol.name)\" = \(sqlLiteralForWhere(cell))")
+        }
+        return parts.joined(separator: " AND ")
+    }
+
+    private func sqlLiteralForWhere(_ cell: QueryCell) -> String {
+        switch cell {
+        case .null:            return "NULL"
+        case .text(let s):     return "'\(s.replacingOccurrences(of: "'", with: "''"))'"
+        case .integer(let i):  return String(i)
+        case .double(let d):   return String(d)
+        case .bool(let b):     return b ? "TRUE" : "FALSE"
+        case .bytes:           return "NULL"
+        }
+    }
+
 
     // MARK: - Cell rendering
 
@@ -871,6 +1037,71 @@ struct ResultsGrid: View {
         lastSelectedRow = 0
         keyboardCursor = 0
         scrollProxy?.scrollTo(0, anchor: .top)
+    }
+}
+
+// MARK: - Edit cell sheet
+
+private struct EditCellSheet: View {
+    let columnName: String
+    @Binding var text: String
+    @Binding var isNull: Bool
+    let isSaving: Bool
+    let error: String?
+    let onSave: () async -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Edit \"\(columnName)\"")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") { onCancel() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save") { Task { await onSave() } }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isSaving)
+            }
+            .padding()
+
+            Divider()
+
+            Form {
+                Section {
+                    Toggle("Set to NULL", isOn: $isNull)
+                    if !isNull {
+                        TextField("Value", text: $text, axis: .vertical)
+                            .lineLimit(5...10)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            if let err = error {
+                Divider()
+                HStack {
+                    Text(err)
+                        .foregroundStyle(.red)
+                        .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                }
+                .padding()
+            }
+
+            if isSaving {
+                Divider()
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Saving…").font(.callout).foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding()
+            }
+        }
+        .frame(width: 380)
     }
 }
 

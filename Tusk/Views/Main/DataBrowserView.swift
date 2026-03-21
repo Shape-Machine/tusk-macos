@@ -22,6 +22,7 @@ struct DataBrowserView: View {
     let schemaName: String
     let tableName: String
     var isView: Bool = false
+    var columns: [ColumnInfo] = []
     @Bindable var state: DataBrowserState
 
     private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
@@ -35,6 +36,7 @@ struct DataBrowserView: View {
     @State private var copiedCSVTask: Task<Void, Never>? = nil
     @State private var copiedJSON = false
     @State private var copiedJSONTask: Task<Void, Never>? = nil
+    @State private var showingInsertSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,9 +56,17 @@ struct DataBrowserView: View {
                             description: Text("This table has no data."))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        ResultsGrid(result: result, copyAsInsert: isView ? nil : { rows in
-                            copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
-                        })
+                        ResultsGrid(
+                            result: result,
+                            copyAsInsert: isView ? nil : { rows in
+                                copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
+                            },
+                            tableColumns: isView ? [] : columns,
+                            qualifiedTableName: qualifiedName,
+                            onExecuteSQL: isView ? nil : { sql in
+                                try await executeAndRefresh(sql: sql)
+                            }
+                        )
                     }
                     Divider()
                     statusBar(result: result)
@@ -76,6 +86,25 @@ struct DataBrowserView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
+            if !isView && !columns.isEmpty {
+                Button {
+                    showingInsertSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help("Insert new row")
+                .sheet(isPresented: $showingInsertSheet) {
+                    InsertRowSheet(
+                        schemaName: schemaName,
+                        tableName: tableName,
+                        columns: columns,
+                        onInsert: { sql in
+                            try await executeAndRefresh(sql: sql)
+                        }
+                    )
+                }
+            }
+
             Spacer()
 
             ZStack(alignment: .trailing) {
@@ -230,9 +259,137 @@ struct DataBrowserView: View {
         }
     }
 
+    // MARK: - Mutating SQL
+
+    /// Executes a mutating SQL statement (UPDATE / DELETE / INSERT) then refreshes.
+    func executeAndRefresh(sql: String) async throws {
+        _ = try await client.query(sql)
+        triggerLoad()
+    }
+
     // MARK: - Export
 
     private func exportCSV(_ result: QueryResult) {
         exportResultAsCSV(result, defaultName: tableName)
+    }
+}
+
+// MARK: - Insert row sheet
+
+private struct InsertRowSheet: View {
+    let schemaName: String
+    let tableName: String
+    let columns: [ColumnInfo]
+    let onInsert: (String) async throws -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var fieldValues: [String: String] = [:]
+    @State private var nullFields: Set<String> = []
+    @State private var isInserting = false
+    @State private var insertError: String? = nil
+
+    private var qualifiedName: String { "\"\(schemaName)\".\"\(tableName)\"" }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Insert Row into \(tableName)")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Insert") { Task { await commitInsert() } }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isInserting)
+            }
+            .padding()
+
+            Divider()
+
+            Form {
+                ForEach(columns) { col in
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(col.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(col.dataType)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(.quinary, in: Capsule())
+                                if col.isPrimaryKey {
+                                    Image(systemName: "key.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
+                                Spacer()
+                                if col.isNullable {
+                                    Toggle("NULL", isOn: Binding(
+                                        get: { nullFields.contains(col.name) },
+                                        set: { if $0 { nullFields.insert(col.name) } else { nullFields.remove(col.name) } }
+                                    ))
+                                    .toggleStyle(.checkbox)
+                                    .font(.caption)
+                                }
+                            }
+                            if !nullFields.contains(col.name) {
+                                TextField(col.defaultValue.map { "default: \($0)" } ?? "value",
+                                          text: Binding(
+                                            get: { fieldValues[col.name] ?? "" },
+                                            set: { fieldValues[col.name] = $0 }
+                                          ))
+                                .font(.system(.body, design: .monospaced))
+                            }
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            if let err = insertError {
+                Divider()
+                HStack {
+                    Text(err).foregroundStyle(.red).font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                }
+                .padding()
+            }
+
+            if isInserting {
+                Divider()
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Inserting…").font(.callout).foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding()
+            }
+        }
+        .frame(width: 460)
+        .frame(maxHeight: 600)
+    }
+
+    private func commitInsert() async {
+        let colNames = columns.map { "\"\($0.name)\"" }.joined(separator: ", ")
+        let values: [String] = columns.map { col in
+            if nullFields.contains(col.name) { return "NULL" }
+            let raw = fieldValues[col.name] ?? ""
+            if raw.isEmpty { return "DEFAULT" }
+            return "'\(raw.replacingOccurrences(of: "'", with: "''"))'"
+        }
+        let sql = "INSERT INTO \(qualifiedName) (\(colNames)) VALUES (\(values.joined(separator: ", ")))"
+        isInserting = true
+        insertError = nil
+        do {
+            try await onInsert(sql)
+            dismiss()
+        } catch {
+            isInserting = false
+            insertError = error.localizedDescription
+        }
     }
 }
