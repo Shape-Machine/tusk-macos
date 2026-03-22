@@ -899,6 +899,7 @@ struct ResultsGrid: View {
                                     DragGesture(minimumDistance: 0)
                                         .onChanged { value in
                                             guard value.translation == .zero else { return }
+                                            guard !NSEvent.modifierFlags.contains(.control) else { return }
                                             isFocused = true
                                             handleRowTap(rowIndex: rowIndex)
                                         }
