@@ -950,10 +950,8 @@ struct ResultsGrid: View {
                                             onSortByColumn?(col.name)
                                         }
                                         .onHover { inside in
-                                            if inside && onSortByColumn != nil {
-                                                NSCursor.pointingHand.push()
-                                            } else {
-                                                NSCursor.pop()
+                                            if onSortByColumn != nil {
+                                                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                                             }
                                         }
 
