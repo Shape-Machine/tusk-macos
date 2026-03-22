@@ -35,6 +35,11 @@ struct TuskCommands: Commands {
         }
 
         CommandGroup(after: .help) {
+            Button("Help…") {
+                openWindow(id: "help")
+            }
+            .keyboardShortcut("?", modifiers: .command)
+
             Button("Sponsor Tusk…") {
                 openWindow(id: "sponsor")
             }

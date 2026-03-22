@@ -54,11 +54,14 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
         .overlay(alignment: .bottom) {
-            Button("Sponsor Tusk") { openWindow(id: "sponsor") }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.bottom, 16)
+            HStack(spacing: 16) {
+                Button("Help…") { openWindow(id: "help") }
+                Button("Sponsor Tusk") { openWindow(id: "sponsor") }
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .padding(.bottom, 16)
         }
     }
 

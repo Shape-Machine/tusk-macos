@@ -25,5 +25,10 @@ struct TuskApp: App {
             SponsorView()
         }
         .windowResizability(.contentSize)
+
+        Window("Help", id: "help") {
+            HelpView()
+        }
+        .windowResizability(.contentSize)
     }
 }
