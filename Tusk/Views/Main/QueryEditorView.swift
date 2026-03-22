@@ -895,10 +895,14 @@ struct ResultsGrid: View {
                                 .id(rowIndex)
                                 .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    isFocused = true
-                                    handleRowTap(rowIndex: rowIndex)
-                                }
+                                .simultaneousGesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onChanged { value in
+                                            guard value.translation == .zero else { return }
+                                            isFocused = true
+                                            handleRowTap(rowIndex: rowIndex)
+                                        }
+                                )
                                 .contextMenu {
                                     let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
                                     let count = selectedRows.isEmpty ? 1 : selectedRows.count
