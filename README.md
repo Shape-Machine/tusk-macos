@@ -32,6 +32,8 @@ No Electron. No telemetry. No subscription.
 
 ---
 
+## Sponsor
+
 Tusk is free and open source.
 If it's useful to you, consider sponsoring its development.
 
@@ -64,6 +66,8 @@ Monthly: [Hero Coffee €5](https://buy.stripe.com/8x29AU7DXdReeKtaTfes000) · [
 ![Screenshot 10](docs/screenshots/1.3.0-10.png)
 
 ---
+
+## Sponsor
 
 Tusk is free and open source.
 If it's useful to you, consider sponsoring its development.
