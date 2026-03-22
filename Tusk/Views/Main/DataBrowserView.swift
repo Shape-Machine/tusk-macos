@@ -65,6 +65,22 @@ struct DataBrowserView: View {
                             qualifiedTableName: qualifiedName,
                             onExecuteSQL: isView ? nil : { sql in
                                 try await executeAndRefresh(sql: sql)
+                            },
+                            sortColumn: sortColumn,
+                            sortAscending: sortAscending,
+                            onSortByColumn: isView ? nil : { colName in
+                                if sortColumn == colName {
+                                    if sortAscending {
+                                        sortAscending = false
+                                    } else {
+                                        sortColumn = nil
+                                        sortAscending = true
+                                    }
+                                } else {
+                                    sortColumn = colName
+                                    sortAscending = true
+                                }
+                                triggerLoad()
                             }
                         )
                     }
