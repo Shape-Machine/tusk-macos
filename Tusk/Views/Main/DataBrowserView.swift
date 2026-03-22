@@ -58,7 +58,7 @@ struct DataBrowserView: View {
                     } else {
                         ResultsGrid(
                             result: result,
-                            columnWidthsPersistenceKey: "tusk.colwidths.\(connectionID).\(schemaName).\(tableName)",
+                            columnWidthsPersistenceKey: "tusk.colwidths.\(connectionID)\u{0}\(schemaName)\u{0}\(tableName)",
                             copyAsInsert: isView ? nil : { rows in
                                 copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
                             },
@@ -95,6 +95,8 @@ struct DataBrowserView: View {
         .task { if state.result == nil { triggerLoad() } }
         .onChange(of: schemaName + "." + tableName) { _, _ in
             state.offset = 0
+            sortColumn = nil
+            sortAscending = true
             triggerLoad()
         }
     }
@@ -258,7 +260,7 @@ struct DataBrowserView: View {
         }
 
         if let col = sortColumn {
-            sql += " ORDER BY \"\(col)\" \(sortAscending ? "ASC" : "DESC")"
+            sql += " ORDER BY \(quoteIdentifier(col)) \(sortAscending ? "ASC" : "DESC")"
         }
 
         sql += " LIMIT \(pageSize) OFFSET \(state.offset)"
