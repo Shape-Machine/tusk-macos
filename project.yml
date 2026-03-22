@@ -24,8 +24,8 @@ targets:
       properties:
         CFBundleName: Tusk
         CFBundleDisplayName: Tusk
-        CFBundleShortVersionString: "2026.03.22-00"
-        CFBundleVersion: "18"
+        CFBundleShortVersionString: "2026.03.22-01"
+        CFBundleVersion: "19"
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableDescription: A minimal, privacy-first PostgreSQL client for macOS.
         NSPrincipalClass: NSApplication
