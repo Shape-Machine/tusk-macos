@@ -4,6 +4,7 @@ struct AboutView: View {
     private let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
 
     @State private var updateStatus: UpdateStatus = .idle
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,6 +57,16 @@ struct AboutView: View {
                 .disabled(updateStatus == .checking)
                 .controlSize(.regular)
             }
+            .padding(20)
+
+            Divider()
+
+            // Sponsor section
+            Button(action: { openWindow(id: "sponsor") }) {
+                Label("Sponsor Tusk…", systemImage: "heart")
+                    .frame(minWidth: 160)
+            }
+            .controlSize(.regular)
             .padding(20)
         }
         .frame(width: 320)
