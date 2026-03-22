@@ -770,6 +770,8 @@ struct QueryEditorView: View {
 
 struct ResultsGrid: View {
     let result: QueryResult
+    /// When provided, column widths are persisted to UserDefaults under this key.
+    var columnWidthsPersistenceKey: String? = nil
     var copyAsInsert: (([[QueryCell]]) -> Void)? = nil
     /// Schema column metadata — when provided with `onExecuteSQL`, enables edit/delete.
     var tableColumns: [ColumnInfo] = []
@@ -799,6 +801,27 @@ struct ResultsGrid: View {
 
     private func columnWidth(_ colIndex: Int) -> CGFloat {
         columnWidths[colIndex] ?? defaultColumnWidth
+    }
+
+    private func loadPersistedWidths() {
+        guard let key = columnWidthsPersistenceKey,
+              let data = UserDefaults.standard.data(forKey: key),
+              let named = try? JSONDecoder().decode([String: CGFloat].self, from: data)
+        else { return }
+        for (colIndex, col) in result.columns.enumerated() {
+            if let w = named[col.name] { columnWidths[colIndex] = w }
+        }
+    }
+
+    private func persistWidths() {
+        guard let key = columnWidthsPersistenceKey else { return }
+        var named: [String: CGFloat] = [:]
+        for (colIndex, col) in result.columns.enumerated() {
+            if let w = columnWidths[colIndex] { named[col.name] = w }
+        }
+        if let data = try? JSONEncoder().encode(named) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
     }
 
     // Edit-cell sheet state
@@ -952,6 +975,7 @@ struct ResultsGrid: View {
                                                     }
                                                     .onEnded { _ in
                                                         dragStartWidths.removeValue(forKey: colIndex)
+                                                        persistWidths()
                                                     }
                                             )
                                     }
@@ -964,7 +988,10 @@ struct ResultsGrid: View {
                         minHeight: geo.size.height,
                         alignment: .topLeading
                     )
-                    .onAppear { scrollProxy = proxy }
+                    .onAppear {
+                        scrollProxy = proxy
+                        loadPersistedWidths()
+                    }
                 }
             }
             .focusable()
