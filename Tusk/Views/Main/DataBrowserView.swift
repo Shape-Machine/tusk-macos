@@ -58,6 +58,7 @@ struct DataBrowserView: View {
                     } else {
                         ResultsGrid(
                             result: result,
+                            columnWidthsPersistenceKey: "tusk.colwidths.\(connectionID).\(schemaName).\(tableName)",
                             copyAsInsert: isView ? nil : { rows in
                                 copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
                             },
