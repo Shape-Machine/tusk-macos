@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
@@ -52,6 +53,13 @@ struct WelcomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
+        .overlay(alignment: .bottom) {
+            Button("Sponsor Tusk") { openWindow(id: "sponsor") }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 16)
+        }
     }
 
     private func shortcutRow(_ key: String, _ label: String) -> some View {

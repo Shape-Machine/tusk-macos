@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsPopover: View {
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("tusk.sidebar.fontSize")       private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign")     private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @AppStorage("tusk.content.fontSize")       private var contentFontSize   = 13.0
@@ -18,6 +19,13 @@ struct SettingsPopover: View {
                 .font(.callout)
             Divider()
             settingsSection("Content", fontDesign: $contentFontDesign, fontSize: $contentFontSize)
+
+            Divider()
+
+            Button("Sponsor Tusk…") { openWindow(id: "sponsor") }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
         }
         .padding(16)
         .frame(width: 280)

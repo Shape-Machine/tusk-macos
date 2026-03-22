@@ -34,6 +34,12 @@ struct TuskCommands: Commands {
             .disabled(appState.activeDetailTabID == nil)
         }
 
+        CommandGroup(replacing: .help) {
+            Button("Sponsor Tusk…") {
+                openWindow(id: "sponsor")
+            }
+        }
+
         CommandGroup(after: .windowArrangement) {
             Button("Show Next Tab") { appState.activateNextTab() }
                 .keyboardShortcut("]", modifiers: .command)
