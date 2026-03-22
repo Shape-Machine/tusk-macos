@@ -34,7 +34,7 @@ struct TuskCommands: Commands {
             .disabled(appState.activeDetailTabID == nil)
         }
 
-        CommandGroup(after: .help) {
+        CommandGroup(replacing: .help) {
             Button("Help…") {
                 openWindow(id: "help")
             }
