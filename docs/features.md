@@ -1,6 +1,6 @@
 # Tusk — Features
 
-_Last updated: 2026-03-21_
+_Last updated: 2026-03-22_
 
 ### Connections
 Manage multiple PostgreSQL connections with full SSH tunnel and SSL support.
@@ -35,6 +35,8 @@ Seven tabs per table for complete introspection.
 Paginated, filterable grid for browsing, editing, and exporting table data.
 - 1000 rows/page with previous/next navigation
 - Real-time text filter across all columns (PostgreSQL ILIKE, 300ms debounce)
+- Resizable columns — drag the divider at the right edge of any header; widths persist per connection, schema, and table
+- Sortable columns — click a column header to sort ascending; click again for descending; third click clears sort
 - Inline cell editing — double-click to edit with NULL toggle; generates UPDATE via primary key
 - Insert new rows via modal form with per-column NULL toggles and type badges
 - Delete rows from context menu; both require a primary key to be present
@@ -91,3 +93,9 @@ Font settings for sidebar and content areas, configurable independently.
 Built-in update checker against the GitHub releases feed.
 - Shows: up to date, update available (with version), or error
 - Links directly to the GitHub release when an update is found
+
+### Sponsor
+Support Tusk's development directly from within the app.
+- Accessible from About, the Welcome screen, Settings (⌘,), and the Help menu
+- One-time tiers: Coffee €5, Supporter €15, Sponsor €49
+- Monthly tiers: Hero Coffee €5/mo, Hero Supporter €15/mo, Hero Sponsor €49/mo
