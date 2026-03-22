@@ -34,7 +34,7 @@ struct TuskCommands: Commands {
             .disabled(appState.activeDetailTabID == nil)
         }
 
-        CommandGroup(replacing: .help) {
+        CommandGroup(after: .help) {
             Button("Sponsor Tusk…") {
                 openWindow(id: "sponsor")
             }
