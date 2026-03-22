@@ -777,6 +777,12 @@ struct ResultsGrid: View {
     var qualifiedTableName: String = ""
     /// Called with a SQL string (UPDATE or DELETE) to execute and refresh.
     var onExecuteSQL: ((String) async throws -> Void)? = nil
+    /// Currently active sort column name — when provided, enables sort indicators.
+    var sortColumn: String? = nil
+    /// Current sort direction — true = ASC.
+    var sortAscending: Bool = true
+    /// Called when user taps a column header to sort. Nil disables sorting UI.
+    var onSortByColumn: ((String) -> Void)? = nil
 
     @State private var expandedCell: CellDetailContent? = nil
     @State private var selectedRows: Set<Int> = []
@@ -785,6 +791,15 @@ struct ResultsGrid: View {
     @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
     @State private var scrollProxy: ScrollViewProxy? = nil
     @State private var keyboardCursor: Int? = nil
+
+    // Column resizing
+    private let defaultColumnWidth: CGFloat = 150
+    @State private var columnWidths: [Int: CGFloat] = [:]
+    @State private var dragStartWidths: [Int: CGFloat] = [:]
+
+    private func columnWidth(_ colIndex: Int) -> CGFloat {
+        columnWidths[colIndex] ?? defaultColumnWidth
+    }
 
     // Edit-cell sheet state
     @State private var editingRowIndex: Int? = nil
@@ -826,7 +841,7 @@ struct ResultsGrid: View {
                                             .truncationMode(.tail)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
-                                            .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                            .frame(width: columnWidth(colIndex), alignment: .leading)
                                             .border(Color(nsColor: .separatorColor), width: 0.5)
                                             .onTapGesture(count: 2) {
                                                 if canEdit {
@@ -887,14 +902,59 @@ struct ResultsGrid: View {
                         } header: {
                             // Header row — pinned to top while scrolling vertically
                             HStack(spacing: 0) {
-                                ForEach(result.columns) { col in
-                                    Text(col.name)
-                                        .fontWeight(.semibold)
+                                ForEach(result.columns.indices, id: \.self) { colIndex in
+                                    let col = result.columns[colIndex]
+                                    let isActiveSort = sortColumn == col.name
+                                    ZStack(alignment: .trailing) {
+                                        HStack(spacing: 4) {
+                                            Text(col.name)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                                .truncationMode(.tail)
+                                            if isActiveSort {
+                                                Text(sortAscending ? "↑" : "↓")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .frame(minWidth: 100, maxWidth: .infinity, alignment: .leading)
+                                        .frame(width: columnWidth(colIndex), alignment: .leading)
                                         .background(Color(nsColor: .controlBackgroundColor))
                                         .border(Color(nsColor: .separatorColor), width: 0.5)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            onSortByColumn?(col.name)
+                                        }
+                                        .onHover { inside in
+                                            if inside && onSortByColumn != nil {
+                                                NSCursor.pointingHand.push()
+                                            } else {
+                                                NSCursor.pop()
+                                            }
+                                        }
+
+                                        // Drag handle on right edge
+                                        Color.clear
+                                            .frame(width: 6)
+                                            .contentShape(Rectangle())
+                                            .onHover { inside in
+                                                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+                                            }
+                                            .gesture(
+                                                DragGesture(minimumDistance: 1)
+                                                    .onChanged { value in
+                                                        if dragStartWidths[colIndex] == nil {
+                                                            dragStartWidths[colIndex] = columnWidth(colIndex)
+                                                        }
+                                                        let startWidth = dragStartWidths[colIndex]!
+                                                        columnWidths[colIndex] = max(50, startWidth + value.translation.width)
+                                                    }
+                                                    .onEnded { _ in
+                                                        dragStartWidths.removeValue(forKey: colIndex)
+                                                    }
+                                            )
+                                    }
                                 }
                             }
                         }
