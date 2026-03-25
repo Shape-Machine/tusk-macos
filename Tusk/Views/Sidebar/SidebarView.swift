@@ -328,7 +328,13 @@ private struct SchemaRow: View {
             do {
                 let sql = "ALTER TABLE \(quoteIdentifier(table.schema)).\(quoteIdentifier(table.name)) RENAME TO \(quoteIdentifier(newName));"
                 _ = try await client.query(sql)
-                appState.renameTableInOpenTabs(connectionID: connection.id, schema: table.schema, oldName: table.name, newName: newName)
+                if let old = appState.openTabs.first(where: {
+                    guard case .table(let cid, let s, let n) = $0.kind else { return false }
+                    return cid == connection.id && s == table.schema && n == table.name
+                }) {
+                    appState.closeDetailTab(old.id)
+                    appState.openOrActivateTableTab(connectionID: connection.id, schema: table.schema, tableName: newName)
+                }
                 try? await appState.refreshSchema(for: connection)
             } catch {
                 let err = NSAlert()
