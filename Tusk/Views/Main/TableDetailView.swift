@@ -13,6 +13,7 @@ struct TableDetailView: View {
     enum Tab { case columns, keys, relations, indexes, triggers, ddl, data }
 
     @State private var selectedTab: Tab = .columns
+    @State private var selectedColumnIDs: Set<String> = []
     @State private var columns: [ColumnInfo] = []
     @State private var foreignKeys: [ForeignKeyInfo] = []
     @State private var isLoadingMeta = false
@@ -162,7 +163,7 @@ struct TableDetailView: View {
             if isLoadingMeta {
                 ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Table(columns) {
+                Table(columns, selection: $selectedColumnIDs) {
                     TableColumn("Column") { col in
                         HStack(spacing: 4) {
                             if col.isPrimaryKey {
@@ -210,7 +211,7 @@ struct TableDetailView: View {
         alert.window.initialFirstResponder = field
 
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let newName = field.stringValue.trimmingCharacters(in: .whitespaces)
+        let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !newName.isEmpty, newName != col.name else { return }
 
         Task {
