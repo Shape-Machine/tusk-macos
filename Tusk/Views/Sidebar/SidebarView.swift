@@ -144,6 +144,7 @@ private struct SchemaRow: View {
     let connection: Connection
     var tableSizes: [String: TableSizeInfo] = [:]
 
+    @Environment(AppState.self) private var appState
     @AppStorage("tusk.sidebar.fontSize")      private var sidebarFontSize    = 13.0
     @AppStorage("tusk.sidebar.fontDesign")    private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
@@ -191,6 +192,11 @@ private struct SchemaRow: View {
                             schema: table.schema,
                             tableName: table.name
                         ))
+                        .contextMenu {
+                            if appState.isConnected(connection) {
+                                Button("Rename…") { renameTable(table) }
+                            }
+                        }
                     }
                 } label: {
                     Text("Tables")
@@ -296,6 +302,41 @@ private struct SchemaRow: View {
             .onTapGesture { isExpanded.toggle() }
         }
         .animation(nil, value: isExpanded)
+    }
+
+    // MARK: - Rename table
+
+    private func renameTable(_ table: TableInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Rename Table \"\(table.name)\""
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
+        field.stringValue = table.name
+        field.selectText(nil)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let newName = field.stringValue.trimmingCharacters(in: .whitespaces)
+        guard !newName.isEmpty, newName != table.name else { return }
+
+        Task {
+            do {
+                let sql = "ALTER TABLE \(quoteIdentifier(table.schema)).\(quoteIdentifier(table.name)) RENAME TO \(quoteIdentifier(newName));"
+                _ = try await client.query(sql)
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Rename Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
     }
 }
 
