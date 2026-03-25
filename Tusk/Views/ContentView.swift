@@ -108,7 +108,7 @@ private struct DetailTabBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
                 ForEach(appState.openTabs) { tab in
-                    DetailTabItem(tab: tab)
+                    DetailTabItem(tabID: tab.id)
                     Divider().frame(height: 34)
                 }
             }
@@ -120,13 +120,15 @@ private struct DetailTabBar: View {
 
 private struct DetailTabItem: View {
     @Environment(AppState.self) private var appState
-    let tab: DetailTab
+    let tabID: UUID
 
-    var isActive: Bool { appState.activeDetailTabID == tab.id }
+    private var tab: DetailTab? { appState.openTabs.first(where: { $0.id == tabID }) }
+
+    var isActive: Bool { appState.activeDetailTabID == tabID }
 
     /// Single scan of queryTabs — reused by resolvedTitle, tooltip, and connectionColor.
     private var queryTab: QueryTab? {
-        guard case .queryEditor(let qid) = tab.kind else { return nil }
+        guard let tab, case .queryEditor(let qid) = tab.kind else { return nil }
         return appState.queryTabs.first(where: { $0.id == qid })
     }
 
@@ -135,11 +137,12 @@ private struct DetailTabItem: View {
         appState.connections.first(where: { $0.id == connID })
     }
 
-    var resolvedTitle: String { queryTab?.title ?? tab.title }
+    var resolvedTitle: String { queryTab?.title ?? tab?.title ?? "" }
 
     var tooltip: String { queryTab?.sourceURL?.path ?? "" }
 
     var connectionColor: Color? {
+        guard let tab else { return nil }
         switch tab.kind {
         case .table(let connID, _, _):
             return connection(for: connID)?.color.color
@@ -152,51 +155,53 @@ private struct DetailTabItem: View {
     }
 
     var body: some View {
-        // Use a Button for tab activation so it doesn't compete with the
-        // close button the way .onTapGesture does on macOS.
-        Button {
-            appState.activateDetailTab(tab)
-        } label: {
-            HStack(spacing: 5) {
-                if let color = connectionColor {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 6, height: 6)
-                }
-                Image(systemName: tab.icon)
-                    .font(.caption)
-                    .foregroundStyle(isActive ? .primary : .secondary)
-                Text(resolvedTitle)
-                    .lineLimit(1)
-                    .foregroundStyle(isActive ? .primary : .secondary)
-                // Reserve space so the title doesn't shift when close button overlaps
-                Color.clear.frame(width: 22)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 34)
-            .background(isActive ? Color(nsColor: .windowBackgroundColor) : .clear)
-            .overlay(alignment: .bottom) {
-                if isActive {
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(height: 2)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .help(tooltip)
-        // Close button overlaid at full tab height — always wins hit-testing
-        .overlay(alignment: .trailing) {
+        if let tab {
+            // Use a Button for tab activation so it doesn't compete with the
+            // close button the way .onTapGesture does on macOS.
             Button {
-                appState.closeDetailTab(tab.id)
+                appState.activateDetailTab(tab)
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 28, height: 34)
+                HStack(spacing: 5) {
+                    if let color = connectionColor {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 6, height: 6)
+                    }
+                    Image(systemName: tab.icon)
+                        .font(.caption)
+                        .foregroundStyle(isActive ? .primary : .secondary)
+                    Text(resolvedTitle)
+                        .lineLimit(1)
+                        .foregroundStyle(isActive ? .primary : .secondary)
+                    // Reserve space so the title doesn't shift when close button overlaps
+                    Color.clear.frame(width: 22)
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 34)
+                .background(isActive ? Color(nsColor: .windowBackgroundColor) : .clear)
+                .overlay(alignment: .bottom) {
+                    if isActive {
+                        Rectangle()
+                            .fill(Color.accentColor)
+                            .frame(height: 2)
+                    }
+                }
             }
             .buttonStyle(.plain)
-            .help("Close tab")
+            .help(tooltip)
+            // Close button overlaid at full tab height — always wins hit-testing
+            .overlay(alignment: .trailing) {
+                Button {
+                    appState.closeDetailTab(tabID)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 28, height: 34)
+                }
+                .buttonStyle(.plain)
+                .help("Close tab")
+            }
         }
     }
 }
