@@ -370,6 +370,22 @@ final class AppState {
         activateDetailTab(openTabs[(idx + openTabs.count - 1) % openTabs.count])
     }
 
+    func renameTableInOpenTabs(connectionID: UUID, schema: String, oldName: String, newName: String) {
+        for i in openTabs.indices {
+            guard case .table(let cid, let s, let n) = openTabs[i].kind,
+                  cid == connectionID, s == schema, n == oldName else { continue }
+            openTabs[i] = DetailTab(
+                id: openTabs[i].id,
+                title: newName,
+                icon: openTabs[i].icon,
+                kind: .table(connectionID: cid, schema: s, tableName: newName)
+            )
+            if selectedSidebarItem == .table(connectionID: cid, schema: s, tableName: oldName) {
+                selectedSidebarItem = .table(connectionID: cid, schema: s, tableName: newName)
+            }
+        }
+    }
+
     func activateDetailTab(_ tab: DetailTab) {
         activeDetailTabID = tab.id
         switch tab.kind {
