@@ -184,9 +184,48 @@ struct TableDetailView: View {
                         Text(col.defaultValue ?? "—").foregroundStyle(.secondary)
                     }
                 }
+                .contextMenu(forSelectionType: String.self) { ids in
+                    if !isView, let id = ids.first,
+                       let col = columns.first(where: { $0.id == id }) {
+                        Button("Rename…") { renameColumn(col) }
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Rename column
+
+    private func renameColumn(_ col: ColumnInfo) {
+        let alert = NSAlert()
+        alert.messageText = "Rename Column \"\(col.name)\""
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
+        field.stringValue = col.name
+        field.selectText(nil)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let newName = field.stringValue.trimmingCharacters(in: .whitespaces)
+        guard !newName.isEmpty, newName != col.name else { return }
+
+        Task {
+            do {
+                let sql = "ALTER TABLE \(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName)) RENAME COLUMN \(quoteIdentifier(col.name)) TO \(quoteIdentifier(newName));"
+                _ = try await client.query(sql)
+                await loadMeta()
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Rename Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
     }
 
     // MARK: - Keys tab
