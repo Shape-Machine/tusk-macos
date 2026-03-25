@@ -321,7 +321,7 @@ private struct SchemaRow: View {
         alert.window.initialFirstResponder = field
 
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let newName = field.stringValue.trimmingCharacters(in: .whitespaces)
+        let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !newName.isEmpty, newName != table.name else { return }
 
         Task {
@@ -336,6 +336,9 @@ private struct SchemaRow: View {
                     appState.openOrActivateTableTab(connectionID: connection.id, schema: table.schema, tableName: newName)
                 }
                 try? await appState.refreshSchema(for: connection)
+                if appState.schemaTableSizes[connection.id] != nil {
+                    await appState.loadTableSizes(for: connection)
+                }
             } catch {
                 let err = NSAlert()
                 err.messageText = "Rename Failed"
