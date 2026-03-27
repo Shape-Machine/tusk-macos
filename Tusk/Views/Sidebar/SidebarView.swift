@@ -154,6 +154,7 @@ private struct SchemaRow: View {
     @State private var enumsExpanded: Bool = false
     @State private var sequencesExpanded: Bool = false
     @State private var functionsExpanded: Bool = false
+    @State private var showingCreateTableSheet = false
 
     init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection, tableSizes: [String: TableSizeInfo] = [:]) {
         self.schema = schema
@@ -300,8 +301,20 @@ private struct SchemaRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { isExpanded.toggle() }
+            .contextMenu {
+                if appState.isConnected(connection) {
+                    Button("New Table…") { showingCreateTableSheet = true }
+                }
+            }
         }
         .animation(nil, value: isExpanded)
+        .sheet(isPresented: $showingCreateTableSheet) {
+            if let client = appState.clients[connection.id] {
+                CreateTableSheet(schemaName: schema, client: client) {
+                    try? await appState.refreshSchema(for: connection)
+                }
+            }
+        }
     }
 
     // MARK: - Rename table
