@@ -287,22 +287,29 @@ struct TableDetailView: View {
                 let t = "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))"
                 let c = quoteIdentifier(col.name)
 
-                if typeChanged {
-                    _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) TYPE \(newType);")
-                }
-                if defaultChanged {
-                    if newDefault.isEmpty {
-                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP DEFAULT;")
-                    } else {
-                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET DEFAULT \(newDefault);")
+                _ = try await client.query("BEGIN;")
+                do {
+                    if typeChanged {
+                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) TYPE \(newType);")
                     }
-                }
-                if nullableChanged {
-                    if newNullable {
-                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP NOT NULL;")
-                    } else {
-                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET NOT NULL;")
+                    if defaultChanged {
+                        if newDefault.isEmpty {
+                            _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP DEFAULT;")
+                        } else {
+                            _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET DEFAULT \(newDefault);")
+                        }
                     }
+                    if nullableChanged {
+                        if newNullable {
+                            _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP NOT NULL;")
+                        } else {
+                            _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET NOT NULL;")
+                        }
+                    }
+                    _ = try await client.query("COMMIT;")
+                } catch {
+                    try? await client.query("ROLLBACK;")
+                    throw error
                 }
                 await loadMeta()
             } catch {
