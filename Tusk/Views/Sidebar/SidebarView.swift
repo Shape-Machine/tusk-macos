@@ -411,6 +411,10 @@ private struct SchemaRow: View {
         Task {
             do {
                 _ = try await client.query(sql)
+                try? await appState.refreshSchema(for: connection)
+                if appState.schemaTableSizes[connection.id] != nil {
+                    await appState.loadTableSizes(for: connection)
+                }
             } catch {
                 let err = NSAlert()
                 err.messageText = "Truncate Failed"
@@ -427,7 +431,17 @@ private struct SchemaRow: View {
         guard let client = appState.clients[connection.id] else { return }
 
         Task {
-            let refs = (try? await client.incomingReferences(schema: table.schema, table: table.name)) ?? []
+            let refs: [IncomingReference]
+            do {
+                refs = try await client.incomingReferences(schema: table.schema, table: table.name)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Could Not Check Dependencies"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+                return
+            }
 
             let alert = NSAlert()
             alert.messageText = "Drop Table \"\(table.name)\"?"
@@ -440,7 +454,7 @@ private struct SchemaRow: View {
                 alert.addButton(withTitle: "Cancel")
             } else {
                 hasDependents = true
-                let tableList = Array(Set(refs.map { $0.fromTable })).sorted().joined(separator: ", ")
+                let tableList = Array(Set(refs.map { "\($0.fromSchema).\($0.fromTable)" })).sorted().joined(separator: ", ")
                 alert.informativeText = "Table \"\(table.name)\" is referenced by foreign keys in: \(tableList).\n\n\"Drop Table\" will fail unless those constraints are removed first. \"Drop with CASCADE\" also drops all dependent objects — use with care."
                 alert.addButton(withTitle: "Drop Table")
                 alert.addButton(withTitle: "Drop with CASCADE")
