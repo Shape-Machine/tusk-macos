@@ -212,6 +212,16 @@ private struct SchemaRow: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .onTapGesture { tablesExpanded.toggle() }
+                        .contextMenu {
+                            if appState.isConnected(connection) {
+                                Button("New Table…") {
+                                    appState.createTableTarget = CreateTableTarget(
+                                        schema: schema,
+                                        connectionID: connection.id
+                                    )
+                                }
+                            }
+                        }
                 }
                 .animation(nil, value: tablesExpanded)
             }
