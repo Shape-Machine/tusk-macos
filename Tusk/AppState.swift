@@ -144,6 +144,9 @@ final class AppState {
         schemaFunctions.removeValue(forKey: connection.id)
         schemaRefreshErrors.removeValue(forKey: connection.id)
         schemaTableSizes.removeValue(forKey: connection.id)
+        if createTableTarget?.connectionID == connection.id {
+            createTableTarget = nil
+        }
 
         // Close all detail tabs belonging to this connection
         let tabsToClose = openTabs.filter { tab in

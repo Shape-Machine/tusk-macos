@@ -57,14 +57,15 @@ struct CreateTableSheet: View {
 
         let t = "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tName))"
         var defs = validCols.map { col -> String in
-            var def = "  \(quoteIdentifier(col.name)) \(col.type)"
+            let colName = col.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            var def = "  \(quoteIdentifier(colName)) \(col.type)"
             if !col.defaultValue.isEmpty { def += " DEFAULT \(col.defaultValue)" }
             if !col.nullable { def += " NOT NULL" }
             return def
         }
         let pkCols = validCols.filter { $0.isPrimaryKey }
         if !pkCols.isEmpty {
-            let pkList = pkCols.map { quoteIdentifier($0.name) }.joined(separator: ", ")
+            let pkList = pkCols.map { quoteIdentifier($0.name.trimmingCharacters(in: .whitespacesAndNewlines)) }.joined(separator: ", ")
             defs.append("  PRIMARY KEY (\(pkList))")
         }
         return "CREATE TABLE \(t) (\n\(defs.joined(separator: ",\n"))\n);"
