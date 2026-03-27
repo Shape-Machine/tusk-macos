@@ -201,7 +201,7 @@ struct TableDetailView: View {
                         }
                     }
                     .contextMenu(forSelectionType: String.self) { ids in
-                        if !isView, let id = ids.first,
+                        if !isView, ids.count == 1, let id = ids.first,
                            let col = columns.first(where: { $0.id == id }) {
                             Button("Rename…")      { renameColumn(col) }
                             Button("Edit…")        { editColumn(col) }
@@ -396,6 +396,18 @@ struct TableDetailView: View {
         let nullable   = nullableCheck.state == .on
 
         guard !name.isEmpty, !type.isEmpty else { return }
+
+        let dangerousTokens = [";", "--", "/*", "*/"]
+        for input in [type, defaultVal] where !input.isEmpty {
+            if dangerousTokens.contains(where: { input.contains($0) }) {
+                let err = NSAlert()
+                err.messageText = "Invalid Input"
+                err.informativeText = "Type and default value must not contain SQL metacharacters (;  --  /*  */)."
+                err.alertStyle = .warning
+                err.runModal()
+                return
+            }
+        }
 
         Task {
             do {
