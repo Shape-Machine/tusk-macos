@@ -170,6 +170,7 @@ actor DatabaseClient {
         let result = try await query("""
             SELECT
                 tc.constraint_name,
+                tc.table_schema AS from_schema,
                 tc.table_name   AS from_table,
                 kcu.column_name AS from_column,
                 ccu.column_name AS to_column
@@ -181,15 +182,16 @@ actor DatabaseClient {
             WHERE tc.constraint_type = 'FOREIGN KEY'
               AND ccu.table_schema = '\(s)'
               AND ccu.table_name   = '\(t)'
-            ORDER BY tc.table_name
+            ORDER BY tc.table_schema, tc.table_name
             """)
 
         return result.rows.map { row in
             IncomingReference(
                 constraintName: row[safe: 0]?.displayValue ?? "",
-                fromTable:      row[safe: 1]?.displayValue ?? "",
-                fromColumn:     row[safe: 2]?.displayValue ?? "",
-                toColumn:       row[safe: 3]?.displayValue ?? ""
+                fromSchema:     row[safe: 1]?.displayValue ?? "",
+                fromTable:      row[safe: 2]?.displayValue ?? "",
+                fromColumn:     row[safe: 3]?.displayValue ?? "",
+                toColumn:       row[safe: 4]?.displayValue ?? ""
             )
         }
     }

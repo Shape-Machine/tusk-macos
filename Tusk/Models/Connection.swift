@@ -104,6 +104,7 @@ struct ForeignKeyInfo: Identifiable, Sendable {
 struct IncomingReference: Identifiable, Sendable {
     var id: String { constraintName }
     let constraintName: String
+    let fromSchema: String  // schema that owns the FK table
     let fromTable: String   // the table that owns the FK
     let fromColumn: String  // the FK column in that table
     let toColumn: String    // the referenced column in the focal table
