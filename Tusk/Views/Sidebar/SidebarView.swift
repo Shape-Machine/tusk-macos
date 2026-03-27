@@ -49,6 +49,13 @@ struct SidebarView: View {
                 CreateTableSheet(schemaName: target.schema, client: client) {
                     try? await appState.refreshSchema(for: connection)
                 }
+            } else {
+                VStack(spacing: 12) {
+                    Text("Connection unavailable")
+                        .font(.headline)
+                    Button("Dismiss") { appState.createTableTarget = nil }
+                }
+                .frame(width: 280, height: 100)
             }
         }
         .navigationTitle("Tusk")
