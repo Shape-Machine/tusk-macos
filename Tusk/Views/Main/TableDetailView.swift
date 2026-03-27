@@ -189,6 +189,7 @@ struct TableDetailView: View {
                     if !isView, let id = ids.first,
                        let col = columns.first(where: { $0.id == id }) {
                         Button("Rename…") { renameColumn(col) }
+                        Button("Edit…")   { editColumn(col) }
                     }
                 }
             }
@@ -222,6 +223,91 @@ struct TableDetailView: View {
             } catch {
                 let err = NSAlert()
                 err.messageText = "Rename Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Edit column
+
+    private func editColumn(_ col: ColumnInfo) {
+        let alert = NSAlert()
+        alert.messageText = "Edit Column \"\(col.name)\""
+        alert.addButton(withTitle: "Apply")
+        alert.addButton(withTitle: "Cancel")
+
+        // Accessory view: type field, default field, nullable checkbox
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 92))
+
+        let typeLabel = NSTextField(labelWithString: "Type")
+        typeLabel.frame = NSRect(x: 0, y: 68, width: 80, height: 17)
+        typeLabel.alignment = .right
+
+        let typeField = NSTextField(frame: NSRect(x: 88, y: 65, width: 212, height: 22))
+        typeField.stringValue = col.dataType
+        typeField.placeholderString = "e.g. text, integer, boolean"
+
+        let defaultLabel = NSTextField(labelWithString: "Default")
+        defaultLabel.frame = NSRect(x: 0, y: 38, width: 80, height: 17)
+        defaultLabel.alignment = .right
+
+        let defaultField = NSTextField(frame: NSRect(x: 88, y: 35, width: 212, height: 22))
+        defaultField.stringValue = col.defaultValue ?? ""
+        defaultField.placeholderString = "leave blank to drop default"
+
+        let nullableCheck = NSButton(checkboxWithTitle: "Nullable", target: nil, action: nil)
+        nullableCheck.frame = NSRect(x: 88, y: 6, width: 212, height: 18)
+        nullableCheck.state = col.isNullable ? .on : .off
+
+        container.addSubview(typeLabel)
+        container.addSubview(typeField)
+        container.addSubview(defaultLabel)
+        container.addSubview(defaultField)
+        container.addSubview(nullableCheck)
+
+        alert.accessoryView = container
+        alert.window.initialFirstResponder = typeField
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let newType    = typeField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newDefault = defaultField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newNullable = nullableCheck.state == .on
+
+        let typeChanged    = !newType.isEmpty && newType != col.dataType
+        let defaultChanged = newDefault != (col.defaultValue ?? "")
+        let nullableChanged = newNullable != col.isNullable
+
+        guard typeChanged || defaultChanged || nullableChanged else { return }
+
+        Task {
+            do {
+                let t = "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))"
+                let c = quoteIdentifier(col.name)
+
+                if typeChanged {
+                    _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) TYPE \(newType);")
+                }
+                if defaultChanged {
+                    if newDefault.isEmpty {
+                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP DEFAULT;")
+                    } else {
+                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET DEFAULT \(newDefault);")
+                    }
+                }
+                if nullableChanged {
+                    if newNullable {
+                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) DROP NOT NULL;")
+                    } else {
+                        _ = try await client.query("ALTER TABLE \(t) ALTER COLUMN \(c) SET NOT NULL;")
+                    }
+                }
+                await loadMeta()
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Edit Failed"
                 err.informativeText = error.localizedDescription
                 err.alertStyle = .warning
                 err.runModal()
