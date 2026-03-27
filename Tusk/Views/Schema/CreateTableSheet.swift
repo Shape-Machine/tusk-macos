@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Create table target (stable identity for sheet presentation)
+
+struct CreateTableTarget: Identifiable {
+    let id = UUID()
+    let schema: String
+    let connectionID: UUID
+}
+
 // MARK: - Column type list
 
 let pgColumnTypes: [String] = [
