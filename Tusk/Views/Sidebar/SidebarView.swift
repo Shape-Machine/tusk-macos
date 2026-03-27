@@ -210,6 +210,9 @@ private struct SchemaRow: View {
                         .contextMenu {
                             if appState.isConnected(connection) {
                                 Button("Rename…") { renameTable(table) }
+                                Divider()
+                                Button("Truncate Table…") { truncateTable(table) }
+                                Button("Drop Table…")     { dropTable(table) }
                             }
                         }
                     }
@@ -377,6 +380,97 @@ private struct SchemaRow: View {
             } catch {
                 let err = NSAlert()
                 err.messageText = "Rename Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+    // MARK: - Truncate table
+
+    private func truncateTable(_ table: TableInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Truncate Table \"\(table.name)\"?"
+        alert.informativeText = "This removes all rows from the table. The table structure is kept. This action cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Truncate")
+        alert.addButton(withTitle: "Cancel")
+
+        let restartCheck = NSButton(checkboxWithTitle: "Restart sequences (RESTART IDENTITY)", target: nil, action: nil)
+        restartCheck.frame = NSRect(x: 0, y: 0, width: 300, height: 18)
+        restartCheck.state = .off
+        alert.accessoryView = restartCheck
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let restartIdentity = restartCheck.state == .on
+        let restartClause = restartIdentity ? " RESTART IDENTITY" : ""
+        let sql = "TRUNCATE TABLE \(quoteIdentifier(table.schema)).\(quoteIdentifier(table.name))\(restartClause);"
+
+        Task {
+            do {
+                _ = try await client.query(sql)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Truncate Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Drop table
+
+    private func dropTable(_ table: TableInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+
+        Task {
+            let refs = (try? await client.incomingReferences(schema: table.schema, table: table.name)) ?? []
+
+            let alert = NSAlert()
+            alert.messageText = "Drop Table \"\(table.name)\"?"
+            alert.alertStyle = .warning
+
+            var hasDependents = false
+            if refs.isEmpty {
+                alert.informativeText = "This permanently removes the table and all its data. This action cannot be undone."
+                alert.addButton(withTitle: "Drop Table")
+                alert.addButton(withTitle: "Cancel")
+            } else {
+                hasDependents = true
+                let tableList = Array(Set(refs.map { $0.fromTable })).sorted().joined(separator: ", ")
+                alert.informativeText = "Table \"\(table.name)\" is referenced by foreign keys in: \(tableList).\n\n\"Drop Table\" will fail unless those constraints are removed first. \"Drop with CASCADE\" also drops all dependent objects — use with care."
+                alert.addButton(withTitle: "Drop Table")
+                alert.addButton(withTitle: "Drop with CASCADE")
+                alert.addButton(withTitle: "Cancel")
+            }
+
+            let response = alert.runModal()
+
+            let isCancelled = hasDependents ? response == .alertThirdButtonReturn
+                                            : response == .alertSecondButtonReturn
+            guard !isCancelled else { return }
+
+            let cascade = hasDependents && response == .alertSecondButtonReturn
+            let sql = "DROP TABLE IF EXISTS \(quoteIdentifier(table.schema)).\(quoteIdentifier(table.name))\(cascade ? " CASCADE" : "");"
+
+            do {
+                _ = try await client.query(sql)
+                if let tab = appState.openTabs.first(where: {
+                    guard case .table(let cid, let s, let n) = $0.kind else { return false }
+                    return cid == connection.id && s == table.schema && n == table.name
+                }) {
+                    appState.closeDetailTab(tab.id)
+                }
+                try? await appState.refreshSchema(for: connection)
+                if appState.schemaTableSizes[connection.id] != nil {
+                    await appState.loadTableSizes(for: connection)
+                }
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Drop Failed"
                 err.informativeText = error.localizedDescription
                 err.alertStyle = .warning
                 err.runModal()
