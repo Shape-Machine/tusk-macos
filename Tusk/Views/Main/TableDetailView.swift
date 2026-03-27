@@ -159,40 +159,59 @@ struct TableDetailView: View {
     // MARK: - Columns tab
 
     private var columnsTab: some View {
-        Group {
-            if isLoadingMeta {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Table(columns, selection: $selectedColumnIDs) {
-                    TableColumn("Column") { col in
-                        HStack(spacing: 4) {
-                            if col.isPrimaryKey {
-                                Image(systemName: "key.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(.orange)
+        VStack(spacing: 0) {
+            if !isView {
+                HStack {
+                    Spacer()
+                    Button { addColumn() } label: {
+                        Label("Add Column", systemImage: "plus")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+                Divider()
+            }
+            Group {
+                if isLoadingMeta {
+                    ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Table(columns, selection: $selectedColumnIDs) {
+                        TableColumn("Column") { col in
+                            HStack(spacing: 4) {
+                                if col.isPrimaryKey {
+                                    Image(systemName: "key.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
+                                Text(col.name)
                             }
-                            Text(col.name)
+                        }
+                        TableColumn("Type") { col in
+                            Text(col.dataType).foregroundStyle(.secondary)
+                        }
+                        TableColumn("Nullable") { col in
+                            Text(col.isNullable ? "YES" : "NO")
+                                .foregroundStyle(col.isNullable ? .secondary : .primary)
+                        }
+                        TableColumn("Default") { col in
+                            Text(col.defaultValue ?? "—").foregroundStyle(.secondary)
                         }
                     }
-                    TableColumn("Type") { col in
-                        Text(col.dataType).foregroundStyle(.secondary)
-                    }
-                    TableColumn("Nullable") { col in
-                        Text(col.isNullable ? "YES" : "NO")
-                            .foregroundStyle(col.isNullable ? .secondary : .primary)
-                    }
-                    TableColumn("Default") { col in
-                        Text(col.defaultValue ?? "—").foregroundStyle(.secondary)
-                    }
-                }
-                .contextMenu(forSelectionType: String.self) { ids in
-                    if !isView, let id = ids.first,
-                       let col = columns.first(where: { $0.id == id }) {
-                        Button("Rename…") { renameColumn(col) }
-                        Button("Edit…")   { editColumn(col) }
+                    .contextMenu(forSelectionType: String.self) { ids in
+                        if !isView, let id = ids.first,
+                           let col = columns.first(where: { $0.id == id }) {
+                            Button("Rename…")      { renameColumn(col) }
+                            Button("Edit…")        { editColumn(col) }
+                            Divider()
+                            Button("Drop Column…") { dropColumn(col) }
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -315,6 +334,109 @@ struct TableDetailView: View {
             } catch {
                 let err = NSAlert()
                 err.messageText = "Edit Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Add column
+
+    private func addColumn() {
+        let alert = NSAlert()
+        alert.messageText = "Add Column to \"\(tableName)\""
+        alert.addButton(withTitle: "Add")
+        alert.addButton(withTitle: "Cancel")
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 122))
+
+        let nameLabel = NSTextField(labelWithString: "Name")
+        nameLabel.frame = NSRect(x: 0, y: 98, width: 80, height: 17)
+        nameLabel.alignment = .right
+
+        let nameField = NSTextField(frame: NSRect(x: 88, y: 95, width: 212, height: 22))
+        nameField.placeholderString = "column_name"
+
+        let typeLabel = NSTextField(labelWithString: "Type")
+        typeLabel.frame = NSRect(x: 0, y: 68, width: 80, height: 17)
+        typeLabel.alignment = .right
+
+        let typeField = NSTextField(frame: NSRect(x: 88, y: 65, width: 212, height: 22))
+        typeField.stringValue = "text"
+        typeField.placeholderString = "e.g. text, integer, boolean"
+
+        let defaultLabel = NSTextField(labelWithString: "Default")
+        defaultLabel.frame = NSRect(x: 0, y: 38, width: 80, height: 17)
+        defaultLabel.alignment = .right
+
+        let defaultField = NSTextField(frame: NSRect(x: 88, y: 35, width: 212, height: 22))
+        defaultField.placeholderString = "leave blank for no default"
+
+        let nullableCheck = NSButton(checkboxWithTitle: "Nullable", target: nil, action: nil)
+        nullableCheck.frame = NSRect(x: 88, y: 6, width: 212, height: 18)
+        nullableCheck.state = .on
+
+        container.addSubview(nameLabel)
+        container.addSubview(nameField)
+        container.addSubview(typeLabel)
+        container.addSubview(typeField)
+        container.addSubview(defaultLabel)
+        container.addSubview(defaultField)
+        container.addSubview(nullableCheck)
+
+        alert.accessoryView = container
+        alert.window.initialFirstResponder = nameField
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let name       = nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let type       = typeField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let defaultVal = defaultField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nullable   = nullableCheck.state == .on
+
+        guard !name.isEmpty, !type.isEmpty else { return }
+
+        Task {
+            do {
+                let t = "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))"
+                let c = quoteIdentifier(name)
+                var sql = "ALTER TABLE \(t) ADD COLUMN \(c) \(type)"
+                if !defaultVal.isEmpty { sql += " DEFAULT \(defaultVal)" }
+                if !nullable           { sql += " NOT NULL" }
+                sql += ";"
+                _ = try await client.query(sql)
+                await loadMeta()
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Add Column Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Drop column
+
+    private func dropColumn(_ col: ColumnInfo) {
+        let alert = NSAlert()
+        alert.messageText = "Drop Column \"\(col.name)\"?"
+        alert.informativeText = "This will permanently remove the column and all its data from \"\(tableName)\". This cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Drop Column")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        Task {
+            do {
+                let sql = "ALTER TABLE \(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName)) DROP COLUMN \(quoteIdentifier(col.name));"
+                _ = try await client.query(sql)
+                await loadMeta()
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Drop Column Failed"
                 err.informativeText = error.localizedDescription
                 err.alertStyle = .warning
                 err.runModal()
