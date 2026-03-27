@@ -43,6 +43,14 @@ struct SidebarView: View {
                 Task { await appState.loadTableSizes(for: connection) }
             }
         }
+        .sheet(item: $appState.createTableTarget) { target in
+            if let client = appState.clients[target.connectionID],
+               let connection = appState.connections.first(where: { $0.id == target.connectionID }) {
+                CreateTableSheet(schemaName: target.schema, client: client) {
+                    try? await appState.refreshSchema(for: connection)
+                }
+            }
+        }
         .navigationTitle("Tusk")
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -154,7 +162,6 @@ private struct SchemaRow: View {
     @State private var enumsExpanded: Bool = false
     @State private var sequencesExpanded: Bool = false
     @State private var functionsExpanded: Bool = false
-    @State private var showingCreateTableSheet = false
 
     init(schema: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], connection: Connection, tableSizes: [String: TableSizeInfo] = [:]) {
         self.schema = schema
@@ -303,18 +310,16 @@ private struct SchemaRow: View {
             .onTapGesture { isExpanded.toggle() }
             .contextMenu {
                 if appState.isConnected(connection) {
-                    Button("New Table…") { showingCreateTableSheet = true }
+                    Button("New Table…") {
+                        appState.createTableTarget = CreateTableTarget(
+                            schema: schema,
+                            connectionID: connection.id
+                        )
+                    }
                 }
             }
         }
         .animation(nil, value: isExpanded)
-        .sheet(isPresented: $showingCreateTableSheet) {
-            if let client = appState.clients[connection.id] {
-                CreateTableSheet(schemaName: schema, client: client) {
-                    try? await appState.refreshSchema(for: connection)
-                }
-            }
-        }
     }
 
     // MARK: - Rename table
