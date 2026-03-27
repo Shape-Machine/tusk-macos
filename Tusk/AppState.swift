@@ -38,6 +38,7 @@ final class AppState {
     var isShowingSettings = false
     var editingConnection: Connection? = nil
     var connectingIDs: Set<UUID> = []
+    var createTableTarget: CreateTableTarget? = nil
 
     init() {
         connections = ConnectionStore.shared.load()
