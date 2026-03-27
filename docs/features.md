@@ -1,6 +1,6 @@
 # Tusk — Features
 
-_Last updated: 2026-03-22_
+_Last updated: 2026-03-27_
 
 ### Connections
 Manage multiple PostgreSQL connections with full SSH tunnel and SSL support.
@@ -17,13 +17,15 @@ Navigate schemas and tables directly from the sidebar.
 - Views, Enums, Sequences, and Functions listed under collapsible groups per schema
 - Optional table size overlay: total size, row estimate, and index size per table (toggle in Settings)
 - Click a table to open its detail tab
+- Right-click a table: **Rename** (`ALTER TABLE RENAME TO`), **Truncate** (with optional RESTART IDENTITY to reset sequences), or **Drop** (warns of FK dependents with schema-qualified names; CASCADE option)
+- Right-click a schema or the Tables row: **New Table…** — column builder wizard with type picker, PK toggle, nullable/default fields, and a live DDL preview pane
 - `⌘R` or right-click to refresh schema
 - Auto-refreshes on connect
 - Schema refresh error badge on connection header
 
 ### Table Detail
 Seven tabs per table for complete introspection.
-- **Columns** — name, type, nullability, default value, primary key indicator
+- **Columns** — name, type, nullability, default value, primary key indicator; toolbar "+" to add a column; right-click to **Rename**, **Edit** (change type, default, nullability — wrapped in a transaction), or **Drop** with confirmation
 - **Foreign Keys** — foreign key constraints with referenced table and column
 - **Relations** — radial graph of incoming and outgoing foreign key relationships with column labels; pinch-to-zoom, drag-to-pan, and auto-scale
 - **Indexes** — index definitions with uniqueness and primary key indicators
