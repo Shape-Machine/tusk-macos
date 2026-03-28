@@ -447,6 +447,18 @@ actor DatabaseClient {
         }
     }
 
+    // MARK: - Databases
+
+    func databases() async throws -> [String] {
+        let result = try await query("""
+            SELECT datname
+            FROM pg_database
+            WHERE datistemplate = false
+            ORDER BY datname
+            """)
+        return result.rows.compactMap { $0[safe: 0]?.displayValue }
+    }
+
     // MARK: - Table sizes
 
     func tableSizes() async throws -> [TableSizeInfo] {
