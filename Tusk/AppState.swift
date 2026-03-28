@@ -100,6 +100,9 @@ final class AppState {
         connectingIDs.insert(connection.id)
         defer { connectingIDs.remove(connection.id) }
 
+        // Clear the database list so a stale cache is never shown if the load below fails.
+        schemaDatabases.removeValue(forKey: connection.id)
+
         // Build and connect the new client *before* tearing down the old one so
         // that table tabs backed by the existing client stay renderable during reconnect.
         var effectiveConnection = connection
@@ -347,6 +350,15 @@ final class AppState {
             return false
         }
         for tab in tabsToClose { closeDetailTab(tab.id) }
+
+        // Clear schema caches so stale data from the previous database is never shown
+        // if the refresh below fails.
+        schemaTables.removeValue(forKey: connectionID)
+        schemaEnums.removeValue(forKey: connectionID)
+        schemaSequences.removeValue(forKey: connectionID)
+        schemaFunctions.removeValue(forKey: connectionID)
+        schemaTableSizes.removeValue(forKey: connectionID)
+        schemaRefreshErrors.removeValue(forKey: connectionID)
 
         try? await refreshSchema(for: connection)
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
