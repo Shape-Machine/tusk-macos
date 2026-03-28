@@ -26,6 +26,7 @@ struct AddConnectionSheet: View {
 
     @State private var isTestingConnection = false
     @State private var testResult: String? = nil
+    @State private var uriError: String? = nil
 
     var isEditing: Bool { connection != nil }
 
@@ -36,6 +37,10 @@ struct AddConnectionSheet: View {
                 Text(isEditing ? "Edit Connection" : "New Connection")
                     .font(.headline)
                 Spacer()
+                if !isEditing {
+                    Button("Paste URI") { pasteURI() }
+                        .help("Parse a postgresql:// URI from the clipboard and fill in the fields below")
+                }
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button(isEditing ? "Save" : "Add") { save() }
@@ -45,6 +50,29 @@ struct AddConnectionSheet: View {
             .padding()
 
             Divider()
+
+            if let uriErr = uriError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(uriErr)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        uriError = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.bar)
+                Divider()
+            }
 
             // Form
             Form {
@@ -217,6 +245,56 @@ struct AddConnectionSheet: View {
             appState.addConnection(new)
         }
         dismiss()
+    }
+
+    private func pasteURI() {
+        let raw = NSPasteboard.general.string(forType: .string) ?? ""
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            uriError = "Clipboard is empty."
+            return
+        }
+        guard let parsed = parsePostgresURI(trimmed) else {
+            uriError = "Could not parse a PostgreSQL URI from the clipboard. Expected format: postgresql://user:pass@host:5432/database"
+            return
+        }
+        host     = parsed.host
+        port     = parsed.port
+        database = parsed.database
+        username = parsed.username
+        password = parsed.password
+        useSSL   = parsed.useSSL
+        uriError = nil
+        testResult = nil
+    }
+
+    private struct ParsedURI {
+        var host: String
+        var port: String
+        var database: String
+        var username: String
+        var password: String
+        var useSSL: Bool
+    }
+
+    private func parsePostgresURI(_ raw: String) -> ParsedURI? {
+        guard var comps = URLComponents(string: raw),
+              comps.scheme == "postgresql" || comps.scheme == "postgres"
+        else { return nil }
+
+        let h  = comps.host ?? "localhost"
+        let p  = comps.port.map { String($0) } ?? "5432"
+        // Path is "/dbname" — strip the leading slash
+        let db = comps.path.hasPrefix("/") ? String(comps.path.dropFirst()) : comps.path
+        let u  = comps.user ?? ""
+        let pw = comps.password ?? ""
+
+        // sslmode query param: anything other than "disable" → useSSL = true
+        let sslmode = comps.queryItems?.first(where: { $0.name == "sslmode" })?.value ?? ""
+        let ssl = !sslmode.isEmpty && sslmode != "disable"
+
+        guard !h.isEmpty, !db.isEmpty else { return nil }
+        return ParsedURI(host: h, port: p, database: db, username: u, password: pw, useSSL: ssl)
     }
 
     private func testConnection() async {
