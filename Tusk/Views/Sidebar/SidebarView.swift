@@ -568,7 +568,8 @@ private struct ConnectionHeader: View {
         .contentShape(Rectangle())
         .help({
             let status = isConnected ? "Click to select" : isConnecting ? "Connecting…" : "Click to connect"
-            return connection.notes.isEmpty ? status : "\(connection.notes)\n\(status)"
+            let notes = connection.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            return notes.isEmpty ? status : "\(notes)\n\(status)"
         }())
         .onTapGesture {
             if isConnected {
