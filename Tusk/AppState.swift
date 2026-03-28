@@ -32,6 +32,10 @@ final class AppState {
     var schemaRefreshErrors:[UUID: String]          = [:]
     /// keyed by connectionID → "schema.table" → TableSizeInfo
     var schemaTableSizes:   [UUID: [String: TableSizeInfo]] = [:]
+    /// keyed by connectionID → sorted list of database names on that server
+    var schemaDatabases:    [UUID: [String]]        = [:]
+    /// keyed by connectionID → currently connected database (may differ from connection.database after a switch)
+    var activeDatabase:     [UUID: String]          = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -132,6 +136,7 @@ final class AppState {
         }
         if let tunnel = newTunnel { tunnels[connection.id] = tunnel }
         clients[connection.id] = newClient
+        activeDatabase[connection.id] = connection.database
         selectedConnectionID = connection.id
 
         // Bind any file-based query tabs that were opened without a connection.
@@ -144,6 +149,7 @@ final class AppState {
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
             await loadTableSizes(for: connection)
         }
+        await loadDatabases(for: connection)
     }
 
     func disconnect(_ connection: Connection) {
@@ -159,6 +165,8 @@ final class AppState {
         schemaFunctions.removeValue(forKey: connection.id)
         schemaRefreshErrors.removeValue(forKey: connection.id)
         schemaTableSizes.removeValue(forKey: connection.id)
+        schemaDatabases.removeValue(forKey: connection.id)
+        activeDatabase.removeValue(forKey: connection.id)
         if createTableTarget?.connectionID == connection.id {
             createTableTarget = nil
         }
@@ -294,6 +302,56 @@ final class AppState {
         var dict: [String: TableSizeInfo] = [:]
         for s in sizes { dict["\(s.schema).\(s.name)"] = s }
         schemaTableSizes[connection.id] = dict
+    }
+
+    func loadDatabases(for connection: Connection) async {
+        guard let client = clients[connection.id] else { return }
+        guard let dbs = try? await client.databases() else { return }
+        schemaDatabases[connection.id] = dbs
+    }
+
+    func switchDatabase(connectionID: UUID, to database: String) async throws {
+        guard let connection = connections.first(where: { $0.id == connectionID }) else { return }
+        guard !connectingIDs.contains(connectionID) else { return }
+        connectingIDs.insert(connectionID)
+        defer { connectingIDs.remove(connectionID) }
+
+        var effectiveConnection = connection
+        effectiveConnection.database = database
+
+        // Reuse the existing SSH tunnel if present
+        if let tunnel = tunnels[connectionID] {
+            let localPort = await tunnel.localPort
+            effectiveConnection.host = "127.0.0.1"
+            effectiveConnection.port = localPort
+        }
+
+        let password = KeychainManager.shared.password(for: connectionID) ?? ""
+        let newClient = DatabaseClient()
+        do {
+            try await newClient.connect(to: effectiveConnection, password: password)
+        } catch {
+            await newClient.disconnect()
+            throw error
+        }
+
+        if let oldClient = clients.removeValue(forKey: connectionID) {
+            await oldClient.disconnect()
+        }
+        clients[connectionID] = newClient
+        activeDatabase[connectionID] = database
+
+        // Close table tabs belonging to this connection — they were for the old database
+        let tabsToClose = openTabs.filter {
+            if case .table(let cid, _, _) = $0.kind { return cid == connectionID }
+            return false
+        }
+        for tab in tabsToClose { closeDetailTab(tab.id) }
+
+        try? await refreshSchema(for: connection)
+        if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
+            await loadTableSizes(for: connection)
+        }
     }
 
     func openQueryTab(for connection: Connection) {

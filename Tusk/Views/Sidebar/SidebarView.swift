@@ -534,6 +534,8 @@ private struct ConnectionHeader: View {
     var isConnected: Bool { appState.isConnected(connection) }
     var isConnecting: Bool { appState.connectingIDs.contains(connection.id) }
     var isSelected: Bool { appState.selectedConnectionID == connection.id }
+    var databases: [String] { appState.schemaDatabases[connection.id] ?? [] }
+    var currentDatabase: String { appState.activeDatabase[connection.id] ?? connection.database }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -598,6 +600,29 @@ private struct ConnectionHeader: View {
                 Divider()
                 Button("Refresh Schema") {
                     Task { try? await appState.refreshSchema(for: connection) }
+                }
+                if databases.count > 1 {
+                    Divider()
+                    Menu("Switch Database") {
+                        ForEach(databases, id: \.self) { db in
+                            Button {
+                                Task {
+                                    do {
+                                        try await appState.switchDatabase(connectionID: connection.id, to: db)
+                                    } catch {
+                                        connectionError = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                if db == currentDatabase {
+                                    Label(db, systemImage: "checkmark")
+                                } else {
+                                    Text(db)
+                                }
+                            }
+                            .disabled(db == currentDatabase)
+                        }
+                    }
                 }
             } else if !isConnecting {
                 Button("Connect") {
