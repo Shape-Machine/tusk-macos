@@ -314,7 +314,7 @@ struct AddConnectionSheet: View {
 
         var info        = Connection(
             name: name, host: host, port: Int(port) ?? 5432,
-            database: database, username: username, useSSL: useSSL
+            database: database, username: username, useSSL: useSSL, isReadOnly: isReadOnly
         )
         info.sshEnabled = sshEnabled
         info.sshHost    = sshHost
