@@ -16,6 +16,7 @@ struct AddConnectionSheet: View {
     @State private var username: String = ""
     @State private var password: String = ""
     @State private var useSSL: Bool = false
+    @State private var isReadOnly: Bool = false
     @State private var color: ConnectionColor = .blue
 
     @State private var sshEnabled: Bool = false
@@ -124,6 +125,7 @@ struct AddConnectionSheet: View {
                     TextField("Username", text: $username)
                     SecureField("Password", text: $password)
                     Toggle("Use SSL", isOn: $useSSL)
+                    Toggle("Read-only", isOn: $isReadOnly)
                 }
 
                 Section("SSH Tunnel") {
@@ -190,6 +192,7 @@ struct AddConnectionSheet: View {
         username      = c.username
         password      = KeychainManager.shared.password(for: c.id) ?? ""
         useSSL        = c.useSSL
+        isReadOnly    = c.isReadOnly
         color         = c.color
         sshEnabled    = c.sshEnabled
         sshHost       = c.sshHost
@@ -224,6 +227,7 @@ struct AddConnectionSheet: View {
             updated.database     = database
             updated.username     = username
             updated.useSSL       = useSSL
+            updated.isReadOnly   = isReadOnly
             updated.color        = color
             updated.sshEnabled   = sshEnabled
             updated.sshHost      = sshHost
@@ -238,7 +242,7 @@ struct AddConnectionSheet: View {
             var new          = Connection(
                 name: name, host: host, port: portInt,
                 database: database, username: username,
-                useSSL: useSSL, color: color
+                useSSL: useSSL, isReadOnly: isReadOnly, color: color
             )
             new.sshEnabled   = sshEnabled
             new.sshHost      = sshHost

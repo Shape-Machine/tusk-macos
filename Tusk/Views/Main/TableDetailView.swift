@@ -6,6 +6,7 @@ struct TableDetailView: View {
     let schemaName: String
     let tableName: String
     var isView: Bool = false
+    var isReadOnly: Bool = false
 
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
@@ -140,7 +141,7 @@ struct TableDetailView: View {
     private var content: some View {
         switch selectedTab {
         case .data:
-            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, isView: isView, columns: columns, state: dataState)
+            DataBrowserView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName, isView: isView, isReadOnly: isReadOnly, columns: columns, state: dataState)
         case .columns:
             columnsTab
         case .keys:
@@ -160,7 +161,7 @@ struct TableDetailView: View {
 
     private var columnsTab: some View {
         VStack(spacing: 0) {
-            if !isView {
+            if !isView && !isReadOnly {
                 HStack {
                     Spacer()
                     Button { addColumn() } label: {
@@ -201,7 +202,7 @@ struct TableDetailView: View {
                         }
                     }
                     .contextMenu(forSelectionType: String.self) { ids in
-                        if !isView, ids.count == 1, let id = ids.first,
+                        if !isView && !isReadOnly, ids.count == 1, let id = ids.first,
                            let col = columns.first(where: { $0.id == id }) {
                             Button("Rename…")      { renameColumn(col) }
                             Button("Edit…")        { editColumn(col) }

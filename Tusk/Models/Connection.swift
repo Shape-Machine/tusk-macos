@@ -11,6 +11,7 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var database: String
     var username: String
     var useSSL: Bool = false
+    var isReadOnly: Bool = false
     var color: ConnectionColor = .blue
     var groupLabel: String = ""
     var notes: String = ""
@@ -40,6 +41,7 @@ extension Connection {
         database    = try c.decode(String.self,           forKey: .database)
         username    = try c.decode(String.self,           forKey: .username)
         useSSL      = try c.decodeIfPresent(Bool.self,    forKey: .useSSL)      ?? false
+        isReadOnly  = try c.decodeIfPresent(Bool.self,    forKey: .isReadOnly)  ?? false
         color       = try c.decodeIfPresent(ConnectionColor.self, forKey: .color) ?? .blue
         groupLabel  = try c.decodeIfPresent(String.self,  forKey: .groupLabel)  ?? ""
         notes       = try c.decodeIfPresent(String.self,  forKey: .notes)       ?? ""
