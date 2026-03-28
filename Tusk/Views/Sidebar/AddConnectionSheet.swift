@@ -282,18 +282,19 @@ struct AddConnectionSheet: View {
               comps.scheme == "postgresql" || comps.scheme == "postgres"
         else { return nil }
 
-        let h  = comps.host ?? "localhost"
+        // Require an explicit, non-empty host — don't silently fall back to localhost
+        guard let h = comps.host, !h.isEmpty else { return nil }
         let p  = comps.port.map { String($0) } ?? "5432"
         // Path is "/dbname" — strip the leading slash
         let db = comps.path.hasPrefix("/") ? String(comps.path.dropFirst()) : comps.path
         let u  = comps.user ?? ""
         let pw = comps.password ?? ""
 
-        // sslmode query param: anything other than "disable" → useSSL = true
-        let sslmode = comps.queryItems?.first(where: { $0.name == "sslmode" })?.value ?? ""
+        // sslmode query param: anything other than "disable" (case-insensitive) → useSSL = true
+        let sslmode = (comps.queryItems?.first(where: { $0.name == "sslmode" })?.value ?? "").lowercased()
         let ssl = !sslmode.isEmpty && sslmode != "disable"
 
-        guard !h.isEmpty, !db.isEmpty else { return nil }
+        guard !db.isEmpty else { return nil }
         return ParsedURI(host: h, port: p, database: db, username: u, password: pw, useSSL: ssl)
     }
 
