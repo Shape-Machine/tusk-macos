@@ -566,7 +566,10 @@ private struct ConnectionHeader: View {
             Spacer()
         }
         .contentShape(Rectangle())
-        .help(isConnected ? "Click to select" : isConnecting ? "Connecting…" : "Click to connect")
+        .help({
+            let status = isConnected ? "Click to select" : isConnecting ? "Connecting…" : "Click to connect"
+            return connection.notes.isEmpty ? status : "\(connection.notes)\n\(status)"
+        }())
         .onTapGesture {
             if isConnected {
                 appState.selectedConnectionID = connection.id
@@ -604,6 +607,7 @@ private struct ConnectionHeader: View {
                 }
             }
             Divider()
+            Button("Duplicate") { appState.duplicateConnection(connection) }
             Button("Edit…") { appState.editingConnection = connection }
             Button("Delete", role: .destructive) { appState.removeConnection(connection) }
         }

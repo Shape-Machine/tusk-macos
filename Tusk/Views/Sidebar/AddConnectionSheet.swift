@@ -9,6 +9,7 @@ struct AddConnectionSheet: View {
     let connection: Connection?
 
     @State private var name: String = ""
+    @State private var notes: String = ""
     @State private var host: String = "localhost"
     @State private var port: String = "5432"
     @State private var database: String = ""
@@ -106,6 +107,8 @@ struct AddConnectionSheet: View {
                         .fixedSize()
                         .help("Connection color")
                     }
+                    TextField("Notes (optional)", text: $notes)
+                        .foregroundStyle(notes.isEmpty ? .secondary : .primary)
                 }
 
                 Section("Server") {
@@ -194,6 +197,7 @@ struct AddConnectionSheet: View {
         sshUser       = c.sshUser
         sshKeyPath    = c.sshKeyPath
         sshPassphrase = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
+        notes         = c.notes
     }
 
     private func pickKey() {
@@ -226,6 +230,7 @@ struct AddConnectionSheet: View {
             updated.sshPort      = sshPortInt
             updated.sshUser      = sshUser
             updated.sshKeyPath   = sshKeyPath
+            updated.notes        = notes
             KeychainManager.shared.setPassword(password, for: updated.id)
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
             appState.updateConnection(updated)
@@ -238,6 +243,7 @@ struct AddConnectionSheet: View {
             new.sshEnabled   = sshEnabled
             new.sshHost      = sshHost
             new.sshPort      = sshPortInt
+            new.notes        = notes
             new.sshUser      = sshUser
             new.sshKeyPath   = sshKeyPath
             KeychainManager.shared.setPassword(password, for: new.id)
