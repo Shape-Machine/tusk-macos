@@ -64,6 +64,21 @@ final class AppState {
         }
     }
 
+    func duplicateConnection(_ connection: Connection) {
+        var copy = connection
+        copy.id = UUID()
+        copy.name = connection.name + " (copy)"
+        // Copy credentials from Keychain
+        if let password = KeychainManager.shared.password(for: connection.id) {
+            KeychainManager.shared.setPassword(password, for: copy.id)
+        }
+        if let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id) {
+            KeychainManager.shared.setSshPassphrase(passphrase, for: copy.id)
+        }
+        connections.append(copy)
+        ConnectionStore.shared.save(connections)
+    }
+
     func removeConnection(_ connection: Connection) {
         disconnect(connection)
         connections.removeAll { $0.id == connection.id }

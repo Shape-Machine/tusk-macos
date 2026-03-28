@@ -13,6 +13,7 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var useSSL: Bool = false
     var color: ConnectionColor = .blue
     var groupLabel: String = ""
+    var notes: String = ""
 
     // SSH tunnel
     var sshEnabled: Bool = false
