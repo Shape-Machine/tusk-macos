@@ -27,6 +27,30 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var displayHost: String { "\(host):\(port)" }
 }
 
+extension Connection {
+    // Custom decoder so that fields added after v1 (groupLabel, notes, SSH fields, etc.)
+    // fall back to their defaults when loading older saved JSON that lacks those keys.
+    // Defined in an extension so Swift still synthesizes the memberwise initializer.
+    init(from decoder: any Decoder) throws {
+        let c       = try decoder.container(keyedBy: CodingKeys.self)
+        id          = try c.decodeIfPresent(UUID.self,   forKey: .id)          ?? UUID()
+        name        = try c.decode(String.self,           forKey: .name)
+        host        = try c.decode(String.self,           forKey: .host)
+        port        = try c.decodeIfPresent(Int.self,     forKey: .port)        ?? 5432
+        database    = try c.decode(String.self,           forKey: .database)
+        username    = try c.decode(String.self,           forKey: .username)
+        useSSL      = try c.decodeIfPresent(Bool.self,    forKey: .useSSL)      ?? false
+        color       = try c.decodeIfPresent(ConnectionColor.self, forKey: .color) ?? .blue
+        groupLabel  = try c.decodeIfPresent(String.self,  forKey: .groupLabel)  ?? ""
+        notes       = try c.decodeIfPresent(String.self,  forKey: .notes)       ?? ""
+        sshEnabled  = try c.decodeIfPresent(Bool.self,    forKey: .sshEnabled)  ?? false
+        sshHost     = try c.decodeIfPresent(String.self,  forKey: .sshHost)     ?? ""
+        sshPort     = try c.decodeIfPresent(Int.self,     forKey: .sshPort)     ?? 22
+        sshUser     = try c.decodeIfPresent(String.self,  forKey: .sshUser)     ?? ""
+        sshKeyPath  = try c.decodeIfPresent(String.self,  forKey: .sshKeyPath)  ?? ""
+    }
+}
+
 // MARK: - Connection color (for visual tagging)
 
 enum ConnectionColor: String, Codable, CaseIterable, Sendable {
