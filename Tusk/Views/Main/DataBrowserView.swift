@@ -22,6 +22,7 @@ struct DataBrowserView: View {
     let schemaName: String
     let tableName: String
     var isView: Bool = false
+    var isReadOnly: Bool = false
     var columns: [ColumnInfo] = []
     @Bindable var state: DataBrowserState
 
@@ -59,12 +60,12 @@ struct DataBrowserView: View {
                         ResultsGrid(
                             result: result,
                             columnWidthsPersistenceKey: "tusk.colwidths.\(connectionID)\u{0}\(schemaName)\u{0}\(tableName)",
-                            copyAsInsert: isView ? nil : { rows in
+                            copyAsInsert: (isView || isReadOnly) ? nil : { rows in
                                 copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
                             },
-                            tableColumns: isView ? [] : columns,
+                            tableColumns: (isView || isReadOnly) ? [] : columns,
                             qualifiedTableName: qualifiedName,
-                            onExecuteSQL: isView ? nil : { sql in
+                            onExecuteSQL: (isView || isReadOnly) ? nil : { sql in
                                 try await executeAndRefresh(sql: sql)
                             },
                             sortColumn: sortColumn,
@@ -105,7 +106,7 @@ struct DataBrowserView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            if !isView && columns.contains(where: { $0.isPrimaryKey }) {
+            if !isView && !isReadOnly && columns.contains(where: { $0.isPrimaryKey }) {
                 Button {
                     showingInsertSheet = true
                 } label: {
@@ -187,7 +188,7 @@ struct DataBrowserView: View {
 
             Spacer()
 
-            if !isView {
+            if !isView && !isReadOnly {
                 Button {
                     copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
                     copiedInsert = true

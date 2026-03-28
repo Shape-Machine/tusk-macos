@@ -75,7 +75,8 @@ struct DetailView: View {
             if let client = appState.clients[connID] {
                 let isView = appState.schemaTables[connID]?
                     .first(where: { $0.schema == schema && $0.name == tableName })?.type == .view
-                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName, isView: isView)
+                let isReadOnly = appState.connections.first(where: { $0.id == connID })?.isReadOnly ?? false
+                TableDetailView(client: client, connectionID: connID, schemaName: schema, tableName: tableName, isView: isView, isReadOnly: isReadOnly)
             } else {
                 VStack(spacing: 12) {
                     ProgressView()

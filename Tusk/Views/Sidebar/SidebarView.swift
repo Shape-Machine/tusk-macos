@@ -208,7 +208,7 @@ private struct SchemaRow: View {
                             tableName: table.name
                         ))
                         .contextMenu {
-                            if appState.isConnected(connection) {
+                            if appState.isConnected(connection) && !connection.isReadOnly {
                                 Button("Rename…") { renameTable(table) }
                                 Divider()
                                 Button("Truncate Table…") { truncateTable(table) }
@@ -223,7 +223,7 @@ private struct SchemaRow: View {
                         .contentShape(Rectangle())
                         .onTapGesture { tablesExpanded.toggle() }
                         .contextMenu {
-                            if appState.isConnected(connection) {
+                            if appState.isConnected(connection) && !connection.isReadOnly {
                                 Button("New Table…") {
                                     appState.createTableTarget = CreateTableTarget(
                                         schema: schema,
@@ -329,7 +329,7 @@ private struct SchemaRow: View {
             .contentShape(Rectangle())
             .onTapGesture { isExpanded.toggle() }
             .contextMenu {
-                if appState.isConnected(connection) {
+                if appState.isConnected(connection) && !connection.isReadOnly {
                     Button("New Table…") {
                         appState.createTableTarget = CreateTableTarget(
                             schema: schema,
@@ -557,6 +557,13 @@ private struct ConnectionHeader: View {
             Text(connection.name)
                 .font(.system(size: sidebarFontSize, weight: .semibold, design: sidebarFontDesign.design))
                 .lineLimit(1)
+
+            if connection.isReadOnly {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: sidebarFontSize - 3))
+                    .foregroundStyle(.secondary)
+                    .help("Read-only connection")
+            }
 
             if let errorMsg = appState.schemaRefreshErrors[connection.id] {
                 Image(systemName: "exclamationmark.triangle.fill")

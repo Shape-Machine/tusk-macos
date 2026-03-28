@@ -65,6 +65,9 @@ actor DatabaseClient {
             logger: logger
         )
         box = ConnectionBox(conn, on: el)
+        if info.isReadOnly {
+            _ = try await conn.query(PostgresQuery(unsafeSQL: "SET default_transaction_read_only = on"), logger: logger)
+        }
     }
 
     func disconnect() async {
