@@ -1,6 +1,6 @@
 # Tusk — Features
 
-_Generated from source: v2026.03.27-00_
+_Generated from source: v2026.03.28-00_
 
 ## Connections
 
@@ -8,7 +8,9 @@ _Generated from source: v2026.03.27-00_
 - Passwords and SSH passphrases stored in macOS Keychain (never in config files)
 - Color tag per connection: blue, green, orange, red, purple, gray
 - SSL/TLS toggle per connection
+- Read-only mode — prevents any write queries from executing
 - SSH tunnel: host, port, user, private key file (file picker), optional passphrase
+- Paste a PostgreSQL URI from clipboard to auto-fill all connection fields
 - Test connection before saving (validates SSL and SSH tunnel end-to-end)
 - Multiple connections open simultaneously; one active database client per connection
 - Right-click a connection to connect, disconnect, refresh schema, edit, or delete
