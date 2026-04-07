@@ -475,6 +475,13 @@ struct QueryEditorView: View {
             let (finalSQL, capped) = cappedSQL(stmt)
             do {
                 let r = try await client.query(finalSQL, rowLimit: tuskPageSize)
+                // If Stop was pressed while the query was running, discard the result.
+                guard !Task.isCancelled else {
+                    executions[entryIndex].outcome = .cancelled
+                    isRunning = false
+                    persistResultStateToTab()
+                    return
+                }
                 if !capped && r.columns.isEmpty {
                     executions[entryIndex].outcome = .ok(duration: r.duration)
                 } else {
@@ -486,6 +493,14 @@ struct QueryEditorView: View {
                 persistResultStateToTab()
                 return
             } catch {
+                // pg_cancel_backend delivers the cancel as a server error, not CancellationError.
+                // Treat any error on a cancelled task as cancelled.
+                if Task.isCancelled {
+                    executions[entryIndex].outcome = .cancelled
+                    isRunning = false
+                    persistResultStateToTab()
+                    return
+                }
                 executions[entryIndex].outcome = .error(error.localizedDescription)
                 break
             }
@@ -556,6 +571,12 @@ struct QueryEditorView: View {
         let explainSQL = "EXPLAIN (FORMAT JSON, ANALYZE, BUFFERS) \(sql)"
         do {
             let r = try await client.query(explainSQL)
+            guard !Task.isCancelled else {
+                executions[0].outcome = .cancelled
+                isRunning = false
+                persistResultStateToTab()
+                return
+            }
             if let jsonText = r.rows.first?.first.flatMap({ if case .text(let s) = $0 { return s }; return nil }),
                let er = ExplainResult.parse(jsonText: jsonText, duration: r.duration) {
                 executions[0].outcome = .explain(er)
@@ -568,6 +589,12 @@ struct QueryEditorView: View {
             persistResultStateToTab()
             return
         } catch {
+            if Task.isCancelled {
+                executions[0].outcome = .cancelled
+                isRunning = false
+                persistResultStateToTab()
+                return
+            }
             executions[0].outcome = .error(error.localizedDescription)
         }
 
@@ -582,7 +609,7 @@ struct QueryEditorView: View {
     private func cancelExecution() {
         executeTask?.cancel()
         executeTask = nil
-        // Mark any still-running entries as cancelled and clear the spinner.
+        // Mark any still-running entries as cancelled and clear the spinner immediately.
         for i in executions.indices {
             if case .running = executions[i].outcome {
                 executions[i].outcome = .cancelled
@@ -590,6 +617,12 @@ struct QueryEditorView: View {
         }
         isRunning = false
         persistResultStateToTab()
+        // Signal PostgreSQL to cancel the backend query so the actor connection is
+        // unblocked — this runs on a temporary second connection, concurrently.
+        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
+        if let client = liveConnectionID.flatMap({ appState.clients[$0] }) {
+            Task { await client.cancelCurrentQuery() }
+        }
     }
 
     // MARK: - Toggle line comments
