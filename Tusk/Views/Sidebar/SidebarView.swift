@@ -165,7 +165,11 @@ private struct ConnectionSection: View {
         }
 
         if filter.isEmpty { return rows }
-        return rows.filter { !$0.tables.isEmpty || !$0.views.isEmpty || !$0.enums.isEmpty || !$0.sequences.isEmpty || !$0.functions.isEmpty }
+        return rows.filter {
+            $0.name.lowercased().contains(filter) ||
+            !$0.tables.isEmpty || !$0.views.isEmpty ||
+            !$0.enums.isEmpty  || !$0.sequences.isEmpty || !$0.functions.isEmpty
+        }
     }
 
     var body: some View {
@@ -604,7 +608,7 @@ private struct ConnectionHeader: View {
             if appState.superuserConnections.contains(connection.id) {
                 Image(systemName: "crown.fill")
                     .font(.system(size: sidebarFontSize - 3))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(.orange)
                     .help("Superuser")
             }
 
