@@ -386,10 +386,79 @@ private struct SchemaRow: View {
                             connectionID: connection.id
                         )
                     }
+                    Divider()
+                    Button("Rename Schema…") { renameSchema() }
+                    Button("Drop Schema…")   { dropSchema() }
                 }
             }
         }
         .animation(nil, value: isExpanded)
+    }
+
+    // MARK: - Rename schema
+
+    private func renameSchema() {
+        guard let client = appState.clients[connection.id] else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Rename Schema \"\(schema)\""
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
+        field.stringValue = schema
+        field.selectText(nil)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty, newName != schema else { return }
+
+        Task {
+            do {
+                _ = try await client.query("ALTER SCHEMA \(quoteIdentifier(schema)) RENAME TO \(quoteIdentifier(newName));")
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Rename Schema Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Drop schema
+
+    private func dropSchema() {
+        guard let client = appState.clients[connection.id] else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Drop Schema \"\(schema)\"?"
+        alert.informativeText = "This permanently removes the schema. \"Drop with CASCADE\" also drops all objects inside it."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Drop Schema")
+        alert.addButton(withTitle: "Drop with CASCADE")
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+        guard response != .alertThirdButtonReturn else { return }
+        let cascade = response == .alertSecondButtonReturn
+
+        Task {
+            do {
+                let sql = "DROP SCHEMA \(quoteIdentifier(schema))\(cascade ? " CASCADE" : "");"
+                _ = try await client.query(sql)
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Drop Schema Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
     }
 
     // MARK: - Rename table
@@ -665,6 +734,10 @@ private struct ConnectionHeader: View {
                 Button("Refresh Schema") {
                     Task { try? await appState.refreshSchema(for: connection) }
                 }
+                if !connection.isReadOnly {
+                    Divider()
+                    Button("New Schema…") { createSchema(for: connection) }
+                }
                 if databases.count > 1 {
                     Divider()
                     Menu("Switch Database") {
@@ -700,6 +773,39 @@ private struct ConnectionHeader: View {
             Button("Duplicate") { appState.duplicateConnection(connection) }
             Button("Edit…") { appState.editingConnection = connection }
             Button("Delete", role: .destructive) { appState.removeConnection(connection) }
+        }
+    }
+
+    // MARK: - Create schema
+
+    private func createSchema(for connection: Connection) {
+        guard let client = appState.clients[connection.id] else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "New Schema"
+        alert.addButton(withTitle: "Create")
+        alert.addButton(withTitle: "Cancel")
+
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
+        field.placeholderString = "schema_name"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+
+        Task {
+            do {
+                _ = try await client.query("CREATE SCHEMA \(quoteIdentifier(name));")
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Create Schema Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
         }
     }
 }
