@@ -38,6 +38,8 @@ final class AppState {
     var activeDatabase:     [UUID: String]          = [:]
     /// connectionIDs where the authenticated user has the PostgreSQL superuser role
     var superuserConnections: Set<UUID>             = []
+    /// keyed by connectionID → cached role list (users + roles)
+    var connectionRoles:      [UUID: [RoleInfo]]    = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -177,6 +179,7 @@ final class AppState {
         schemaDatabases.removeValue(forKey: connection.id)
         activeDatabase.removeValue(forKey: connection.id)
         superuserConnections.remove(connection.id)
+        connectionRoles.removeValue(forKey: connection.id)
         if createTableTarget?.connectionID == connection.id {
             createTableTarget = nil
         }
@@ -186,6 +189,7 @@ final class AppState {
             switch tab.kind {
             case .table(let cid, _, _): return cid == connection.id
             case .activityMonitor(let cid): return cid == connection.id
+            case .roles(let cid): return cid == connection.id
             case .queryEditor(let qid):
                 return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
             }
@@ -302,6 +306,49 @@ final class AppState {
             title: "Activity",
             icon: "waveform.path.ecg",
             kind: .activityMonitor(connectionID: connection.id)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
+    }
+
+    func loadRoles(for connection: Connection) async {
+        guard let client = clients[connection.id] else { return }
+        let result = try? await client.query("""
+            SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+                   rolcanlogin, rolreplication, rolconnlimit
+            FROM pg_roles
+            ORDER BY rolcanlogin DESC, rolname
+            """)
+        connectionRoles[connection.id] = result?.rows.compactMap { row -> RoleInfo? in
+            guard let name = row[safe: 0]?.displayValue else { return nil }
+            func bool(_ i: Int) -> Bool { row[safe: i]?.displayValue == "true" }
+            let connLimit = Int(row[safe: 7]?.displayValue ?? "") ?? -1
+            return RoleInfo(
+                name: name,
+                superuser: bool(1),
+                inherit: bool(2),
+                createRole: bool(3),
+                createDB: bool(4),
+                canLogin: bool(5),
+                replication: bool(6),
+                connLimit: connLimit
+            )
+        } ?? []
+    }
+
+    func openRolesBrowser(for connection: Connection) {
+        if let existing = openTabs.first(where: {
+            if case .roles(let cid) = $0.kind { return cid == connection.id }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: "Users & Roles",
+            icon: "person.2",
+            kind: .roles(connectionID: connection.id)
         )
         openTabs.append(tab)
         activateDetailTab(tab)
@@ -492,6 +539,9 @@ final class AppState {
         case .activityMonitor(let cid):
             selectedSidebarItem = nil
             selectedConnectionID = cid
+        case .roles(let cid):
+            selectedSidebarItem = nil
+            selectedConnectionID = cid
         case .queryEditor(let qid):
             selectedSidebarItem = nil
             if let connID = queryTabs.first(where: { $0.id == qid })?.connectionID {
@@ -543,9 +593,32 @@ struct DetailTab: Identifiable, Hashable {
     enum Kind: Hashable {
         case table(connectionID: UUID, schema: String, tableName: String)
         case activityMonitor(connectionID: UUID)
+        case roles(connectionID: UUID)
         case queryEditor(queryTabID: UUID)
     }
 
     static func == (lhs: DetailTab, rhs: DetailTab) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+// MARK: - Role model
+
+struct RoleInfo: Identifiable {
+    var id: String { name }
+    let name: String
+    let superuser: Bool
+    let inherit: Bool
+    let createRole: Bool
+    let createDB: Bool
+    let canLogin: Bool
+    let replication: Bool
+    let connLimit: Int  // -1 = no limit
+}
+
+// MARK: - Safe collection subscript
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
 }

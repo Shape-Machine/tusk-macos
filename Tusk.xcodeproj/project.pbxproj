@@ -18,6 +18,7 @@
 		51A6EB67E1B6BA69959B4E7D /* CreateTableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */; };
 		AA11223344556677889900AA /* AddConstraintSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11223344556677889900BB /* AddConstraintSheet.swift */; };
 		CC11223344556677889900CC /* CreateIndexSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11223344556677889900DD /* CreateIndexSheet.swift */; };
+		EE11223344556677889900EE /* RolesBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11223344556677889900FF /* RolesBrowserView.swift */; };
 		5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0031996A15573BA8334CAB25 /* KeychainManager.swift */; };
 		62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */; };
 		7DAB39642DDB974C9033D770 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F317DCA7625AA05FB8810169 /* WelcomeView.swift */; };
@@ -76,6 +77,7 @@
 		E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTableSheet.swift; sourceTree = "<group>"; };
 		BB11223344556677889900BB /* AddConstraintSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConstraintSheet.swift; sourceTree = "<group>"; };
 		DD11223344556677889900DD /* CreateIndexSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateIndexSheet.swift; sourceTree = "<group>"; };
+		FF11223344556677889900FF /* RolesBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RolesBrowserView.swift; sourceTree = "<group>"; };
 		EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F317DCA7625AA05FB8810169 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplainPlanView.swift; sourceTree = "<group>"; };
@@ -177,6 +179,7 @@
 				F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
+				FF11223344556677889900FF /* RolesBrowserView.swift */,
 				7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */,
 				07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */,
 				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
@@ -332,6 +335,7 @@
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
 				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
 				2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */,
+				EE11223344556677889900EE /* RolesBrowserView.swift in Sources */,
 				B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */,
 				A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */,
 				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
