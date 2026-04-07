@@ -313,18 +313,21 @@ final class AppState {
 
     func loadRoles(for connection: Connection) async {
         guard let client = clients[connection.id] else { return }
-        let result = try? await client.query("""
+        guard let result = try? await client.query("""
             SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
                    rolcanlogin, rolreplication, rolconnlimit,
                    to_char(rolvaliduntil, 'YYYY-MM-DD') AS validuntil
             FROM pg_roles
             ORDER BY rolcanlogin DESC, rolname
-            """)
-        connectionRoles[connection.id] = result?.rows.compactMap { row -> RoleInfo? in
-            guard let name = row[safe: 0]?.displayValue else { return nil }
+            """) else { return }  // leave connectionRoles nil so callers can retry
+        connectionRoles[connection.id] = result.rows.compactMap { row -> RoleInfo? in
+            guard let name = row[safe: 0]?.displayValue, name != "NULL" else { return nil }
             func bool(_ i: Int) -> Bool { row[safe: i]?.displayValue == "true" }
             let connLimit = Int(row[safe: 7]?.displayValue ?? "") ?? -1
-            let validUntil = row[safe: 8]?.displayValue
+            let validUntil: String? = {
+                guard case .text(let s) = row[safe: 8] else { return nil }
+                return s
+            }()
             return RoleInfo(
                 name: name,
                 superuser: bool(1),
@@ -336,7 +339,7 @@ final class AppState {
                 connLimit: connLimit,
                 validUntil: validUntil
             )
-        } ?? []
+        }
     }
 
     func openRoleTab(for connection: Connection, roleName: String) {
