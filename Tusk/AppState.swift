@@ -218,6 +218,7 @@ final class AppState {
             schemaSequences[connection.id] = s
             schemaFunctions[connection.id] = f
             schemaRefreshErrors.removeValue(forKey: connection.id)
+            await loadSuperuserStatus(for: connection)
         } catch {
             schemaRefreshErrors[connection.id] = error.localizedDescription
             throw error
