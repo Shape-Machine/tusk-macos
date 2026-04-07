@@ -63,7 +63,7 @@ struct AddConstraintSheet: View {
     private var canAdd: Bool {
         switch constraintType {
         case .primaryKey, .unique:   return !selectedColumns.isEmpty
-        case .foreignKey:            return !selectedColumns.isEmpty && !refTable.isEmpty && !refColumn.isEmpty
+        case .foreignKey:            return selectedColumns.count == 1 && !refTable.isEmpty && !refColumn.isEmpty
         case .check:                 return !checkExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
@@ -103,8 +103,8 @@ struct AddConstraintSheet: View {
                     TextField("Constraint name (optional)", text: $constraintName)
                 }
 
-                if constraintType == .primaryKey || constraintType == .unique || constraintType == .foreignKey {
-                    Section(constraintType == .foreignKey ? "Source Columns" : "Columns") {
+                if constraintType == .primaryKey || constraintType == .unique {
+                    Section("Columns") {
                         if tableColumns.isEmpty {
                             Text("No columns available").foregroundStyle(.secondary)
                         } else {
@@ -113,6 +113,22 @@ struct AddConstraintSheet: View {
                                     get: { selectedColumns.contains(col.name) },
                                     set: { if $0 { selectedColumns.insert(col.name) } else { selectedColumns.remove(col.name) } }
                                 ))
+                            }
+                        }
+                    }
+                }
+
+                if constraintType == .foreignKey {
+                    Section("Source Column") {
+                        if tableColumns.isEmpty {
+                            Text("No columns available").foregroundStyle(.secondary)
+                        } else {
+                            Picker("Column", selection: Binding(
+                                get: { selectedColumns.first ?? "" },
+                                set: { selectedColumns = $0.isEmpty ? [] : [$0] }
+                            )) {
+                                Text("—").tag("")
+                                ForEach(tableColumns) { col in Text(col.name).tag(col.name) }
                             }
                         }
                     }

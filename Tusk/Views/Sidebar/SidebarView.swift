@@ -418,6 +418,12 @@ private struct SchemaRow: View {
         Task {
             do {
                 _ = try await client.query("ALTER SCHEMA \(quoteIdentifier(schema)) RENAME TO \(quoteIdentifier(newName));")
+                // Close open tabs whose table was in the renamed schema — their schema name is now stale
+                let tabsToClose = appState.openTabs.filter {
+                    guard case .table(let cid, let s, _) = $0.kind else { return false }
+                    return cid == connection.id && s == schema
+                }
+                for tab in tabsToClose { appState.closeDetailTab(tab.id) }
                 try? await appState.refreshSchema(for: connection)
             } catch {
                 let err = NSAlert()
