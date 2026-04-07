@@ -10,18 +10,17 @@
 		166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3E61CFF0505201909FC54F /* DatabaseClient.swift */; };
 		16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */; };
 		19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */; };
+		1E2EFB66DF5C011F0EA60127 /* CreateRoleSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD380525258BD900E61098D9 /* CreateRoleSheet.swift */; };
 		1F64D183D981C86FB3181B1B /* TuskFontDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67200EE52B28AE64A17D09E7 /* TuskFontDesign.swift */; };
+		28F290BFB76D187A26ABAD44 /* RoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */; };
 		2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D55DC649CC6986737268922 /* RelationsView.swift */; };
 		2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EBD0E0FCEF86AA688735504 /* QueryResult.swift */; };
 		43CD2524047CB484084FE904 /* PostgresNIO in Frameworks */ = {isa = PBXBuildFile; productRef = FEBBCC182C5C88B35790CB9D /* PostgresNIO */; };
 		4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */; };
 		51A6EB67E1B6BA69959B4E7D /* CreateTableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */; };
-		AA11223344556677889900AA /* AddConstraintSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11223344556677889900BB /* AddConstraintSheet.swift */; };
-		CC11223344556677889900CC /* CreateIndexSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11223344556677889900DD /* CreateIndexSheet.swift */; };
-		AA22334455667788990011AA /* RoleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC22334455667788990011CC /* RoleDetailView.swift */; };
-		BB22334455667788990011BB /* CreateRoleSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22334455667788990011DD /* CreateRoleSheet.swift */; };
 		5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0031996A15573BA8334CAB25 /* KeychainManager.swift */; };
 		62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */; };
+		6E83A0905EA999292F8C7622 /* CreateIndexSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 857CD7B4230E8C84954D257F /* CreateIndexSheet.swift */; };
 		7DAB39642DDB974C9033D770 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F317DCA7625AA05FB8810169 /* WelcomeView.swift */; };
 		7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */; };
 		8579F3571057CAD4338D6EB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */; };
@@ -38,6 +37,7 @@
 		D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */; };
 		DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE3A60259B635D1BA6AEE2 /* SidebarView.swift */; };
 		DE4F3724A5C82253871A3906 /* TuskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAC42E3023CAE6227191B992 /* TuskApp.swift */; };
+		E089453CC03E346608C81935 /* AddConstraintSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF9AE44C9B548E1F4421ABD /* AddConstraintSheet.swift */; };
 		EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */; };
 		ED65F385DAFD91259FA6AD73 /* FileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009D995F865C1E2F42BA3F72 /* FileExplorerView.swift */; };
 		EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84F6197423F6B815DCFF5EC /* TableDetailView.swift */; };
@@ -63,23 +63,23 @@
 		75B070C67054E9379142805B /* ActivityMonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityMonitorView.swift; sourceTree = "<group>"; };
 		7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLHighlighter.swift; sourceTree = "<group>"; };
 		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
+		857CD7B4230E8C84954D257F /* CreateIndexSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateIndexSheet.swift; sourceTree = "<group>"; };
 		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
 		94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9EBD0E0FCEF86AA688735504 /* QueryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryResult.swift; sourceTree = "<group>"; };
+		A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleDetailView.swift; sourceTree = "<group>"; };
 		A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskCommands.swift; sourceTree = "<group>"; };
 		A2DB3B82C091A7A8275E26E3 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		A823F170F4A78F83472BF32E /* SponsorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SponsorView.swift; sourceTree = "<group>"; };
 		B48A2CA1E506E6FDF0786437 /* Connection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connection.swift; sourceTree = "<group>"; };
 		BA3E61CFF0505201909FC54F /* DatabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseClient.swift; sourceTree = "<group>"; };
+		BFF9AE44C9B548E1F4421ABD /* AddConstraintSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConstraintSheet.swift; sourceTree = "<group>"; };
+		CD380525258BD900E61098D9 /* CreateRoleSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoleSheet.swift; sourceTree = "<group>"; };
 		D84F6197423F6B815DCFF5EC /* TableDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDetailView.swift; sourceTree = "<group>"; };
 		DAC42E3023CAE6227191B992 /* TuskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskApp.swift; sourceTree = "<group>"; };
 		E1576217C7FBD3F87C830FD0 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E1B1C7B5BED9E0D467D5CFED /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTableSheet.swift; sourceTree = "<group>"; };
-		BB11223344556677889900BB /* AddConstraintSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConstraintSheet.swift; sourceTree = "<group>"; };
-		DD11223344556677889900DD /* CreateIndexSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateIndexSheet.swift; sourceTree = "<group>"; };
-		CC22334455667788990011CC /* RoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleDetailView.swift; sourceTree = "<group>"; };
-		DD22334455667788990011DD /* CreateRoleSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoleSheet.swift; sourceTree = "<group>"; };
 		EAC605F0F401EDB2A7D1C6AA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F317DCA7625AA05FB8810169 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplainPlanView.swift; sourceTree = "<group>"; };
@@ -181,7 +181,7 @@
 				F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
-				CC22334455667788990011CC /* RoleDetailView.swift */,
+				A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */,
 				7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */,
 				07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */,
 				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
@@ -210,9 +210,9 @@
 		EB2A0E12F1CDF3A2A879D575 /* Schema */ = {
 			isa = PBXGroup;
 			children = (
-				BB11223344556677889900BB /* AddConstraintSheet.swift */,
-				DD11223344556677889900DD /* CreateIndexSheet.swift */,
-				DD22334455667788990011DD /* CreateRoleSheet.swift */,
+				BFF9AE44C9B548E1F4421ABD /* AddConstraintSheet.swift */,
+				857CD7B4230E8C84954D257F /* CreateIndexSheet.swift */,
+				CD380525258BD900E61098D9 /* CreateRoleSheet.swift */,
 				E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */,
 			);
 			path = Schema;
@@ -321,15 +321,15 @@
 				BDF57DF2459313BCFB4DDD3D /* AboutView.swift in Sources */,
 				8BC64A5B72B6437F52A7EC49 /* ActivityMonitorView.swift in Sources */,
 				19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */,
+				E089453CC03E346608C81935 /* AddConstraintSheet.swift in Sources */,
 				88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */,
 				B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */,
 				7F0899718F61DC90F640A3C7 /* ConnectionStore.swift in Sources */,
 				FB2DF2917401EB297E0173FA /* Constants.swift in Sources */,
 				62DF484EC5D8D90758FED098 /* ContentView.swift in Sources */,
-				AA11223344556677889900AA /* AddConstraintSheet.swift in Sources */,
-				CC11223344556677889900CC /* CreateIndexSheet.swift in Sources */,
+				6E83A0905EA999292F8C7622 /* CreateIndexSheet.swift in Sources */,
+				1E2EFB66DF5C011F0EA60127 /* CreateRoleSheet.swift in Sources */,
 				51A6EB67E1B6BA69959B4E7D /* CreateTableSheet.swift in Sources */,
-				BB22334455667788990011BB /* CreateRoleSheet.swift in Sources */,
 				D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */,
 				166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */,
 				FA1608BC33176CC583BE610B /* ExplainPlanView.swift in Sources */,
@@ -339,7 +339,7 @@
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,
 				2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */,
 				2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */,
-				AA22334455667788990011AA /* RoleDetailView.swift in Sources */,
+				28F290BFB76D187A26ABAD44 /* RoleDetailView.swift in Sources */,
 				B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */,
 				A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */,
 				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
