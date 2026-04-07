@@ -171,6 +171,7 @@ struct ExecutionEntry: Identifiable, Sendable {
         case ok(duration: TimeInterval)     // DML/DDL — no result set
         case error(String)
         case explain(ExplainResult)
+        case cancelled
     }
 
     var outcome: Outcome = .running
