@@ -436,7 +436,7 @@ private struct SchemaRow: View {
 
         let alert = NSAlert()
         alert.messageText = "Drop Schema \"\(schema)\"?"
-        alert.informativeText = "This permanently removes the schema. \"Drop with CASCADE\" also drops all objects inside it."
+        alert.informativeText = "This permanently removes the schema. The schema must be empty — use \"Drop with CASCADE\" to also drop all objects inside it."
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Drop Schema")
         alert.addButton(withTitle: "Drop with CASCADE")
@@ -450,6 +450,12 @@ private struct SchemaRow: View {
             do {
                 let sql = "DROP SCHEMA \(quoteIdentifier(schema))\(cascade ? " CASCADE" : "");"
                 _ = try await client.query(sql)
+                // Close any open tabs whose table lives in the dropped schema
+                let tabsToClose = appState.openTabs.filter {
+                    guard case .table(let cid, let s, _) = $0.kind else { return false }
+                    return cid == connection.id && s == schema
+                }
+                for tab in tabsToClose { appState.closeDetailTab(tab.id) }
                 try? await appState.refreshSchema(for: connection)
             } catch {
                 let err = NSAlert()

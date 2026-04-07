@@ -12,7 +12,7 @@ struct CreateIndexSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var indexName: String = ""
-    @State private var selectedColumns: Set<String> = []
+    @State private var selectedColumns: [String] = []
     @State private var method: IndexMethod = .btree
     @State private var isUnique: Bool = false
     @State private var isConcurrently: Bool = false
@@ -29,9 +29,7 @@ struct CreateIndexSheet: View {
         "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))"
     }
 
-    private var orderedColumns: [String] {
-        selectedColumns.sorted()
-    }
+    private var orderedColumns: [String] { selectedColumns }
 
     private var generatedSQL: String {
         guard !indexName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -120,7 +118,13 @@ struct CreateIndexSheet: View {
                         ForEach(tableColumns) { col in
                             Toggle(col.name, isOn: Binding(
                                 get: { selectedColumns.contains(col.name) },
-                                set: { if $0 { selectedColumns.insert(col.name) } else { selectedColumns.remove(col.name) } }
+                                set: { checked in
+                                    if checked {
+                                        selectedColumns.append(col.name)
+                                    } else {
+                                        selectedColumns.removeAll { $0 == col.name }
+                                    }
+                                }
                             ))
                         }
                     }
