@@ -10,7 +10,7 @@ import Logging
 // Holds the backend PID and connection parameters needed to cancel a running
 // query via pg_cancel_backend on a separate connection. Stored as a nonisolated
 // `let` on the actor so it can be read without queuing behind the busy connection.
-final class CancelState: @unchecked Sendable {
+fileprivate final class CancelState: @unchecked Sendable {
     private let lock = NSLock()
     private var _pid:      Int?    = nil
     private var _host:     String  = ""
@@ -38,7 +38,11 @@ final class CancelState: @unchecked Sendable {
         _database = database; _useSSL = useSSL
     }
 
-    func clear() { lock.lock(); defer { lock.unlock() }; _pid = nil }
+    func clear() {
+        lock.lock(); defer { lock.unlock() }
+        _pid = nil; _host = ""; _port = 5432
+        _username = ""; _password = nil; _database = ""; _useSSL = false
+    }
 }
 
 // MARK: - ConnectionBox
@@ -73,7 +77,7 @@ actor DatabaseClient {
     private var box: ConnectionBox?
     private let logger = Logger(label: "tusk.database")
     /// Accessible from nonisolated context for query cancellation without queuing behind the busy connection.
-    nonisolated let cancelState = CancelState()
+    nonisolated fileprivate let cancelState = CancelState()
 
     // MARK: - Connect / Disconnect
 

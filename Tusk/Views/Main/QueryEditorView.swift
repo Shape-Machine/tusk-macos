@@ -35,6 +35,9 @@ struct QueryEditorView: View {
             sql = tab.sql
             executions = tab.executions
         }
+        .onDisappear {
+            if isRunning { cancelExecution() }
+        }
         .onChange(of: sql) { _, newValue in
             // Sync in-memory state
             if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
@@ -666,7 +669,7 @@ struct QueryEditorView: View {
         var mutSQL = sql
         for lr in lineRanges.reversed() {
             let line = nsSQL.substring(with: lr)
-            let swiftRange = Range(lr, in: mutSQL)!
+            guard let swiftRange = Range(lr, in: mutSQL) else { continue }
             if allCommented {
                 // Remove "-- " or "--" prefix.
                 if line.hasPrefix("-- ") {
