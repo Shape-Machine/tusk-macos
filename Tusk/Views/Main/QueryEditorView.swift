@@ -11,6 +11,7 @@ struct QueryEditorView: View {
     @State private var executions: [ExecutionEntry] = []
     @State private var selectedResultTab: Int = 0   // 0 = Log, 1+ = Result N
     @State private var isRunning = false
+    @State private var executeTask: Task<Void, Never>? = nil
     @State private var autoSaveTask: Task<Void, Never>? = nil
     @State private var savedIndicatorTask: Task<Void, Never>? = nil
     @State private var savedIndicator = false
@@ -74,9 +75,20 @@ struct QueryEditorView: View {
                 }
                 if isRunning {
                     ProgressView().controlSize(.small)
+                    Button {
+                        cancelExecution()
+                    } label: {
+                        Label("Stop", systemImage: "stop.fill")
+                            .font(.callout)
+                    }
+                    .keyboardShortcut(".", modifiers: .command)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Cancel running query (⌘.)")
                 }
                 Button {
-                    Task { await runCurrentQuery() }
+                    executeTask?.cancel()
+                    executeTask = Task { await runCurrentQuery() }
                 } label: {
                     Label("Run Current", systemImage: "play")
                         .font(.callout)
@@ -87,7 +99,8 @@ struct QueryEditorView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 Button {
-                    Task { await runQuery() }
+                    executeTask?.cancel()
+                    executeTask = Task { await runQuery() }
                 } label: {
                     Label("Run", systemImage: "play.fill")
                         .font(.callout)
@@ -98,7 +111,8 @@ struct QueryEditorView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 Button {
-                    Task { await explainCurrentQuery() }
+                    executeTask?.cancel()
+                    executeTask = Task { await explainCurrentQuery() }
                 } label: {
                     Label("Explain", systemImage: "chart.bar.doc.horizontal")
                         .font(.callout)
@@ -125,6 +139,12 @@ struct QueryEditorView: View {
                         .padding(.vertical, 9)
                         .allowsHitTesting(false)
                 }
+                // Hidden button for Cmd+/ toggle line comments
+                Button(action: toggleLineComments) { EmptyView() }
+                    .keyboardShortcut("/", modifiers: .command)
+                    .frame(width: 0, height: 0)
+                    .opacity(0)
+                    .allowsHitTesting(false)
             }
         }
     }
@@ -325,6 +345,9 @@ struct QueryEditorView: View {
                         .foregroundStyle(.tint)
                 }
             }
+        case .cancelled:
+            Text("Cancelled")
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -440,6 +463,11 @@ struct QueryEditorView: View {
         persistResultStateToTab()
 
         for stmt in statements {
+            guard !Task.isCancelled else {
+                isRunning = false
+                persistResultStateToTab()
+                return
+            }
             let idx = executions.count + 1
             executions.append(ExecutionEntry(index: idx, sql: stmt, outcome: .running))
             let entryIndex = executions.count - 1
@@ -452,6 +480,11 @@ struct QueryEditorView: View {
                 } else {
                     executions[entryIndex].outcome = .rows(r, isCapped: capped && r.rows.count == tuskPageSize)
                 }
+            } catch is CancellationError {
+                executions[entryIndex].outcome = .cancelled
+                isRunning = false
+                persistResultStateToTab()
+                return
             } catch {
                 executions[entryIndex].outcome = .error(error.localizedDescription)
                 break
@@ -529,6 +562,11 @@ struct QueryEditorView: View {
             } else {
                 executions[0].outcome = .error("Could not parse EXPLAIN output")
             }
+        } catch is CancellationError {
+            executions[0].outcome = .cancelled
+            isRunning = false
+            persistResultStateToTab()
+            return
         } catch {
             executions[0].outcome = .error(error.localizedDescription)
         }
@@ -537,6 +575,77 @@ struct QueryEditorView: View {
         // Auto-switch to the plan tab
         if case .explain = executions[0].outcome { selectedResultTab = 1 }
         persistResultStateToTab()
+    }
+
+    // MARK: - Cancel execution
+
+    private func cancelExecution() {
+        executeTask?.cancel()
+        executeTask = nil
+        // Mark any still-running entries as cancelled and clear the spinner.
+        for i in executions.indices {
+            if case .running = executions[i].outcome {
+                executions[i].outcome = .cancelled
+            }
+        }
+        isRunning = false
+        persistResultStateToTab()
+    }
+
+    // MARK: - Toggle line comments
+
+    /// Toggles `-- ` prefix on all lines touched by the current selection (or the cursor line).
+    /// If every affected line already begins with `-- `, removes the prefix; otherwise adds it.
+    private func toggleLineComments() {
+        let nsSQL = sql as NSString
+        let len = nsSQL.length
+        guard len > 0 else { return }
+
+        // Determine the character range covering all selected (or cursor) lines.
+        let selLoc    = min(selectedRange.location, len)
+        let selEnd    = min(selLoc + selectedRange.length, len)
+        let lineStart = nsSQL.lineRange(for: NSRange(location: selLoc, length: 0)).location
+        let lineEnd   = nsSQL.lineRange(for: NSRange(location: max(selLoc, selEnd > 0 ? selEnd - 1 : selEnd), length: 0))
+        let coverRange = NSRange(location: lineStart, length: NSMaxRange(lineEnd) - lineStart)
+
+        // Collect the individual line ranges within that span.
+        var lineRanges: [NSRange] = []
+        var pos = coverRange.location
+        while pos < NSMaxRange(coverRange) {
+            let lr = nsSQL.lineRange(for: NSRange(location: pos, length: 0))
+            lineRanges.append(lr)
+            let next = NSMaxRange(lr)
+            if next <= pos { break }
+            pos = next
+        }
+        guard !lineRanges.isEmpty else { return }
+
+        // Decide: uncomment if every non-empty line already starts with "--".
+        let nonEmpty = lineRanges.filter { r in
+            let line = nsSQL.substring(with: r)
+            return !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        let allCommented = !nonEmpty.isEmpty && nonEmpty.allSatisfy { r in
+            nsSQL.substring(with: r).hasPrefix("--")
+        }
+
+        // Build the new string by mutating line by line (process in reverse to keep ranges valid).
+        var mutSQL = sql
+        for lr in lineRanges.reversed() {
+            let line = nsSQL.substring(with: lr)
+            let swiftRange = Range(lr, in: mutSQL)!
+            if allCommented {
+                // Remove "-- " or "--" prefix.
+                if line.hasPrefix("-- ") {
+                    mutSQL.replaceSubrange(swiftRange, with: line.replacingCharacters(in: line.startIndex..<line.index(line.startIndex, offsetBy: 3), with: ""))
+                } else if line.hasPrefix("--") {
+                    mutSQL.replaceSubrange(swiftRange, with: line.replacingCharacters(in: line.startIndex..<line.index(line.startIndex, offsetBy: 2), with: ""))
+                }
+            } else {
+                mutSQL.replaceSubrange(swiftRange, with: "-- " + line)
+            }
+        }
+        sql = mutSQL
     }
 
     // MARK: - Statement splitting
