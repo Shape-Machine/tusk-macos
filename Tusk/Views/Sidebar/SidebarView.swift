@@ -5,31 +5,58 @@ struct SidebarView: View {
     @AppStorage("tusk.sidebar.fontSize")       private var sidebarFontSize    = 13.0
     @AppStorage("tusk.sidebar.fontDesign")     private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes     = false
+    @State private var filterText: String = ""
 
     var body: some View {
         VSplitView {
             // Top — connections + schema tree
-            List(selection: Binding(
-                get: { appState.selectedSidebarItem },
-                set: { newItem in
-                    appState.selectedSidebarItem = newItem
-                    if let item = newItem,
-                       case .table(let cid, let schema, let name) = item {
-                        appState.openOrActivateTableTab(
-                            connectionID: cid,
-                            schema: schema,
-                            tableName: name
-                        )
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.tertiary)
+                        .font(.system(size: sidebarFontSize - 1))
+                    TextField("Filter…", text: $filterText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                    if !filterText.isEmpty {
+                        Button {
+                            filterText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-            )) {
-                ForEach(appState.connections) { connection in
-                    ConnectionSection(connection: connection)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.bar)
+                Divider()
+                List(selection: Binding(
+                    get: { appState.selectedSidebarItem },
+                    set: { newItem in
+                        appState.selectedSidebarItem = newItem
+                        if let item = newItem,
+                           case .table(let cid, let schema, let name) = item {
+                            appState.openOrActivateTableTab(
+                                connectionID: cid,
+                                schema: schema,
+                                tableName: name
+                            )
+                        }
+                    }
+                )) {
+                    ForEach(appState.connections) { connection in
+                        ConnectionSection(connection: connection, filterText: filterText)
+                    }
                 }
+                .listStyle(.sidebar)
+                .environment(\.font, .system(size: sidebarFontSize, design: sidebarFontDesign.design))
             }
-            .listStyle(.sidebar)
             .frame(minHeight: 120)
-            .environment(\.font, .system(size: sidebarFontSize, design: sidebarFontDesign.design))
+            .onChange(of: appState.clients.count) { _, _ in
+                filterText = ""
+            }
 
             // Bottom — file explorer
             FileExplorerView()
@@ -88,10 +115,14 @@ struct SidebarView: View {
 private struct ConnectionSection: View {
     @Environment(AppState.self) private var appState
     let connection: Connection
+    var filterText: String = ""
 
     var isConnected: Bool { appState.isConnected(connection) }
 
     /// All schemas present in the cache, public first then alphabetical.
+    /// When `filterText` is non-empty, each schema's object arrays are narrowed to
+    /// names containing the filter string (case-insensitive), and schemas with no
+    /// matching objects are omitted entirely.
     var schemas: [(id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo])] {
         let all       = appState.schemaTables[connection.id] ?? []
         let allEnums  = appState.schemaEnums[connection.id] ?? []
@@ -111,18 +142,30 @@ private struct ConnectionSection: View {
         let enumsBySchema  = Dictionary(grouping: allEnums, by: { $0.schema })
         let seqsBySchema   = Dictionary(grouping: allSeqs,  by: { $0.schema })
         let funcsBySchema  = Dictionary(grouping: allFuncs, by: { $0.schema })
+
+        let filter = filterText.lowercased()
+
+        func matches(_ name: String) -> Bool {
+            filter.isEmpty || name.lowercased().contains(filter)
+        }
+
         // Include connection.id in the row ID so that identically-named schemas
         // across different connections get distinct SwiftUI identities in the
         // flattened List — otherwise @State (isExpanded) is shared between them.
-        return uniqueSchemas.map { (
-            id:        "\(connection.id)-\($0)",
-            name:      $0,
-            tables:    tablesBySchema[$0] ?? [],
-            views:     viewsBySchema[$0]  ?? [],
-            enums:     enumsBySchema[$0]  ?? [],
-            sequences: seqsBySchema[$0]   ?? [],
-            functions: funcsBySchema[$0]  ?? []
-        ) }
+        let rows = uniqueSchemas.map { schema -> (id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo]) in
+            (
+                id:        "\(connection.id)-\(schema)",
+                name:      schema,
+                tables:    (tablesBySchema[schema] ?? []).filter { matches($0.name) },
+                views:     (viewsBySchema[schema]  ?? []).filter { matches($0.name) },
+                enums:     (enumsBySchema[schema]  ?? []).filter { matches($0.name) },
+                sequences: (seqsBySchema[schema]   ?? []).filter { matches($0.name) },
+                functions: (funcsBySchema[schema]  ?? []).filter { matches($0.signature) }
+            )
+        }
+
+        if filter.isEmpty { return rows }
+        return rows.filter { !$0.tables.isEmpty || !$0.views.isEmpty || !$0.enums.isEmpty || !$0.sequences.isEmpty || !$0.functions.isEmpty }
     }
 
     var body: some View {
@@ -557,6 +600,13 @@ private struct ConnectionHeader: View {
             Text(connection.name)
                 .font(.system(size: sidebarFontSize, weight: .semibold, design: sidebarFontDesign.design))
                 .lineLimit(1)
+
+            if appState.superuserConnections.contains(connection.id) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: sidebarFontSize - 3))
+                    .foregroundStyle(.yellow)
+                    .help("Superuser")
+            }
 
             if connection.isReadOnly {
                 Image(systemName: "lock.fill")

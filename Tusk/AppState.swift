@@ -36,6 +36,8 @@ final class AppState {
     var schemaDatabases:    [UUID: [String]]        = [:]
     /// keyed by connectionID → currently connected database (may differ from connection.database after a switch)
     var activeDatabase:     [UUID: String]          = [:]
+    /// connectionIDs where the authenticated user has the PostgreSQL superuser role
+    var superuserConnections: Set<UUID>             = []
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -153,6 +155,7 @@ final class AppState {
             await loadTableSizes(for: connection)
         }
         await loadDatabases(for: connection)
+        await loadSuperuserStatus(for: connection)
     }
 
     func disconnect(_ connection: Connection) {
@@ -170,6 +173,7 @@ final class AppState {
         schemaTableSizes.removeValue(forKey: connection.id)
         schemaDatabases.removeValue(forKey: connection.id)
         activeDatabase.removeValue(forKey: connection.id)
+        superuserConnections.remove(connection.id)
         if createTableTarget?.connectionID == connection.id {
             createTableTarget = nil
         }
@@ -313,6 +317,16 @@ final class AppState {
         schemaDatabases[connection.id] = dbs
     }
 
+    func loadSuperuserStatus(for connection: Connection) async {
+        guard let client = clients[connection.id] else { return }
+        let result = try? await client.query("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
+        if case .bool(true) = result?.rows.first?.first {
+            superuserConnections.insert(connection.id)
+        } else {
+            superuserConnections.remove(connection.id)
+        }
+    }
+
     func switchDatabase(connectionID: UUID, to database: String) async throws {
         guard let connection = connections.first(where: { $0.id == connectionID }) else { return }
         guard !connectingIDs.contains(connectionID) else { return }
@@ -364,6 +378,7 @@ final class AppState {
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
             await loadTableSizes(for: connection)
         }
+        await loadSuperuserStatus(for: connection)
     }
 
     func openQueryTab(for connection: Connection) {
