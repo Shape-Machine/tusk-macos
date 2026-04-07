@@ -27,7 +27,7 @@ struct DataBrowserView: View {
     @Bindable var state: DataBrowserState
 
     private var qualifiedName: String { "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))" }
-    private let pageSize = tuskPageSize
+    @AppStorage("tusk.dataBrowser.pageSize") private var pageSize = 1_000
 
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
@@ -147,6 +147,22 @@ struct DataBrowserView: View {
                         triggerLoad()
                     }
                 }
+
+            Picker("Rows", selection: $pageSize) {
+                Text("50").tag(50)
+                Text("100").tag(100)
+                Text("500").tag(500)
+                Text("1 000").tag(1_000)
+                Text("5 000").tag(5_000)
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 70)
+            .help("Rows per page")
+            .onChange(of: pageSize) { _, _ in
+                state.offset = 0
+                triggerLoad()
+            }
 
             Button {
                 triggerLoad()

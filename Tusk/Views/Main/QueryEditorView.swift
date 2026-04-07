@@ -799,6 +799,10 @@ struct ResultsGrid: View {
     @State private var columnWidths: [Int: CGFloat] = [:]
     @State private var dragStartWidths: [Int: CGFloat] = [:]
 
+    // Pinned columns
+    @State private var pinnedColumns: Set<String> = []
+    @State private var syncedRow: Int? = nil
+
     private func columnWidth(_ colIndex: Int) -> CGFloat {
         columnWidths[colIndex] ?? defaultColumnWidth
     }
@@ -822,6 +826,32 @@ struct ResultsGrid: View {
         if let data = try? JSONEncoder().encode(named) {
             UserDefaults.standard.set(data, forKey: key)
         }
+    }
+
+    private var pinnedColIndices: [Int] {
+        result.columns.indices.filter { pinnedColumns.contains(result.columns[$0].name) }
+    }
+
+    private var nonPinnedColIndices: [Int] {
+        result.columns.indices.filter { !pinnedColumns.contains(result.columns[$0].name) }
+    }
+
+    private var totalPinnedWidth: CGFloat {
+        pinnedColIndices.reduce(0) { $0 + columnWidth($1) }
+    }
+
+    private func loadPersistedPinnedColumns() {
+        guard let key = columnWidthsPersistenceKey else { return }
+        let pinnedKey = key.replacingOccurrences(of: "tusk.colwidths.", with: "tusk.pinned.")
+        if let names = UserDefaults.standard.stringArray(forKey: pinnedKey) {
+            pinnedColumns = Set(names)
+        }
+    }
+
+    private func persistPinnedColumns() {
+        guard let key = columnWidthsPersistenceKey else { return }
+        let pinnedKey = key.replacingOccurrences(of: "tusk.colwidths.", with: "tusk.pinned.")
+        UserDefaults.standard.set(Array(pinnedColumns), forKey: pinnedKey)
     }
 
     // Edit-cell sheet state
@@ -848,153 +878,11 @@ struct ResultsGrid: View {
 
     var body: some View {
         GeometryReader { geo in
-            ScrollView([.horizontal, .vertical]) {
-                ScrollViewReader { proxy in
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            // Data rows — only rows near the viewport are materialised
-                            ForEach(result.rows.indices, id: \.self) { rowIndex in
-                                let row = result.rows[rowIndex]
-                                let isSelected = selectedRows.contains(rowIndex)
-                                HStack(spacing: 0) {
-                                    ForEach(row.indices, id: \.self) { colIndex in
-                                        let cell = row[colIndex]
-                                        cellText(cell)
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 3)
-                                            .frame(width: columnWidth(colIndex), alignment: .leading)
-                                            .border(Color(nsColor: .separatorColor), width: 0.5)
-                                            .onTapGesture(count: 2) {
-                                                if canEdit {
-                                                    startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
-                                                } else {
-                                                    let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
-                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
-                                                }
-                                            }
-                                            .contextMenu {
-                                                Button("Copy Cell") {
-                                                    NSPasteboard.general.clearContents()
-                                                    NSPasteboard.general.setString(cell.displayValue, forType: .string)
-                                                }
-                                                Button("View Full Value") {
-                                                    let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
-                                                    expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
-                                                }
-                                                if canEdit {
-                                                    Divider()
-                                                    Button("Edit Cell…") {
-                                                        startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
-                                                    }
-                                                }
-                                            }
-                                    }
-                                }
-                                .id(rowIndex)
-                                .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
-                                .contentShape(Rectangle())
-                                .simultaneousGesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { value in
-                                            guard value.translation == .zero else { return }
-                                            guard !NSEvent.modifierFlags.contains(.control) else { return }
-                                            isFocused = true
-                                            handleRowTap(rowIndex: rowIndex)
-                                        }
-                                )
-                                .contextMenu {
-                                    let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
-                                    let count = selectedRows.isEmpty ? 1 : selectedRows.count
-                                    let label = count == 1 ? "Row" : "\(count) Rows"
-                                    Button("Copy \(label) as CSV") {
-                                        copyRowsAsCSV(columns: result.columns, rows: selectionRows)
-                                    }
-                                    Button("Copy \(label) as JSON") {
-                                        copyRowsAsJSON(columns: result.columns, rows: selectionRows)
-                                    }
-                                    if let copyAsInsert {
-                                        Button("Copy \(label) as INSERT") {
-                                            copyAsInsert(selectionRows)
-                                        }
-                                    }
-                                    if canEdit {
-                                        Divider()
-                                        Button("Delete Row…", role: .destructive) {
-                                            deletingRowIndex = rowIndex
-                                        }
-                                    }
-                                }
-                            }
-                        } header: {
-                            // Header row — pinned to top while scrolling vertically
-                            HStack(spacing: 0) {
-                                ForEach(result.columns.indices, id: \.self) { colIndex in
-                                    let col = result.columns[colIndex]
-                                    let isActiveSort = sortColumn == col.name
-                                    ZStack(alignment: .trailing) {
-                                        HStack(spacing: 4) {
-                                            Text(col.name)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                                .truncationMode(.tail)
-                                            if isActiveSort {
-                                                Text(sortAscending ? "↑" : "↓")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .frame(width: columnWidth(colIndex), alignment: .leading)
-                                        .background(Color(nsColor: .controlBackgroundColor))
-                                        .border(Color(nsColor: .separatorColor), width: 0.5)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            onSortByColumn?(col.name)
-                                        }
-                                        .onHover { inside in
-                                            if onSortByColumn != nil {
-                                                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                                            }
-                                        }
-
-                                        // Drag handle on right edge
-                                        Color.clear
-                                            .frame(width: 6)
-                                            .contentShape(Rectangle())
-                                            .onHover { inside in
-                                                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-                                            }
-                                            .gesture(
-                                                DragGesture(minimumDistance: 1)
-                                                    .onChanged { value in
-                                                        if dragStartWidths[colIndex] == nil {
-                                                            dragStartWidths[colIndex] = columnWidth(colIndex)
-                                                        }
-                                                        let startWidth = dragStartWidths[colIndex]!
-                                                        columnWidths[colIndex] = max(50, startWidth + value.translation.width)
-                                                    }
-                                                    .onEnded { _ in
-                                                        dragStartWidths.removeValue(forKey: colIndex)
-                                                        persistWidths()
-                                                    }
-                                            )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .frame(
-                        minWidth: geo.size.width,
-                        minHeight: geo.size.height,
-                        alignment: .topLeading
-                    )
-                    .onAppear {
-                        scrollProxy = proxy
-                        loadPersistedWidths()
-                    }
+            Group {
+                if !pinnedColumns.isEmpty, columnWidthsPersistenceKey != nil {
+                    twoPaneLayout(geo: geo)
+                } else {
+                    singlePaneLayout(geo: geo)
                 }
             }
             .focusable()
@@ -1044,6 +932,246 @@ struct ResultsGrid: View {
             selectedRows.removeAll()
             lastSelectedRow = nil
             keyboardCursor = nil
+            syncedRow = nil
+        }
+    }
+
+    // MARK: - Layout helpers
+
+    @ViewBuilder
+    private func singlePaneLayout(geo: GeometryProxy) -> some View {
+        ScrollView([.horizontal, .vertical]) {
+            ScrollViewReader { proxy in
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        ForEach(result.rows.indices, id: \.self) { rowIndex in
+                            dataRow(rowIndex: rowIndex, colIndices: Array(result.rows[rowIndex].indices))
+                        }
+                    } header: {
+                        headerRow(colIndices: Array(result.columns.indices))
+                    }
+                }
+                .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
+                .onAppear {
+                    scrollProxy = proxy
+                    loadPersistedWidths()
+                    loadPersistedPinnedColumns()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func twoPaneLayout(geo: GeometryProxy) -> some View {
+        let pinnedIndices = pinnedColIndices
+        let nonPinnedIndices = nonPinnedColIndices
+        let leftWidth = totalPinnedWidth
+
+        HStack(spacing: 0) {
+            // Left pane — pinned columns, vertical scroll only
+            ScrollView(.vertical) {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        ForEach(result.rows.indices, id: \.self) { rowIndex in
+                            dataRow(rowIndex: rowIndex, colIndices: pinnedIndices)
+                        }
+                    } header: {
+                        headerRow(colIndices: pinnedIndices)
+                    }
+                }
+                .frame(minHeight: geo.size.height, alignment: .topLeading)
+            }
+            .frame(width: leftWidth)
+            .scrollPosition(id: $syncedRow)
+
+            // Pinned / scrollable separator
+            Rectangle()
+                .fill(Color.accentColor.opacity(0.35))
+                .frame(width: 2)
+
+            // Right pane — non-pinned columns, scrolls both ways
+            ScrollView([.horizontal, .vertical]) {
+                ScrollViewReader { proxy in
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            ForEach(result.rows.indices, id: \.self) { rowIndex in
+                                dataRow(rowIndex: rowIndex, colIndices: nonPinnedIndices)
+                            }
+                        } header: {
+                            headerRow(colIndices: nonPinnedIndices)
+                        }
+                    }
+                    .frame(minWidth: max(0, geo.size.width - leftWidth - 2), minHeight: geo.size.height, alignment: .topLeading)
+                    .onAppear {
+                        scrollProxy = proxy
+                        loadPersistedWidths()
+                        loadPersistedPinnedColumns()
+                    }
+                }
+            }
+            .scrollPosition(id: $syncedRow)
+        }
+    }
+
+    @ViewBuilder
+    private func dataRow(rowIndex: Int, colIndices: [Int]) -> some View {
+        let row = result.rows[rowIndex]
+        let isSelected = selectedRows.contains(rowIndex)
+        HStack(spacing: 0) {
+            ForEach(colIndices, id: \.self) { colIndex in
+                let cell = row[colIndex]
+                cellText(cell)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .frame(width: columnWidth(colIndex), alignment: .leading)
+                    .border(Color(nsColor: .separatorColor), width: 0.5)
+                    .onTapGesture(count: 2) {
+                        if canEdit {
+                            startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
+                        } else {
+                            let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
+                            expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
+                        }
+                    }
+                    .contextMenu {
+                        Button("Copy Cell") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(cell.displayValue, forType: .string)
+                        }
+                        Button("View Full Value") {
+                            let dtype = colIndex < result.columns.count ? result.columns[colIndex].dataType : ""
+                            expandedCell = CellDetailContent(id: "\(rowIndex):\(colIndex)", value: cell.displayValue, columnDataType: dtype)
+                        }
+                        if canEdit {
+                            Divider()
+                            Button("Edit Cell…") {
+                                startEditing(rowIndex: rowIndex, colIndex: colIndex, cell: cell)
+                            }
+                        }
+                    }
+            }
+        }
+        .id(rowIndex)
+        .background(rowBackground(rowIndex: rowIndex, isSelected: isSelected))
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    guard value.translation == .zero else { return }
+                    guard !NSEvent.modifierFlags.contains(.control) else { return }
+                    isFocused = true
+                    handleRowTap(rowIndex: rowIndex)
+                }
+        )
+        .contextMenu {
+            let selectionRows = selectedRows.isEmpty ? [row] : selectedRows.sorted().compactMap { result.rows.indices.contains($0) ? result.rows[$0] : nil }
+            let count = selectedRows.isEmpty ? 1 : selectedRows.count
+            let label = count == 1 ? "Row" : "\(count) Rows"
+            Button("Copy \(label) as CSV") {
+                copyRowsAsCSV(columns: result.columns, rows: selectionRows)
+            }
+            Button("Copy \(label) as JSON") {
+                copyRowsAsJSON(columns: result.columns, rows: selectionRows)
+            }
+            if let copyAsInsert {
+                Button("Copy \(label) as INSERT") {
+                    copyAsInsert(selectionRows)
+                }
+            }
+            if canEdit {
+                Divider()
+                Button("Delete Row…", role: .destructive) {
+                    deletingRowIndex = rowIndex
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func headerRow(colIndices: [Int]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(colIndices, id: \.self) { colIndex in
+                headerCell(colIndex: colIndex)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func headerCell(colIndex: Int) -> some View {
+        let col = result.columns[colIndex]
+        let isActiveSort = sortColumn == col.name
+        let isPinned = pinnedColumns.contains(col.name)
+        ZStack(alignment: .trailing) {
+            HStack(spacing: 4) {
+                Text(col.name)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if isActiveSort {
+                    Text(sortAscending ? "↑" : "↓")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(width: columnWidth(colIndex), alignment: .leading)
+            .background {
+                if isPinned {
+                    Color(nsColor: .controlBackgroundColor).brightness(-0.04)
+                } else {
+                    Color(nsColor: .controlBackgroundColor)
+                }
+            }
+            .border(Color(nsColor: .separatorColor), width: 0.5)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSortByColumn?(col.name)
+            }
+            .onHover { inside in
+                if onSortByColumn != nil {
+                    if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+            }
+
+            // Drag handle on right edge
+            Color.clear
+                .frame(width: 6)
+                .contentShape(Rectangle())
+                .onHover { inside in
+                    if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            if dragStartWidths[colIndex] == nil {
+                                dragStartWidths[colIndex] = columnWidth(colIndex)
+                            }
+                            let startWidth = dragStartWidths[colIndex]!
+                            columnWidths[colIndex] = max(50, startWidth + value.translation.width)
+                        }
+                        .onEnded { _ in
+                            dragStartWidths.removeValue(forKey: colIndex)
+                            persistWidths()
+                        }
+                )
+        }
+        .contextMenu {
+            if columnWidthsPersistenceKey != nil {
+                if isPinned {
+                    Button("Unpin Column") {
+                        pinnedColumns.remove(col.name)
+                        persistPinnedColumns()
+                    }
+                } else {
+                    Button("Pin Column") {
+                        pinnedColumns.insert(col.name)
+                        persistPinnedColumns()
+                    }
+                }
+            }
         }
     }
 
@@ -1219,7 +1347,11 @@ struct ResultsGrid: View {
             lastSelectedRow = newCursor
         }
 
-        scrollProxy?.scrollTo(newCursor, anchor: .center)
+        if pinnedColumns.isEmpty || columnWidthsPersistenceKey == nil {
+            scrollProxy?.scrollTo(newCursor, anchor: .center)
+        } else {
+            syncedRow = newCursor
+        }
     }
 
     private func handleSelectAll() {
@@ -1227,7 +1359,11 @@ struct ResultsGrid: View {
         selectedRows = Set(result.rows.indices)
         lastSelectedRow = 0
         keyboardCursor = 0
-        scrollProxy?.scrollTo(0, anchor: .top)
+        if pinnedColumns.isEmpty || columnWidthsPersistenceKey == nil {
+            scrollProxy?.scrollTo(0, anchor: .top)
+        } else {
+            syncedRow = 0
+        }
     }
 }
 
