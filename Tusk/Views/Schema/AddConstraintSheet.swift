@@ -15,7 +15,6 @@ struct AddConstraintSheet: View {
     @State private var constraintName: String = ""
     @State private var selectedColumns: Set<String> = []
     @State private var checkExpression: String = ""
-    @State private var refSchema: String = "public"
     @State private var refTable: String = ""
     @State private var refColumn: String = ""
     @State private var refTables: [String] = []
@@ -52,7 +51,7 @@ struct AddConstraintSheet: View {
             guard !selectedColumns.isEmpty, !refTable.isEmpty, !refColumn.isEmpty else {
                 return "-- Select source column(s), reference table and reference column"
             }
-            let refQ = "\(quoteIdentifier(refSchema)).\(quoteIdentifier(refTable))"
+            let refQ = "\(quoteIdentifier(schemaName)).\(quoteIdentifier(refTable))"
             return "ALTER TABLE \(qualifiedTable) \(constraintClause) FOREIGN KEY (\(colList)) REFERENCES \(refQ) (\(quoteIdentifier(refColumn)));"
         case .check:
             let expr = checkExpression.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -224,6 +223,17 @@ struct AddConstraintSheet: View {
 
     private func commitAdd() async {
         guard canAdd else { return }
+
+        // Validate CHECK expression for SQL metacharacters
+        if constraintType == .check {
+            let expr = checkExpression.trimmingCharacters(in: .whitespacesAndNewlines)
+            let dangerous = [";", "--", "/*", "*/"]
+            if dangerous.contains(where: { expr.contains($0) }) {
+                addError = "CHECK expression must not contain SQL metacharacters (; -- /* */)."
+                return
+            }
+        }
+
         isAdding = true
         addError = nil
         do {
