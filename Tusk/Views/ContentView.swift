@@ -91,10 +91,10 @@ struct DetailView: View {
                let connection = appState.connections.first(where: { $0.id == connID }) {
                 ActivityMonitorView(client: client, connection: connection)
             }
-        case .roles(let connID):
+        case .role(let connID, let roleName):
             if let client = appState.clients[connID],
                let connection = appState.connections.first(where: { $0.id == connID }) {
-                RolesBrowserView(client: client, connection: connection)
+                RoleDetailView(connectionID: connID, roleName: roleName, client: client, connection: connection)
             }
         case .queryEditor(let queryTabID):
             if let queryTab = appState.queryTabs.first(where: { $0.id == queryTabID }) {
@@ -151,7 +151,7 @@ private struct DetailTabItem: View {
             return connection(for: connID)?.color.color
         case .activityMonitor(let connID):
             return connection(for: connID)?.color.color
-        case .roles(let connID):
+        case .role(let connID, _):
             return connection(for: connID)?.color.color
         case .queryEditor:
             guard let connID = queryTab?.connectionID else { return nil }
