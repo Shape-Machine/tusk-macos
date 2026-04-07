@@ -150,12 +150,15 @@ final class AppState {
             queryTabs[idx].connectionName = connection.name
         }
 
-        try? await refreshSchema(for: connection)
+        // refreshSchema calls loadSuperuserStatus on its success path;
+        // call it here only as a fallback for when schema refresh fails.
+        if (try? await refreshSchema(for: connection)) == nil {
+            await loadSuperuserStatus(for: connection)
+        }
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
             await loadTableSizes(for: connection)
         }
         await loadDatabases(for: connection)
-        await loadSuperuserStatus(for: connection)
     }
 
     func disconnect(_ connection: Connection) {
@@ -320,11 +323,15 @@ final class AppState {
 
     func loadSuperuserStatus(for connection: Connection) async {
         guard let client = clients[connection.id] else { return }
-        let result = try? await client.query("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
-        if case .bool(true) = result?.rows.first?.first {
-            superuserConnections.insert(connection.id)
-        } else {
-            superuserConnections.remove(connection.id)
+        do {
+            let result = try await client.query("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
+            if case .bool(true) = result.rows.first?.first {
+                superuserConnections.insert(connection.id)
+            } else {
+                superuserConnections.remove(connection.id)
+            }
+        } catch {
+            // Leave existing badge state unchanged — a query failure is not evidence of non-superuser.
         }
     }
 
@@ -375,11 +382,12 @@ final class AppState {
         schemaTableSizes.removeValue(forKey: connectionID)
         schemaRefreshErrors.removeValue(forKey: connectionID)
 
-        try? await refreshSchema(for: connection)
+        if (try? await refreshSchema(for: connection)) == nil {
+            await loadSuperuserStatus(for: connection)
+        }
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
             await loadTableSizes(for: connection)
         }
-        await loadSuperuserStatus(for: connection)
     }
 
     func openQueryTab(for connection: Connection) {
