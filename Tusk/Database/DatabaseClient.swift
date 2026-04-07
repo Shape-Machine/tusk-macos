@@ -5,6 +5,42 @@ import NIOPosix
 import NIOSSL
 import Logging
 
+// MARK: - CancelState
+//
+// Holds the backend PID and connection parameters needed to cancel a running
+// query via pg_cancel_backend on a separate connection. Stored as a nonisolated
+// `let` on the actor so it can be read without queuing behind the busy connection.
+final class CancelState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _pid:      Int?    = nil
+    private var _host:     String  = ""
+    private var _port:     Int     = 5432
+    private var _username: String  = ""
+    private var _password: String? = nil
+    private var _database: String  = ""
+    private var _useSSL:   Bool    = false
+
+    var pid: Int? {
+        lock.lock(); defer { lock.unlock() }
+        return _pid
+    }
+
+    var params: (host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool)? {
+        lock.lock(); defer { lock.unlock() }
+        guard _pid != nil else { return nil }
+        return (_host, _port, _username, _password, _database, _useSSL)
+    }
+
+    func configure(pid: Int, host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool) {
+        lock.lock(); defer { lock.unlock() }
+        _pid = pid; _host = host; _port = port
+        _username = username; _password = password
+        _database = database; _useSSL = useSSL
+    }
+
+    func clear() { lock.lock(); defer { lock.unlock() }; _pid = nil }
+}
+
 // MARK: - ConnectionBox
 //
 // PostgresNIO asserts that PostgresConnection is deallocated on its EventLoop
@@ -36,6 +72,8 @@ private final class ConnectionBox: @unchecked Sendable {
 actor DatabaseClient {
     private var box: ConnectionBox?
     private let logger = Logger(label: "tusk.database")
+    /// Accessible from nonisolated context for query cancellation without queuing behind the busy connection.
+    nonisolated let cancelState = CancelState()
 
     // MARK: - Connect / Disconnect
 
@@ -68,11 +106,22 @@ actor DatabaseClient {
         if info.isReadOnly {
             _ = try await conn.query(PostgresQuery(unsafeSQL: "SET default_transaction_read_only = on"), logger: logger)
         }
+        // Cache backend PID and connection params so cancelCurrentQuery() can open
+        // a second connection to send pg_cancel_backend without queuing on this actor.
+        if let pidResult = try? await query("SELECT pg_backend_pid()"),
+           case .integer(let pid) = pidResult.rows.first?.first {
+            cancelState.configure(
+                pid: Int(pid), host: info.host, port: info.port,
+                username: info.username, password: password.isEmpty ? nil : password,
+                database: info.database, useSSL: info.useSSL
+            )
+        }
     }
 
     func disconnect() async {
         guard let b = box else { return }
         box = nil                          // nil first — deinit won't double-close
+        cancelState.clear()
         try? await b.connection.close()
     }
 
@@ -434,6 +483,33 @@ actor DatabaseClient {
                 waitEvent:       row[safe: 6].flatMap { $0.isNull ? nil : $0.displayValue }
             )
         }
+    }
+
+    /// Cancels the currently running query by opening a temporary second connection
+    /// and calling pg_cancel_backend. Because this is nonisolated it runs concurrently
+    /// with the busy actor — it does not queue behind the in-flight query.
+    nonisolated func cancelCurrentQuery() async {
+        guard let pid = cancelState.pid, let p = cancelState.params else { return }
+        let el = MultiThreadedEventLoopGroup.singleton.next()
+        let tlsConfig: PostgresConnection.Configuration.TLS
+        if p.useSSL, let ctx = try? NIOSSLContext(configuration: .makeClientConfiguration()) {
+            tlsConfig = .prefer(ctx)
+        } else {
+            tlsConfig = .disable
+        }
+        let config = PostgresConnection.Configuration(
+            host: p.host, port: p.port,
+            username: p.username, password: p.password,
+            database: p.database, tls: tlsConfig
+        )
+        guard let cancelConn = try? await PostgresConnection.connect(
+            on: el, configuration: config, id: 9999, logger: logger
+        ) else { return }
+        _ = try? await cancelConn.query(
+            PostgresQuery(unsafeSQL: "SELECT pg_cancel_backend(\(pid))"),
+            logger: logger
+        )
+        try? await cancelConn.close()
     }
 
     func cancelBackend(pid: Int) async throws {
