@@ -57,6 +57,9 @@ struct SidebarView: View {
             .onChange(of: appState.clients.count) { _, _ in
                 filterText = ""
             }
+            .onChange(of: appState.selectedConnectionID) { _, _ in
+                filterText = ""
+            }
 
             // Bottom — file explorer
             FileExplorerView()
