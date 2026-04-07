@@ -7,6 +7,7 @@ struct SettingsPopover: View {
     @AppStorage("tusk.content.fontSize")       private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign")     private var contentFontDesign: TuskFontDesign = .sansSerif
     @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
+    @AppStorage("tusk.dataBrowser.pageSize")   private var dataBrowserPageSize = 1_000
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -17,6 +18,24 @@ struct SettingsPopover: View {
             Toggle("Show table sizes", isOn: $showTableSizes)
                 .toggleStyle(.checkbox)
                 .font(.callout)
+
+            HStack {
+                Text("Rows per page")
+                    .font(.callout)
+                Spacer()
+                Picker("Rows per page", selection: $dataBrowserPageSize) {
+                    Text("50").tag(50)
+                    Text("100").tag(100)
+                    Text("500").tag(500)
+                    Text("1 000").tag(1_000)
+                    Text("5 000").tag(5_000)
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 80)
+            }
+            .font(.callout)
+
             Divider()
             settingsSection("Content", fontDesign: $contentFontDesign, fontSize: $contentFontSize)
 
