@@ -178,6 +178,7 @@ private struct ConnectionSection: View {
     var body: some View {
         Section {
             if isConnected {
+                UsersAndRolesSection(connection: connection)
                 ForEach(schemas, id: \.id) { schema in
                     SchemaRow(
                         schema: schema.name,
@@ -621,6 +622,104 @@ private struct SchemaRow: View {
                 err.runModal()
             }
         }
+    }
+}
+
+// MARK: - Users & Roles sidebar section
+
+private struct UsersAndRolesSection: View {
+    @Environment(AppState.self) private var appState
+    let connection: Connection
+
+    @AppStorage("tusk.sidebar.fontSize")   private var sidebarFontSize   = 13.0
+    @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
+
+    @State private var isExpanded = false
+    @State private var usersExpanded = false
+    @State private var rolesExpanded = false
+
+    private var roles: [RoleInfo] { appState.connectionRoles[connection.id] ?? [] }
+    private var users: [RoleInfo] { roles.filter { $0.canLogin } }
+    private var roleOnly: [RoleInfo] { roles.filter { !$0.canLogin } }
+    private var isLoaded: Bool { appState.connectionRoles[connection.id] != nil }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            if !isLoaded {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…")
+                        .font(.system(size: sidebarFontSize - 1, design: sidebarFontDesign.design))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.leading, 4)
+            } else {
+                if !users.isEmpty {
+                    DisclosureGroup(isExpanded: $usersExpanded) {
+                        ForEach(users) { user in
+                            Label {
+                                Text(user.name)
+                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            } icon: {
+                                Image(systemName: "person")
+                            }
+                            .onTapGesture { appState.openRolesBrowser(for: connection) }
+                        }
+                    } label: {
+                        Text("Users")
+                            .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture { usersExpanded.toggle() }
+                    }
+                    .animation(nil, value: usersExpanded)
+                }
+
+                if !roleOnly.isEmpty {
+                    DisclosureGroup(isExpanded: $rolesExpanded) {
+                        ForEach(roleOnly) { role in
+                            Label {
+                                Text(role.name)
+                                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            } icon: {
+                                Image(systemName: "person.2")
+                            }
+                            .onTapGesture { appState.openRolesBrowser(for: connection) }
+                        }
+                    } label: {
+                        Text("Roles")
+                            .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture { rolesExpanded.toggle() }
+                    }
+                    .animation(nil, value: rolesExpanded)
+                }
+
+                if users.isEmpty && roleOnly.isEmpty {
+                    Text("No roles found")
+                        .font(.system(size: sidebarFontSize - 1, design: sidebarFontDesign.design))
+                        .foregroundStyle(.tertiary)
+                        .padding(.leading, 4)
+                }
+            }
+        } label: {
+            Label {
+                Text("Users & Roles")
+                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+            } icon: {
+                Image(systemName: "person.2")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isExpanded.toggle()
+                if isExpanded && !isLoaded {
+                    Task { await appState.loadRoles(for: connection) }
+                }
+            }
+        }
+        .animation(nil, value: isExpanded)
     }
 }
 
