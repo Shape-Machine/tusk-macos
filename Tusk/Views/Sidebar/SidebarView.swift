@@ -637,11 +637,13 @@ private struct UsersAndRolesSection: View {
     @State private var isExpanded = false
     @State private var usersExpanded = false
     @State private var rolesExpanded = false
+    @State private var showingCreateRole = false
 
     private var roles: [RoleInfo] { appState.connectionRoles[connection.id] ?? [] }
     private var users: [RoleInfo] { roles.filter { $0.canLogin } }
     private var roleOnly: [RoleInfo] { roles.filter { !$0.canLogin } }
     private var isLoaded: Bool { appState.connectionRoles[connection.id] != nil }
+    private var isSuperuser: Bool { appState.superuserConnections.contains(connection.id) }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -663,7 +665,7 @@ private struct UsersAndRolesSection: View {
                             } icon: {
                                 Image(systemName: "person")
                             }
-                            .onTapGesture { appState.openRolesBrowser(for: connection) }
+                            .onTapGesture { appState.openRoleTab(for: connection, roleName: user.name) }
                         }
                     } label: {
                         Text("Users")
@@ -684,7 +686,7 @@ private struct UsersAndRolesSection: View {
                             } icon: {
                                 Image(systemName: "person.2")
                             }
-                            .onTapGesture { appState.openRolesBrowser(for: connection) }
+                            .onTapGesture { appState.openRoleTab(for: connection, roleName: role.name) }
                         }
                     } label: {
                         Text("Roles")
@@ -704,22 +706,43 @@ private struct UsersAndRolesSection: View {
                 }
             }
         } label: {
-            Label {
-                Text("Users & Roles")
-                    .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
-            } icon: {
-                Image(systemName: "person.2")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isExpanded.toggle()
-                if isExpanded && !isLoaded {
-                    Task { await appState.loadRoles(for: connection) }
+            HStack(spacing: 0) {
+                Label {
+                    Text("Users & Roles")
+                        .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
+                } icon: {
+                    Image(systemName: "person.2")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isExpanded.toggle()
+                    if isExpanded && !isLoaded {
+                        Task { await appState.loadRoles(for: connection) }
+                    }
+                }
+
+                if isSuperuser && !connection.isReadOnly {
+                    Button {
+                        showingCreateRole = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: sidebarFontSize - 2))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Create new user or role")
                 }
             }
         }
         .animation(nil, value: isExpanded)
+        .sheet(isPresented: $showingCreateRole) {
+            if let client = appState.clients[connection.id] {
+                CreateRoleSheet(client: client, connection: connection) {
+                    await appState.loadRoles(for: connection)
+                }
+            }
+        }
     }
 }
 

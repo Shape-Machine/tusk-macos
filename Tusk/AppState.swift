@@ -189,7 +189,7 @@ final class AppState {
             switch tab.kind {
             case .table(let cid, _, _): return cid == connection.id
             case .activityMonitor(let cid): return cid == connection.id
-            case .roles(let cid): return cid == connection.id
+            case .role(let cid, _): return cid == connection.id
             case .queryEditor(let qid):
                 return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
             }
@@ -315,7 +315,8 @@ final class AppState {
         guard let client = clients[connection.id] else { return }
         let result = try? await client.query("""
             SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
-                   rolcanlogin, rolreplication, rolconnlimit
+                   rolcanlogin, rolreplication, rolconnlimit,
+                   to_char(rolvaliduntil, 'YYYY-MM-DD') AS validuntil
             FROM pg_roles
             ORDER BY rolcanlogin DESC, rolname
             """)
@@ -323,6 +324,7 @@ final class AppState {
             guard let name = row[safe: 0]?.displayValue else { return nil }
             func bool(_ i: Int) -> Bool { row[safe: i]?.displayValue == "true" }
             let connLimit = Int(row[safe: 7]?.displayValue ?? "") ?? -1
+            let validUntil = row[safe: 8]?.displayValue
             return RoleInfo(
                 name: name,
                 superuser: bool(1),
@@ -331,14 +333,15 @@ final class AppState {
                 createDB: bool(4),
                 canLogin: bool(5),
                 replication: bool(6),
-                connLimit: connLimit
+                connLimit: connLimit,
+                validUntil: validUntil
             )
         } ?? []
     }
 
-    func openRolesBrowser(for connection: Connection) {
+    func openRoleTab(for connection: Connection, roleName: String) {
         if let existing = openTabs.first(where: {
-            if case .roles(let cid) = $0.kind { return cid == connection.id }
+            if case .role(let cid, let n) = $0.kind { return cid == connection.id && n == roleName }
             return false
         }) {
             activateDetailTab(existing)
@@ -346,9 +349,9 @@ final class AppState {
         }
         let tab = DetailTab(
             id: UUID(),
-            title: "Users & Roles",
-            icon: "person.2",
-            kind: .roles(connectionID: connection.id)
+            title: roleName,
+            icon: "person",
+            kind: .role(connectionID: connection.id, roleName: roleName)
         )
         openTabs.append(tab)
         activateDetailTab(tab)
@@ -539,7 +542,7 @@ final class AppState {
         case .activityMonitor(let cid):
             selectedSidebarItem = nil
             selectedConnectionID = cid
-        case .roles(let cid):
+        case .role(let cid, _):
             selectedSidebarItem = nil
             selectedConnectionID = cid
         case .queryEditor(let qid):
@@ -593,7 +596,7 @@ struct DetailTab: Identifiable, Hashable {
     enum Kind: Hashable {
         case table(connectionID: UUID, schema: String, tableName: String)
         case activityMonitor(connectionID: UUID)
-        case roles(connectionID: UUID)
+        case role(connectionID: UUID, roleName: String)
         case queryEditor(queryTabID: UUID)
     }
 
@@ -612,7 +615,8 @@ struct RoleInfo: Identifiable {
     let createDB: Bool
     let canLogin: Bool
     let replication: Bool
-    let connLimit: Int  // -1 = no limit
+    let connLimit: Int      // -1 = no limit
+    let validUntil: String? // nil = infinity / no expiry
 }
 
 // MARK: - Safe collection subscript
