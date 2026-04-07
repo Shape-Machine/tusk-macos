@@ -31,6 +31,8 @@ struct TableDetailView: View {
     @State private var ddlError: String? = nil
     @State private var isLoadingDDL = false
     @State private var ddlLoadTask: Task<Void, Never>? = nil
+    @State private var showingAddConstraint = false
+    @State private var showingCreateIndex = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -460,21 +462,50 @@ struct TableDetailView: View {
     // MARK: - Keys tab
 
     private var keysTab: some View {
-        Group {
-            if isLoadingMeta {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if foreignKeys.isEmpty {
-                ContentUnavailableView("No foreign keys", systemImage: "link")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Table(foreignKeys) {
-                    TableColumn("Constraint", value: \.constraintName)
-                    TableColumn("Column", value: \.fromColumn)
-                    TableColumn("References") { fk in
-                        Text("\(fk.toTable)(\(fk.toColumn))")
+        VStack(spacing: 0) {
+            if !isView && !isReadOnly {
+                HStack {
+                    Spacer()
+                    Button {
+                        showingAddConstraint = true
+                    } label: {
+                        Label("Add Constraint", systemImage: "plus")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .sheet(isPresented: $showingAddConstraint) {
+                        AddConstraintSheet(
+                            schemaName: schemaName,
+                            tableName: tableName,
+                            tableColumns: columns,
+                            client: client
+                        ) {
+                            await loadMeta()
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+                Divider()
+            }
+            Group {
+                if isLoadingMeta {
+                    ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if foreignKeys.isEmpty {
+                    ContentUnavailableView("No foreign keys", systemImage: "link")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Table(foreignKeys) {
+                        TableColumn("Constraint", value: \.constraintName)
+                        TableColumn("Column", value: \.fromColumn)
+                        TableColumn("References") { fk in
+                            Text("\(fk.toTable)(\(fk.toColumn))")
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -482,30 +513,60 @@ struct TableDetailView: View {
     // MARK: - Indexes tab
 
     private var indexesTab: some View {
-        Group {
-            if isLoadingIndexes {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error = indexesError {
-                ContentUnavailableView("Failed to load indexes", systemImage: "exclamationmark.triangle")
-                    .help(error)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if indexes.isEmpty {
-                ContentUnavailableView("No indexes", systemImage: "magnifyingglass")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Table(indexes) {
-                    TableColumn("Name", value: \.name)
-                    TableColumn("Unique") { idx in
-                        Text(idx.isUnique ? "YES" : "NO")
-                            .foregroundStyle(idx.isUnique ? .primary : .secondary)
+        VStack(spacing: 0) {
+            if !isView && !isReadOnly {
+                HStack {
+                    Spacer()
+                    Button {
+                        showingCreateIndex = true
+                    } label: {
+                        Label("Create Index", systemImage: "plus")
+                            .font(.caption)
                     }
-                    TableColumn("Primary") { idx in
-                        Text(idx.isPrimary ? "YES" : "NO")
-                            .foregroundStyle(idx.isPrimary ? .primary : .secondary)
+                    .buttonStyle(.borderless)
+                    .sheet(isPresented: $showingCreateIndex) {
+                        CreateIndexSheet(
+                            schemaName: schemaName,
+                            tableName: tableName,
+                            tableColumns: columns,
+                            client: client
+                        ) {
+                            indexesLoadTask?.cancel()
+                            indexesLoadTask = Task { await loadIndexes() }
+                        }
                     }
-                    TableColumn("Definition", value: \.definition)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(.bar)
+                Divider()
+            }
+            Group {
+                if isLoadingIndexes {
+                    ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = indexesError {
+                    ContentUnavailableView("Failed to load indexes", systemImage: "exclamationmark.triangle")
+                        .help(error)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if indexes.isEmpty {
+                    ContentUnavailableView("No indexes", systemImage: "magnifyingglass")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Table(indexes) {
+                        TableColumn("Name", value: \.name)
+                        TableColumn("Unique") { idx in
+                            Text(idx.isUnique ? "YES" : "NO")
+                                .foregroundStyle(idx.isUnique ? .primary : .secondary)
+                        }
+                        TableColumn("Primary") { idx in
+                            Text(idx.isPrimary ? "YES" : "NO")
+                                .foregroundStyle(idx.isPrimary ? .primary : .secondary)
+                        }
+                        TableColumn("Definition", value: \.definition)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
