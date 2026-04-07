@@ -621,9 +621,9 @@ struct QueryEditorView: View {
         isRunning = false
         persistResultStateToTab()
         // Signal PostgreSQL to cancel the backend query so the actor connection is
-        // unblocked — this runs on a temporary second connection, concurrently.
-        let liveConnectionID = appState.queryTabs.first(where: { $0.id == tab.id })?.connectionID
-        if let client = liveConnectionID.flatMap({ appState.clients[$0] }) {
+        // unblocked — use the view's direct client reference rather than looking up
+        // through appState.queryTabs (which may already be removed on tab close).
+        if let client {
             Task { await client.cancelCurrentQuery() }
         }
     }
@@ -665,13 +665,23 @@ struct QueryEditorView: View {
             nsSQL.substring(with: r).hasPrefix("--")
         }
 
+        // Compute per-line deltas to adjust the selection after mutation.
+        // Each delta is +3 (add "-- "), -3 (remove "-- "), or -2 (remove "--").
+        var lineDeltas: [Int] = lineRanges.map { lr in
+            if allCommented {
+                let line = nsSQL.substring(with: lr)
+                return line.hasPrefix("-- ") ? -3 : (line.hasPrefix("--") ? -2 : 0)
+            } else {
+                return 3
+            }
+        }
+
         // Build the new string by mutating line by line (process in reverse to keep ranges valid).
         var mutSQL = sql
-        for lr in lineRanges.reversed() {
+        for (i, lr) in lineRanges.enumerated().reversed() {
             let line = nsSQL.substring(with: lr)
-            guard let swiftRange = Range(lr, in: mutSQL) else { continue }
+            guard let swiftRange = Range(lr, in: mutSQL) else { lineDeltas[i] = 0; continue }
             if allCommented {
-                // Remove "-- " or "--" prefix.
                 if line.hasPrefix("-- ") {
                     mutSQL.replaceSubrange(swiftRange, with: line.replacingCharacters(in: line.startIndex..<line.index(line.startIndex, offsetBy: 3), with: ""))
                 } else if line.hasPrefix("--") {
@@ -681,7 +691,20 @@ struct QueryEditorView: View {
                 mutSQL.replaceSubrange(swiftRange, with: "-- " + line)
             }
         }
+
+        // Adjust selectedRange: sum deltas for lines whose start is at or before selLoc/selEnd.
+        var locDelta = 0
+        var endDelta = 0
+        for (idx, lr) in lineRanges.enumerated() {
+            if lr.location <= selLoc { locDelta += lineDeltas[idx] }
+            if lr.location < selEnd  { endDelta += lineDeltas[idx] }
+        }
+        let newLen    = (mutSQL as NSString).length
+        let newLoc    = max(0, min(selLoc + locDelta, newLen))
+        let rawEnd    = selEnd + endDelta
+        let newSelLen = max(0, min(rawEnd, newLen) - newLoc)
         sql = mutSQL
+        selectedRange = NSRange(location: newLoc, length: newSelLen)
     }
 
     // MARK: - Statement splitting

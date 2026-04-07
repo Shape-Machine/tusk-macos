@@ -496,7 +496,8 @@ actor DatabaseClient {
         guard let pid = cancelState.pid, let p = cancelState.params else { return }
         let el = MultiThreadedEventLoopGroup.singleton.next()
         let tlsConfig: PostgresConnection.Configuration.TLS
-        if p.useSSL, let ctx = try? NIOSSLContext(configuration: .makeClientConfiguration()) {
+        if p.useSSL {
+            guard let ctx = try? NIOSSLContext(configuration: .makeClientConfiguration()) else { return }
             tlsConfig = .prefer(ctx)
         } else {
             tlsConfig = .disable
