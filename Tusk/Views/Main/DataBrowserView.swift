@@ -60,6 +60,7 @@ struct DataBrowserView: View {
                         ResultsGrid(
                             result: result,
                             columnWidthsPersistenceKey: "tusk.colwidths.\(connectionID)\u{0}\(schemaName)\u{0}\(tableName)",
+                            pinnedColumnsPersistenceKey: "tusk.pinned.\(connectionID)\u{0}\(schemaName)\u{0}\(tableName)",
                             copyAsInsert: (isView || isReadOnly) ? nil : { rows in
                                 copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: rows)
                             },

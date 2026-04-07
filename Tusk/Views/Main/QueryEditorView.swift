@@ -772,6 +772,8 @@ struct ResultsGrid: View {
     let result: QueryResult
     /// When provided, column widths are persisted to UserDefaults under this key.
     var columnWidthsPersistenceKey: String? = nil
+    /// When provided, pinned column names are persisted to UserDefaults under this key.
+    var pinnedColumnsPersistenceKey: String? = nil
     var copyAsInsert: (([[QueryCell]]) -> Void)? = nil
     /// Schema column metadata — when provided with `onExecuteSQL`, enables edit/delete.
     var tableColumns: [ColumnInfo] = []
@@ -841,17 +843,15 @@ struct ResultsGrid: View {
     }
 
     private func loadPersistedPinnedColumns() {
-        guard let key = columnWidthsPersistenceKey else { return }
-        let pinnedKey = key.replacingOccurrences(of: "tusk.colwidths.", with: "tusk.pinned.")
-        if let names = UserDefaults.standard.stringArray(forKey: pinnedKey) {
+        guard let key = pinnedColumnsPersistenceKey else { return }
+        if let names = UserDefaults.standard.stringArray(forKey: key) {
             pinnedColumns = Set(names)
         }
     }
 
     private func persistPinnedColumns() {
-        guard let key = columnWidthsPersistenceKey else { return }
-        let pinnedKey = key.replacingOccurrences(of: "tusk.colwidths.", with: "tusk.pinned.")
-        UserDefaults.standard.set(Array(pinnedColumns), forKey: pinnedKey)
+        guard let key = pinnedColumnsPersistenceKey else { return }
+        UserDefaults.standard.set(Array(pinnedColumns), forKey: key)
     }
 
     // Edit-cell sheet state
@@ -879,7 +879,7 @@ struct ResultsGrid: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if !pinnedColumns.isEmpty, columnWidthsPersistenceKey != nil {
+                if !pinnedColumns.isEmpty, pinnedColumnsPersistenceKey != nil {
                     twoPaneLayout(geo: geo)
                 } else {
                     singlePaneLayout(geo: geo)
@@ -934,6 +934,12 @@ struct ResultsGrid: View {
             keyboardCursor = nil
             syncedRow = nil
         }
+        .onChange(of: columnWidthsPersistenceKey) { _, _ in
+            columnWidths = [:]
+            pinnedColumns = []
+            loadPersistedWidths()
+            loadPersistedPinnedColumns()
+        }
     }
 
     // MARK: - Layout helpers
@@ -942,13 +948,14 @@ struct ResultsGrid: View {
     private func singlePaneLayout(geo: GeometryProxy) -> some View {
         ScrollView([.horizontal, .vertical]) {
             ScrollViewReader { proxy in
+                let allIndices = Array(result.columns.indices)
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
                         ForEach(result.rows.indices, id: \.self) { rowIndex in
-                            dataRow(rowIndex: rowIndex, colIndices: Array(result.rows[rowIndex].indices))
+                            dataRow(rowIndex: rowIndex, colIndices: allIndices)
                         }
                     } header: {
-                        headerRow(colIndices: Array(result.columns.indices))
+                        headerRow(colIndices: allIndices)
                     }
                 }
                 .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
@@ -984,32 +991,32 @@ struct ResultsGrid: View {
             .frame(width: leftWidth)
             .scrollPosition(id: $syncedRow)
 
-            // Pinned / scrollable separator
-            Rectangle()
-                .fill(Color.accentColor.opacity(0.35))
-                .frame(width: 2)
+            if !nonPinnedIndices.isEmpty {
+                // Pinned / scrollable separator
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.35))
+                    .frame(width: 2)
 
-            // Right pane — non-pinned columns, scrolls both ways
-            ScrollView([.horizontal, .vertical]) {
-                ScrollViewReader { proxy in
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            ForEach(result.rows.indices, id: \.self) { rowIndex in
-                                dataRow(rowIndex: rowIndex, colIndices: nonPinnedIndices)
+                // Right pane — non-pinned columns, scrolls both ways
+                ScrollView([.horizontal, .vertical]) {
+                    ScrollViewReader { proxy in
+                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                            Section {
+                                ForEach(result.rows.indices, id: \.self) { rowIndex in
+                                    dataRow(rowIndex: rowIndex, colIndices: nonPinnedIndices)
+                                }
+                            } header: {
+                                headerRow(colIndices: nonPinnedIndices)
                             }
-                        } header: {
-                            headerRow(colIndices: nonPinnedIndices)
+                        }
+                        .frame(minWidth: max(0, geo.size.width - leftWidth - 2), minHeight: geo.size.height, alignment: .topLeading)
+                        .onAppear {
+                            scrollProxy = proxy
                         }
                     }
-                    .frame(minWidth: max(0, geo.size.width - leftWidth - 2), minHeight: geo.size.height, alignment: .topLeading)
-                    .onAppear {
-                        scrollProxy = proxy
-                        loadPersistedWidths()
-                        loadPersistedPinnedColumns()
-                    }
                 }
+                .scrollPosition(id: $syncedRow)
             }
-            .scrollPosition(id: $syncedRow)
         }
     }
 
@@ -1159,7 +1166,7 @@ struct ResultsGrid: View {
                 )
         }
         .contextMenu {
-            if columnWidthsPersistenceKey != nil {
+            if pinnedColumnsPersistenceKey != nil {
                 if isPinned {
                     Button("Unpin Column") {
                         pinnedColumns.remove(col.name)
@@ -1347,7 +1354,7 @@ struct ResultsGrid: View {
             lastSelectedRow = newCursor
         }
 
-        if pinnedColumns.isEmpty || columnWidthsPersistenceKey == nil {
+        if pinnedColumns.isEmpty || pinnedColumnsPersistenceKey == nil {
             scrollProxy?.scrollTo(newCursor, anchor: .center)
         } else {
             syncedRow = newCursor
@@ -1359,7 +1366,7 @@ struct ResultsGrid: View {
         selectedRows = Set(result.rows.indices)
         lastSelectedRow = 0
         keyboardCursor = 0
-        if pinnedColumns.isEmpty || columnWidthsPersistenceKey == nil {
+        if pinnedColumns.isEmpty || pinnedColumnsPersistenceKey == nil {
             scrollProxy?.scrollTo(0, anchor: .top)
         } else {
             syncedRow = 0
