@@ -722,7 +722,7 @@ private struct UsersAndRolesSection: View {
                     }
                 }
 
-                if isSuperuser && !connection.isReadOnly {
+                if isSuperuser && !connection.isReadOnly && appState.clients[connection.id] != nil {
                     Button {
                         showingCreateRole = true
                     } label: {

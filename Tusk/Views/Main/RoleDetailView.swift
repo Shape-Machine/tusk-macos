@@ -16,6 +16,7 @@ struct RoleDetailView: View {
     @State private var members: [String] = []
     @State private var allRoleNames: [String] = []
     @State private var isLoadingMemberships = false
+    @State private var membershipError: String? = nil
     @State private var actionError: String? = nil
 
     private var role: RoleInfo? {
@@ -57,6 +58,9 @@ struct RoleDetailView: View {
             Text(actionError ?? "")
         }
         .task {
+            if appState.connectionRoles[connectionID] == nil {
+                await appState.loadRoles(for: connection)
+            }
             await loadMemberships()
             allRoleNames = (appState.connectionRoles[connectionID] ?? []).map(\.name)
         }
@@ -249,6 +253,11 @@ struct RoleDetailView: View {
 
             if isLoadingMemberships {
                 ProgressView().controlSize(.small)
+            } else if let err = membershipError {
+                Text(err)
+                    .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if items.isEmpty {
                 Text("None")
                     .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
@@ -302,6 +311,7 @@ struct RoleDetailView: View {
 
     private func loadMemberships() async {
         isLoadingMemberships = true
+        membershipError = nil
         let escaped = roleName.replacingOccurrences(of: "'", with: "''")
 
         async let memberOfResult = client.query("""
@@ -319,8 +329,12 @@ struct RoleDetailView: View {
             ORDER BY u.rolname
             """)
 
-        memberships = (try? await memberOfResult)?.rows.compactMap { $0.first?.displayValue } ?? []
-        members     = (try? await membersResult)?.rows.compactMap { $0.first?.displayValue } ?? []
+        do {
+            memberships = try await memberOfResult.rows.compactMap { $0.first?.displayValue }
+            members     = try await membersResult.rows.compactMap { $0.first?.displayValue }
+        } catch {
+            membershipError = error.localizedDescription
+        }
         isLoadingMemberships = false
     }
 
@@ -337,8 +351,9 @@ struct RoleDetailView: View {
 
     private func alter(_ role: RoleInfo, _ onKeyword: String, _ offKeyword: String, current: Bool) async {
         let keyword = current ? offKeyword : onKeyword
-        await run("ALTER ROLE \(quoteIdentifier(role.name)) \(keyword);")
-        await refresh()
+        if await run("ALTER ROLE \(quoteIdentifier(role.name)) \(keyword);") {
+            await refresh()
+        }
     }
 
     // MARK: - Actions
@@ -358,7 +373,15 @@ struct RoleDetailView: View {
         guard !newName.isEmpty, newName != role.name else { return }
         Task {
             if await run("ALTER ROLE \(quoteIdentifier(role.name)) RENAME TO \(quoteIdentifier(newName));") {
-                await refresh()
+                await appState.loadRoles(for: connection)
+                // Close stale tab and open a fresh one under the new name
+                if let tab = appState.openTabs.first(where: {
+                    if case .role(let cid, let n) = $0.kind { return cid == connectionID && n == roleName }
+                    return false
+                }) {
+                    appState.closeDetailTab(tab.id)
+                }
+                appState.openRoleTab(for: connection, roleName: newName)
             }
         }
     }
