@@ -28,6 +28,8 @@ struct DataBrowserView: View {
 
     private var qualifiedName: String { "\(quoteIdentifier(schemaName)).\(quoteIdentifier(tableName))" }
     @AppStorage("tusk.dataBrowser.pageSize") private var pageSize = 1_000
+    private static let allowedPageSizes = [50, 100, 500, 1_000, 5_000]
+    private var effectivePageSize: Int { Self.allowedPageSizes.contains(pageSize) ? pageSize : 1_000 }
 
     @State private var sortColumn: String? = nil
     @State private var sortAscending = true
@@ -187,16 +189,16 @@ struct DataBrowserView: View {
 
             if state.offset > 0 {
                 Button("← Previous") {
-                    state.offset = max(0, state.offset - pageSize)
+                    state.offset = max(0, state.offset - effectivePageSize)
                     triggerLoad()
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)
             }
 
-            if result.rows.count == pageSize {
+            if result.rows.count == effectivePageSize {
                 Button("Next →") {
-                    state.offset += pageSize
+                    state.offset += effectivePageSize
                     triggerLoad()
                 }
                 .buttonStyle(.borderless)
@@ -281,7 +283,7 @@ struct DataBrowserView: View {
             sql += " ORDER BY \(quoteIdentifier(col)) \(sortAscending ? "ASC" : "DESC")"
         }
 
-        sql += " LIMIT \(pageSize) OFFSET \(state.offset)"
+        sql += " LIMIT \(effectivePageSize) OFFSET \(state.offset)"
 
         do {
             let queryResult = try await client.query(sql)

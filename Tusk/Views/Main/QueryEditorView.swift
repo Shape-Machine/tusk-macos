@@ -844,8 +844,16 @@ struct ResultsGrid: View {
 
     private func loadPersistedPinnedColumns() {
         guard let key = pinnedColumnsPersistenceKey else { return }
+        let valid = Set(result.columns.map(\.name))
         if let names = UserDefaults.standard.stringArray(forKey: key) {
-            pinnedColumns = Set(names)
+            let cleaned = Set(names).intersection(valid)
+            pinnedColumns = cleaned
+            // Prune stale entries so they don't accumulate in UserDefaults.
+            if cleaned.count != names.count {
+                UserDefaults.standard.set(Array(cleaned), forKey: key)
+            }
+        } else {
+            pinnedColumns = []
         }
     }
 
@@ -879,7 +887,7 @@ struct ResultsGrid: View {
     var body: some View {
         GeometryReader { geo in
             Group {
-                if !pinnedColumns.isEmpty, pinnedColumnsPersistenceKey != nil {
+                if !pinnedColIndices.isEmpty, pinnedColumnsPersistenceKey != nil {
                     twoPaneLayout(geo: geo)
                 } else {
                     singlePaneLayout(geo: geo)
