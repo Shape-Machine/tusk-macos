@@ -281,7 +281,8 @@ struct AddConnectionSheet: View {
         database = parsed.database
         username = parsed.username
         password = parsed.password
-        useSSL   = parsed.useSSL
+        useSSL               = parsed.useSSL
+        verifySSLCertificate = parsed.verifySSLCertificate
         uriError = nil
         testResult = nil
     }
@@ -293,6 +294,7 @@ struct AddConnectionSheet: View {
         var username: String
         var password: String
         var useSSL: Bool
+        var verifySSLCertificate: Bool
     }
 
     private func parsePostgresURI(_ raw: String) -> ParsedURI? {
@@ -308,12 +310,16 @@ struct AddConnectionSheet: View {
         let u  = comps.user ?? ""
         let pw = comps.password ?? ""
 
-        // sslmode query param: anything other than "disable" (case-insensitive) → useSSL = true
+        // sslmode query param mapping:
+        //   verify-full / verify-ca → useSSL = true, verifySSLCertificate = true
+        //   require / prefer / allow → useSSL = true, verifySSLCertificate = false
+        //   disable / (absent)      → useSSL = false, verifySSLCertificate = false
         let sslmode = (comps.queryItems?.first(where: { $0.name == "sslmode" })?.value ?? "").lowercased()
-        let ssl = !sslmode.isEmpty && sslmode != "disable"
+        let ssl    = !sslmode.isEmpty && sslmode != "disable"
+        let verify = sslmode == "verify-full" || sslmode == "verify-ca"
 
         guard !db.isEmpty else { return nil }
-        return ParsedURI(host: h, port: p, database: db, username: u, password: pw, useSSL: ssl)
+        return ParsedURI(host: h, port: p, database: db, username: u, password: pw, useSSL: ssl, verifySSLCertificate: verify)
     }
 
     private func testConnection() async {
