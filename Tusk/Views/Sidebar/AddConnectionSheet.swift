@@ -129,7 +129,6 @@ struct AddConnectionSheet: View {
                     if useSSL {
                         Toggle("Verify Certificate", isOn: $verifySSLCertificate)
                             .padding(.leading, 16)
-                            .foregroundStyle(.secondary)
                     }
                     Toggle("Read-only", isOn: $isReadOnly)
                 }
@@ -380,7 +379,7 @@ private func friendlyError(_ error: any Error) -> String {
         case .sslUnsupported:
             return "SSL is not enabled on this server. Turn off Use SSL and try again."
         case .connectionError:
-            let underlying = psql.underlying?.localizedDescription ?? ""
+            let underlying = (psql.underlying?.localizedDescription ?? "").lowercased()
             if underlying.contains("certificate") || underlying.contains("tls") || underlying.contains("ssl") || underlying.contains("handshake") {
                 return "SSL handshake failed. Try disabling certificate verification."
             }
