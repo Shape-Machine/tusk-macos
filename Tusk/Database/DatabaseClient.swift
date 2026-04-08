@@ -18,30 +18,33 @@ fileprivate final class CancelState: @unchecked Sendable {
     private var _username: String  = ""
     private var _password: String? = nil
     private var _database: String  = ""
-    private var _useSSL:   Bool    = false
+    private var _useSSL:                Bool    = false
+    private var _verifySSLCertificate:  Bool    = false
 
     var pid: Int? {
         lock.lock(); defer { lock.unlock() }
         return _pid
     }
 
-    var params: (host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool)? {
+    var params: (host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool, verifySSLCertificate: Bool)? {
         lock.lock(); defer { lock.unlock() }
         guard _pid != nil else { return nil }
-        return (_host, _port, _username, _password, _database, _useSSL)
+        return (_host, _port, _username, _password, _database, _useSSL, _verifySSLCertificate)
     }
 
-    func configure(pid: Int, host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool) {
+    func configure(pid: Int, host: String, port: Int, username: String, password: String?, database: String, useSSL: Bool, verifySSLCertificate: Bool) {
         lock.lock(); defer { lock.unlock() }
         _pid = pid; _host = host; _port = port
         _username = username; _password = password
         _database = database; _useSSL = useSSL
+        _verifySSLCertificate = verifySSLCertificate
     }
 
     func clear() {
         lock.lock(); defer { lock.unlock() }
         _pid = nil; _host = ""; _port = 5432
-        _username = ""; _password = nil; _database = ""; _useSSL = false
+        _username = ""; _password = nil; _database = ""
+        _useSSL = false; _verifySSLCertificate = false
     }
 }
 
@@ -86,7 +89,11 @@ actor DatabaseClient {
 
         let tlsConfig: PostgresConnection.Configuration.TLS
         if info.useSSL {
-            tlsConfig = .prefer(try NIOSSLContext(configuration: .makeClientConfiguration()))
+            var tls = TLSConfiguration.makeClientConfiguration()
+            if !info.verifySSLCertificate {
+                tls.certificateVerification = .none
+            }
+            tlsConfig = .require(try NIOSSLContext(configuration: tls))
         } else {
             tlsConfig = .disable
         }
@@ -117,7 +124,8 @@ actor DatabaseClient {
             cancelState.configure(
                 pid: Int(pid), host: info.host, port: info.port,
                 username: info.username, password: password.isEmpty ? nil : password,
-                database: info.database, useSSL: info.useSSL
+                database: info.database, useSSL: info.useSSL,
+                verifySSLCertificate: info.verifySSLCertificate
             )
         }
     }
@@ -497,8 +505,12 @@ actor DatabaseClient {
         let el = MultiThreadedEventLoopGroup.singleton.next()
         let tlsConfig: PostgresConnection.Configuration.TLS
         if p.useSSL {
-            guard let ctx = try? NIOSSLContext(configuration: .makeClientConfiguration()) else { return }
-            tlsConfig = .prefer(ctx)
+            var tls = TLSConfiguration.makeClientConfiguration()
+            if !p.verifySSLCertificate {
+                tls.certificateVerification = .none
+            }
+            guard let ctx = try? NIOSSLContext(configuration: tls) else { return }
+            tlsConfig = .require(ctx)
         } else {
             tlsConfig = .disable
         }

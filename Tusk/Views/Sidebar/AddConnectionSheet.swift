@@ -16,6 +16,7 @@ struct AddConnectionSheet: View {
     @State private var username: String = ""
     @State private var password: String = ""
     @State private var useSSL: Bool = false
+    @State private var verifySSLCertificate: Bool = false
     @State private var isReadOnly: Bool = false
     @State private var color: ConnectionColor = .blue
 
@@ -125,6 +126,11 @@ struct AddConnectionSheet: View {
                     TextField("Username", text: $username)
                     SecureField("Password", text: $password)
                     Toggle("Use SSL", isOn: $useSSL)
+                    if useSSL {
+                        Toggle("Verify Certificate", isOn: $verifySSLCertificate)
+                            .padding(.leading, 16)
+                            .foregroundStyle(.secondary)
+                    }
                     Toggle("Read-only", isOn: $isReadOnly)
                 }
 
@@ -191,8 +197,9 @@ struct AddConnectionSheet: View {
         database      = c.database
         username      = c.username
         password      = KeychainManager.shared.password(for: c.id) ?? ""
-        useSSL        = c.useSSL
-        isReadOnly    = c.isReadOnly
+        useSSL                = c.useSSL
+        verifySSLCertificate  = c.verifySSLCertificate
+        isReadOnly            = c.isReadOnly
         color         = c.color
         sshEnabled    = c.sshEnabled
         sshHost       = c.sshHost
@@ -226,8 +233,9 @@ struct AddConnectionSheet: View {
             updated.port         = portInt
             updated.database     = database
             updated.username     = username
-            updated.useSSL       = useSSL
-            updated.isReadOnly   = isReadOnly
+            updated.useSSL                = useSSL
+            updated.verifySSLCertificate  = verifySSLCertificate
+            updated.isReadOnly            = isReadOnly
             updated.color        = color
             updated.sshEnabled   = sshEnabled
             updated.sshHost      = sshHost
@@ -242,7 +250,8 @@ struct AddConnectionSheet: View {
             var new          = Connection(
                 name: name, host: host, port: portInt,
                 database: database, username: username,
-                useSSL: useSSL, isReadOnly: isReadOnly, color: color
+                useSSL: useSSL, verifySSLCertificate: verifySSLCertificate,
+                isReadOnly: isReadOnly, color: color
             )
             new.sshEnabled   = sshEnabled
             new.sshHost      = sshHost
@@ -314,7 +323,8 @@ struct AddConnectionSheet: View {
 
         var info        = Connection(
             name: name, host: host, port: Int(port) ?? 5432,
-            database: database, username: username, useSSL: useSSL, isReadOnly: isReadOnly
+            database: database, username: username,
+            useSSL: useSSL, verifySSLCertificate: verifySSLCertificate, isReadOnly: isReadOnly
         )
         info.sshEnabled = sshEnabled
         info.sshHost    = sshHost
@@ -370,6 +380,10 @@ private func friendlyError(_ error: any Error) -> String {
         case .sslUnsupported:
             return "SSL is not enabled on this server. Turn off Use SSL and try again."
         case .connectionError:
+            let underlying = psql.underlying?.localizedDescription ?? ""
+            if underlying.contains("certificate") || underlying.contains("tls") || underlying.contains("ssl") || underlying.contains("handshake") {
+                return "SSL handshake failed. Try disabling certificate verification."
+            }
             return "Could not reach the server. Check the host and port."
         case .authMechanismRequiresPassword:
             return "A password is required."
