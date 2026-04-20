@@ -101,6 +101,16 @@ struct DetailView: View {
                 let client = queryTab.connectionID.flatMap { appState.clients[$0] }
                 QueryEditorView(tab: queryTab, client: client)
             }
+        case .enumType(let connID, let schema, let enumName):
+            if let client = appState.clients[connID],
+               let connection = appState.connections.first(where: { $0.id == connID }) {
+                EnumDetailView(schema: schema, enumName: enumName, client: client, connection: connection)
+            }
+        case .sequence(let connID, let schema, let sequenceName):
+            if let client = appState.clients[connID],
+               let connection = appState.connections.first(where: { $0.id == connID }) {
+                SequenceDetailView(schema: schema, sequenceName: sequenceName, client: client, connection: connection)
+            }
         }
     }
 }
@@ -155,6 +165,10 @@ private struct DetailTabItem: View {
             return connection(for: connID)?.color.color
         case .queryEditor:
             guard let connID = queryTab?.connectionID else { return nil }
+            return connection(for: connID)?.color.color
+        case .enumType(let connID, _, _):
+            return connection(for: connID)?.color.color
+        case .sequence(let connID, _, _):
             return connection(for: connID)?.color.color
         }
     }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D8DDDD1DAF8C4B529F3301C /* SequenceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7463E8EFBD3C2C180D34F4A9 /* SequenceDetailView.swift */; };
 		166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3E61CFF0505201909FC54F /* DatabaseClient.swift */; };
 		16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */; };
 		19F8F1956AE3FBCCD1F774D4 /* AddConnectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */; };
@@ -16,6 +17,7 @@
 		2A084C868154BFE4D6EF03F6 /* RelationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D55DC649CC6986737268922 /* RelationsView.swift */; };
 		2E45EA7D8AE4CB19451C82E6 /* QueryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EBD0E0FCEF86AA688735504 /* QueryResult.swift */; };
 		43CD2524047CB484084FE904 /* PostgresNIO in Frameworks */ = {isa = PBXBuildFile; productRef = FEBBCC182C5C88B35790CB9D /* PostgresNIO */; };
+		4485D687490F834C172D3905 /* EnumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9E80D332E3F0E63E0DEBF9 /* EnumDetailView.swift */; };
 		4FF5DD480828FDE70A227CE9 /* TuskCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */; };
 		51A6EB67E1B6BA69959B4E7D /* CreateTableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D7A2C8664E78D1A769D1C2 /* CreateTableSheet.swift */; };
 		5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0031996A15573BA8334CAB25 /* KeychainManager.swift */; };
@@ -63,6 +65,7 @@
 		64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewAutosave.swift; sourceTree = "<group>"; };
 		67200EE52B28AE64A17D09E7 /* TuskFontDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskFontDesign.swift; sourceTree = "<group>"; };
 		6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHTunnel.swift; sourceTree = "<group>"; };
+		7463E8EFBD3C2C180D34F4A9 /* SequenceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceDetailView.swift; sourceTree = "<group>"; };
 		75B070C67054E9379142805B /* ActivityMonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityMonitorView.swift; sourceTree = "<group>"; };
 		7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLHighlighter.swift; sourceTree = "<group>"; };
 		7D55DC649CC6986737268922 /* RelationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelationsView.swift; sourceTree = "<group>"; };
@@ -70,6 +73,7 @@
 		934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBrowserView.swift; sourceTree = "<group>"; };
 		94B3CB106A5350A8C72161B8 /* CloudSQLProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSQLProxy.swift; sourceTree = "<group>"; };
 		94BE01E87D7E3C7BDDE1D73E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9D9E80D332E3F0E63E0DEBF9 /* EnumDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnumDetailView.swift; sourceTree = "<group>"; };
 		9EBD0E0FCEF86AA688735504 /* QueryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryResult.swift; sourceTree = "<group>"; };
 		A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleDetailView.swift; sourceTree = "<group>"; };
 		A053EBD9CCCEB96B218FE03A /* TuskCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskCommands.swift; sourceTree = "<group>"; };
@@ -183,10 +187,12 @@
 			children = (
 				75B070C67054E9379142805B /* ActivityMonitorView.swift */,
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
+				9D9E80D332E3F0E63E0DEBF9 /* EnumDetailView.swift */,
 				F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
 				A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */,
+				7463E8EFBD3C2C180D34F4A9 /* SequenceDetailView.swift */,
 				7CCC2BABC5778B46E7417764 /* SQLHighlighter.swift */,
 				07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */,
 				D84F6197423F6B815DCFF5EC /* TableDetailView.swift */,
@@ -340,6 +346,7 @@
 				51A6EB67E1B6BA69959B4E7D /* CreateTableSheet.swift in Sources */,
 				D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */,
 				166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */,
+				4485D687490F834C172D3905 /* EnumDetailView.swift in Sources */,
 				FA1608BC33176CC583BE610B /* ExplainPlanView.swift in Sources */,
 				ED65F385DAFD91259FA6AD73 /* FileExplorerView.swift in Sources */,
 				BEF51C28F2EF37A71F450340 /* HelpView.swift in Sources */,
@@ -351,6 +358,7 @@
 				B4EC8AF4B1FDCE660985FCA1 /* SQLHighlighter.swift in Sources */,
 				A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */,
 				EBAD0BABD60043A2CFC574C9 /* SSHTunnel.swift in Sources */,
+				0D8DDDD1DAF8C4B529F3301C /* SequenceDetailView.swift in Sources */,
 				B2123B053A58F7D78FEE550A /* SettingsPopover.swift in Sources */,
 				DAECA2B92659612616C8E742 /* SidebarView.swift in Sources */,
 				8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */,

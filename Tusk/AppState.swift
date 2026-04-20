@@ -244,6 +244,8 @@ final class AppState {
             case .role(let cid, _): return cid == connection.id
             case .queryEditor(let qid):
                 return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
+            case .enumType(let cid, _, _): return cid == connection.id
+            case .sequence(let cid, _, _): return cid == connection.id
             }
         }
         for tab in tabsToClose { closeDetailTab(tab.id) }
@@ -437,6 +439,42 @@ final class AppState {
             title: roleName,
             icon: "person",
             kind: .role(connectionID: connection.id, roleName: roleName)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
+    }
+
+    func openEnumTab(for connection: Connection, schema: String, enumName: String) {
+        if let existing = openTabs.first(where: {
+            if case .enumType(let cid, let s, let n) = $0.kind { return cid == connection.id && s == schema && n == enumName }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: enumName,
+            icon: "list.bullet",
+            kind: .enumType(connectionID: connection.id, schema: schema, enumName: enumName)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
+    }
+
+    func openSequenceTab(for connection: Connection, schema: String, sequenceName: String) {
+        if let existing = openTabs.first(where: {
+            if case .sequence(let cid, let s, let n) = $0.kind { return cid == connection.id && s == schema && n == sequenceName }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: sequenceName,
+            icon: "arrow.clockwise",
+            kind: .sequence(connectionID: connection.id, schema: schema, sequenceName: sequenceName)
         )
         openTabs.append(tab)
         activateDetailTab(tab)
@@ -663,6 +701,12 @@ final class AppState {
             if let connID = queryTabs.first(where: { $0.id == qid })?.connectionID {
                 selectedConnectionID = connID
             }
+        case .enumType(let cid, _, _):
+            selectedSidebarItem = nil
+            selectedConnectionID = cid
+        case .sequence(let cid, _, _):
+            selectedSidebarItem = nil
+            selectedConnectionID = cid
         }
     }
 
@@ -711,6 +755,8 @@ struct DetailTab: Identifiable, Hashable {
         case activityMonitor(connectionID: UUID)
         case role(connectionID: UUID, roleName: String)
         case queryEditor(queryTabID: UUID)
+        case enumType(connectionID: UUID, schema: String, enumName: String)
+        case sequence(connectionID: UUID, schema: String, sequenceName: String)
     }
 
     static func == (lhs: DetailTab, rhs: DetailTab) -> Bool { lhs.id == rhs.id }
