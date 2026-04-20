@@ -111,6 +111,11 @@ struct DetailView: View {
                let connection = appState.connections.first(where: { $0.id == connID }) {
                 SequenceDetailView(schema: schema, sequenceName: sequenceName, client: client, connection: connection)
             }
+        case .function(let connID, _, _, let oid):
+            if let client = appState.clients[connID],
+               let connection = appState.connections.first(where: { $0.id == connID }) {
+                FunctionDetailView(oid: oid, client: client, connection: connection)
+            }
         }
     }
 }
@@ -169,6 +174,8 @@ private struct DetailTabItem: View {
         case .enumType(let connID, _, _):
             return connection(for: connID)?.color.color
         case .sequence(let connID, _, _):
+            return connection(for: connID)?.color.color
+        case .function(let connID, _, _, _):
             return connection(for: connID)?.color.color
         }
     }
