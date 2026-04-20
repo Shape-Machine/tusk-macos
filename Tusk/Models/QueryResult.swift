@@ -126,6 +126,10 @@ func quoteIdentifier(_ name: String) -> String {
     "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }
 
+func quoteLiteral(_ value: String) -> String {
+    "'" + value.replacingOccurrences(of: "'", with: "''") + "'"
+}
+
 func copyToPasteboard(_ string: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(string, forType: .string)
@@ -263,8 +267,9 @@ struct FunctionInfo: Identifiable, Sendable {
     var id: String { "\(schema).\(signature)" }
     let schema: String
     let name: String
-    let signature: String   // e.g. "my_func(integer, text) → boolean"
-    let oid: UInt32         // pg_proc.oid — used for pg_get_functiondef
+    let signature: String       // e.g. "my_func(integer, text) → boolean"
+    let oid: UInt32             // pg_proc.oid — used for pg_get_functiondef
+    let identityArgs: String    // pg_get_function_identity_arguments — used for DROP FUNCTION
 }
 
 // MARK: - Sequence detail (fetched on demand)

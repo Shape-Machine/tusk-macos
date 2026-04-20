@@ -145,8 +145,8 @@ struct EnumDetailView: View {
 
         Task {
             do {
-                let posClause = beforeValue.isEmpty ? "" : " BEFORE \(quoteIdentifier(beforeValue))"
-                let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteIdentifier(newValue))\(posClause);"
+                let posClause = beforeValue.isEmpty ? "" : " BEFORE \(quoteLiteral(beforeValue))"
+                let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteLiteral(newValue))\(posClause);"
                 _ = try await client.query(sql)
                 try? await appState.refreshSchema(for: connection)
                 await reload()

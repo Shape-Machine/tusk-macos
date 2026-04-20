@@ -412,7 +412,8 @@ actor DatabaseClient {
                    p.proname,
                    pg_catalog.pg_get_function_arguments(p.oid),
                    CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END,
-                   p.oid
+                   p.oid,
+                   pg_catalog.pg_get_function_identity_arguments(p.oid)
             FROM pg_catalog.pg_proc p
             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
@@ -421,13 +422,14 @@ actor DatabaseClient {
             """)
 
         return result.rows.map { row in
-            let schema  = row[safe: 0]?.displayValue ?? ""
-            let name    = row[safe: 1]?.displayValue ?? ""
-            let args    = row[safe: 2]?.displayValue ?? ""
-            let ret     = row[safe: 3]?.displayValue ?? ""
-            let sig     = ret.isEmpty ? "\(name)(\(args))" : "\(name)(\(args)) → \(ret)"
-            let oid     = UInt32(row[safe: 4]?.displayValue ?? "") ?? 0
-            return FunctionInfo(schema: schema, name: name, signature: sig, oid: oid)
+            let schema       = row[safe: 0]?.displayValue ?? ""
+            let name         = row[safe: 1]?.displayValue ?? ""
+            let args         = row[safe: 2]?.displayValue ?? ""
+            let ret          = row[safe: 3]?.displayValue ?? ""
+            let sig          = ret.isEmpty ? "\(name)(\(args))" : "\(name)(\(args)) → \(ret)"
+            let oid          = UInt32(row[safe: 4]?.displayValue ?? "") ?? 0
+            let identityArgs = row[safe: 5]?.displayValue ?? ""
+            return FunctionInfo(schema: schema, name: name, signature: sig, oid: oid, identityArgs: identityArgs)
         }
     }
 
