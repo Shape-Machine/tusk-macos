@@ -445,7 +445,7 @@ actor DatabaseClient {
                    END,
                    p.prosecdef,
                    CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END,
-                   pg_catalog.pg_get_functiondef(p.oid),
+                   COALESCE(pg_catalog.pg_get_functiondef(p.oid), '-- source not available'),
                    pg_catalog.pg_get_function_identity_arguments(p.oid),
                    array_to_string(p.proargnames, ',')
             FROM pg_catalog.pg_proc p
@@ -472,7 +472,7 @@ actor DatabaseClient {
         let typeTokens = identityArgs.isEmpty
             ? []
             : identityArgs.components(separatedBy: ", ")
-        let nameTokens = argNamesRaw.isEmpty
+        let nameTokens = (argNamesRaw.isEmpty || argNamesRaw == "NULL")
             ? []
             : argNamesRaw.components(separatedBy: ",")
 

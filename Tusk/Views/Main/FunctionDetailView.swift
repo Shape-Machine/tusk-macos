@@ -55,7 +55,7 @@ struct FunctionDetailView: View {
             Spacer()
             if let detail, !isLoading {
                 metadataBadges(detail: detail)
-                if !isReadOnly {
+                if !isReadOnly || detail.volatility != "VOLATILE" {
                     Toggle(isOn: $isExecutorVisible) {
                         Label("Run", systemImage: "play.fill")
                             .font(.callout)
@@ -63,6 +63,8 @@ struct FunctionDetailView: View {
                     .toggleStyle(.button)
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                }
+                if !isReadOnly {
                     Button("Drop…") { dropFunction(detail) }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -164,8 +166,7 @@ private struct ExecutorPane: View {
     let client: DatabaseClient
     let isReadOnly: Bool
 
-    @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
-    @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
 
     @State private var argValues: [String] = []
     @State private var result: QueryResult? = nil
@@ -283,7 +284,7 @@ private struct ExecutorPane: View {
         } else {
             argList = inArgs.enumerated().map { idx, arg in
                 let val = idx < argValues.count ? argValues[idx] : ""
-                return "\(quoteLiteral(val))::\(arg.typeName)"
+                return val.isEmpty ? "NULL" : "\(quoteLiteral(val))::\(arg.typeName)"
             }.joined(separator: ", ")
         }
 

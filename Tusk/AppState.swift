@@ -483,7 +483,7 @@ final class AppState {
 
     func openFunctionTab(for connection: Connection, fn: FunctionInfo) {
         if let existing = openTabs.first(where: {
-            if case .function(let cid, let s, let n, _) = $0.kind { return cid == connection.id && s == fn.schema && n == fn.name }
+            if case .function(let cid, _, _, let o) = $0.kind { return cid == connection.id && o == fn.oid }
             return false
         }) {
             activateDetailTab(existing)
