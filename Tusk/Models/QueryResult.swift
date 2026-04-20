@@ -269,7 +269,8 @@ struct FunctionInfo: Identifiable, Sendable {
     let name: String
     let signature: String       // e.g. "my_func(integer, text) → boolean"
     let oid: UInt32             // pg_proc.oid — used for pg_get_functiondef
-    let identityArgs: String    // pg_get_function_identity_arguments — used for DROP FUNCTION
+    let identityArgs: String    // pg_get_function_identity_arguments — used for DROP FUNCTION/PROCEDURE
+    let isProcedure: Bool       // true when prokind = 'p'
 }
 
 // MARK: - Sequence detail (fetched on demand)

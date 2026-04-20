@@ -504,20 +504,24 @@ private struct SchemaRow: View {
 
     private func dropFunction(_ fn: FunctionInfo) {
         guard let client = appState.clients[connection.id] else { return }
+        let kind = fn.isProcedure ? "Procedure" : "Function"
         let alert = NSAlert()
-        alert.messageText = "Drop Function \"\(fn.name)\"?"
-        alert.informativeText = "This permanently removes the function: \(fn.signature)"
+        alert.messageText = "Drop \(kind) \"\(fn.name)\"?"
+        alert.informativeText = "This permanently removes the \(kind.lowercased()): \(fn.signature)"
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Drop Function")
+        alert.addButton(withTitle: "Drop \(kind)")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task {
             do {
-                _ = try await client.query("DROP FUNCTION \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name))(\(fn.identityArgs));")
+                let dropSQL = fn.isProcedure
+                    ? "DROP PROCEDURE \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name))(\(fn.identityArgs));"
+                    : "DROP FUNCTION \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name))(\(fn.identityArgs));"
+                _ = try await client.query(dropSQL)
                 try? await appState.refreshSchema(for: connection)
             } catch {
                 let err = NSAlert()
-                err.messageText = "Drop Function Failed"
+                err.messageText = "Drop \(kind) Failed"
                 err.informativeText = error.localizedDescription
                 err.alertStyle = .warning
                 err.runModal()

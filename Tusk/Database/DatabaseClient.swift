@@ -413,7 +413,8 @@ actor DatabaseClient {
                    pg_catalog.pg_get_function_arguments(p.oid),
                    CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END,
                    p.oid,
-                   pg_catalog.pg_get_function_identity_arguments(p.oid)
+                   pg_catalog.pg_get_function_identity_arguments(p.oid),
+                   p.prokind
             FROM pg_catalog.pg_proc p
             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
@@ -429,7 +430,8 @@ actor DatabaseClient {
             let sig          = ret.isEmpty ? "\(name)(\(args))" : "\(name)(\(args)) → \(ret)"
             let oid          = UInt32(row[safe: 4]?.displayValue ?? "") ?? 0
             let identityArgs = row[safe: 5]?.displayValue ?? ""
-            return FunctionInfo(schema: schema, name: name, signature: sig, oid: oid, identityArgs: identityArgs)
+            let isProcedure  = row[safe: 6]?.displayValue == "p"
+            return FunctionInfo(schema: schema, name: name, signature: sig, oid: oid, identityArgs: identityArgs, isProcedure: isProcedure)
         }
     }
 
