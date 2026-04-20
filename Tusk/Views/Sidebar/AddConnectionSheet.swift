@@ -8,6 +8,9 @@ struct AddConnectionSheet: View {
     // nil = new connection, non-nil = editing existing
     let connection: Connection?
 
+    @State private var connectionType: ConnectionType = .direct
+
+    // Direct TCP fields
     @State private var name: String = ""
     @State private var notes: String = ""
     @State private var host: String = "localhost"
@@ -27,11 +30,29 @@ struct AddConnectionSheet: View {
     @State private var sshKeyPath: String = ""
     @State private var sshPassphrase: String = ""
 
+    // Cloud SQL fields
+    @State private var cloudSQLInstanceConnectionName: String = ""
+    @State private var cloudSQLProject: String = ""
+    @State private var useADC: Bool = false
+    @State private var showingInstancePicker = false
+    @State private var availableDatabases: [String] = []
+    @State private var isLoadingDatabases = false
+    @State private var showingDatabasePopover = false
+
     @State private var isTestingConnection = false
     @State private var testResult: String? = nil
     @State private var uriError: String? = nil
 
     var isEditing: Bool { connection != nil }
+
+    private var isCloudSQL: Bool { connectionType == .cloudSQL }
+
+    private var saveDisabled: Bool {
+        if isCloudSQL {
+            return name.isEmpty || cloudSQLInstanceConnectionName.isEmpty || database.isEmpty || username.isEmpty
+        }
+        return name.isEmpty || host.isEmpty || database.isEmpty || username.isEmpty
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +61,7 @@ struct AddConnectionSheet: View {
                 Text(isEditing ? "Edit Connection" : "New Connection")
                     .font(.headline)
                 Spacer()
-                if !isEditing {
+                if !isEditing && !isCloudSQL {
                     Button("Paste URI") { pasteURI() }
                         .help("Parse a postgresql:// URI from the clipboard and fill in the fields below")
                 }
@@ -48,7 +69,7 @@ struct AddConnectionSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button(isEditing ? "Save" : "Add") { save() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty || host.isEmpty || database.isEmpty || username.isEmpty)
+                    .disabled(saveDisabled)
             }
             .padding()
 
@@ -111,48 +132,124 @@ struct AddConnectionSheet: View {
                     }
                     TextField("Notes (optional)", text: $notes)
                         .foregroundStyle(notes.isEmpty ? .secondary : .primary)
-                }
 
-                Section("Server") {
-                    HStack {
-                        TextField("Host", text: $host)
-                        TextField("Port", text: $port)
-                            .frame(width: 70)
+                    Picker("Type", selection: $connectionType) {
+                        Text("Direct TCP").tag(ConnectionType.direct)
+                        Text("Google Cloud SQL").tag(ConnectionType.cloudSQL)
                     }
-                    TextField("Database", text: $database)
+                    .pickerStyle(.menu)
                 }
 
-                Section("Authentication") {
-                    TextField("Username", text: $username)
-                    SecureField("Password", text: $password)
-                    Toggle("Use SSL", isOn: $useSSL)
-                    if useSSL {
-                        Toggle("Verify Certificate", isOn: $verifySSLCertificate)
-                            .padding(.leading, 16)
-                    }
-                    Toggle("Read-only", isOn: $isReadOnly)
-                }
-
-                Section("SSH Tunnel") {
-                    Toggle("Use SSH Tunnel", isOn: $sshEnabled)
-
-                    if sshEnabled {
+                if isCloudSQL {
+                    // Cloud SQL section
+                    Section("Google Cloud SQL") {
                         HStack {
-                            TextField("Host", text: $sshHost)
-                            TextField("Port", text: $sshPort)
+                            TextField("Instance connection name (project:region:instance)",
+                                      text: $cloudSQLInstanceConnectionName)
+                            Button("Browse…") { showingInstancePicker = true }
+                                .buttonStyle(.borderless)
+                                .disabled(CloudSQLProxy.findBinary("gcloud") == nil)
+                                .help(CloudSQLProxy.findBinary("gcloud") == nil
+                                      ? "gcloud not found. Install Google Cloud SDK."
+                                      : "Browse Cloud SQL instances from gcloud")
+                        }
+                        HStack {
+                            TextField("Database", text: $database)
+                            if isLoadingDatabases {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Button("Browse…") {
+                                    Task { await fetchDatabases() }
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(cloudSQLInstanceConnectionName.isEmpty
+                                          || CloudSQLProxy.findBinary("gcloud") == nil)
+                                .help(cloudSQLInstanceConnectionName.isEmpty
+                                      ? "Select an instance first"
+                                      : "List databases on this instance")
+                                .popover(isPresented: $showingDatabasePopover, arrowEdge: .trailing) {
+                                    DatabasePickerPopover(
+                                        databases: availableDatabases,
+                                        onSelect: { database = $0; showingDatabasePopover = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Section("Authentication") {
+                        TextField("Username", text: $username)
+                        Toggle("Use Application Default Credentials", isOn: $useADC)
+                        if !useADC {
+                            SecureField("Password", text: $password)
+                        } else {
+                            Text("Token will be fetched via `gcloud auth print-access-token` at connect time.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Toggle("Read-only", isOn: $isReadOnly)
+                    }
+
+                    Section {
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.shield.fill")
+                                .foregroundStyle(.green)
+                            Text("cloud-sql-proxy encrypts traffic to Cloud SQL. The local connection to the proxy uses plain TCP.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                } else {
+                    // Direct TCP sections
+                    Section("Server") {
+                        HStack {
+                            TextField("Host", text: $host)
+                            TextField("Port", text: $port)
                                 .frame(width: 70)
                         }
-                        TextField("User", text: $sshUser)
-                        HStack {
-                            TextField("Key Path", text: $sshKeyPath)
-                            Button("Browse…") { pickKey() }
-                                .buttonStyle(.borderless)
+                        TextField("Database", text: $database)
+                    }
+
+                    Section("Authentication") {
+                        TextField("Username", text: $username)
+                        SecureField("Password", text: $password)
+                        Toggle("Use SSL", isOn: $useSSL)
+                        if useSSL {
+                            Toggle("Verify Certificate", isOn: $verifySSLCertificate)
+                                .padding(.leading, 16)
                         }
-                        SecureField("Passphrase", text: $sshPassphrase)
+                        Toggle("Read-only", isOn: $isReadOnly)
+                    }
+
+                    Section("SSH Tunnel") {
+                        Toggle("Use SSH Tunnel", isOn: $sshEnabled)
+
+                        if sshEnabled {
+                            HStack {
+                                TextField("Host", text: $sshHost)
+                                TextField("Port", text: $sshPort)
+                                    .frame(width: 70)
+                            }
+                            TextField("User", text: $sshUser)
+                            HStack {
+                                TextField("Key Path", text: $sshKeyPath)
+                                Button("Browse…") { pickKey() }
+                                    .buttonStyle(.borderless)
+                            }
+                            SecureField("Passphrase", text: $sshPassphrase)
+                        }
                     }
                 }
             }
             .formStyle(.grouped)
+            .sheet(isPresented: $showingInstancePicker) {
+                CloudSQLInstancePickerSheet { instance in
+                    cloudSQLInstanceConnectionName = instance.connectionName
+                    cloudSQLProject = instance.project
+                    if name.isEmpty { name = instance.name }
+                }
+            }
 
             Divider()
 
@@ -168,7 +265,10 @@ struct AddConnectionSheet: View {
                             Text("Test Connection")
                         }
                     }
-                    .disabled(host.isEmpty || database.isEmpty || username.isEmpty)
+                    .disabled({
+                        if isCloudSQL { return cloudSQLInstanceConnectionName.isEmpty || database.isEmpty || username.isEmpty }
+                        return host.isEmpty || database.isEmpty || username.isEmpty
+                    }())
 
                     Spacer()
                 }
@@ -182,7 +282,7 @@ struct AddConnectionSheet: View {
             }
             .padding()
         }
-        .frame(width: 460)
+        .frame(width: 480)
         .onAppear { populate() }
     }
 
@@ -190,23 +290,27 @@ struct AddConnectionSheet: View {
 
     private func populate() {
         guard let c = connection else { return }
-        name          = c.name
-        host          = c.host
-        port          = String(c.port)
-        database      = c.database
-        username      = c.username
-        password      = KeychainManager.shared.password(for: c.id) ?? ""
+        connectionType  = c.connectionType
+        name            = c.name
+        host            = c.host
+        port            = String(c.port)
+        database        = c.database
+        username        = c.username
+        password        = KeychainManager.shared.password(for: c.id) ?? ""
         useSSL                = c.useSSL
         verifySSLCertificate  = c.verifySSLCertificate
         isReadOnly            = c.isReadOnly
-        color         = c.color
-        sshEnabled    = c.sshEnabled
-        sshHost       = c.sshHost
-        sshPort       = String(c.sshPort)
-        sshUser       = c.sshUser
-        sshKeyPath    = c.sshKeyPath
-        sshPassphrase = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
-        notes         = c.notes
+        color           = c.color
+        sshEnabled      = c.sshEnabled
+        sshHost         = c.sshHost
+        sshPort         = String(c.sshPort)
+        sshUser         = c.sshUser
+        sshKeyPath      = c.sshKeyPath
+        sshPassphrase   = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
+        notes           = c.notes
+        cloudSQLInstanceConnectionName = c.cloudSQLInstanceConnectionName
+        cloudSQLProject = c.cloudSQLProject
+        useADC          = c.useADC
     }
 
     private func pickKey() {
@@ -227,6 +331,7 @@ struct AddConnectionSheet: View {
         let sshPortInt = Int(sshPort) ?? 22
         if let existing = connection {
             var updated          = existing
+            updated.connectionType = connectionType
             updated.name         = name
             updated.host         = host
             updated.port         = portInt
@@ -242,22 +347,29 @@ struct AddConnectionSheet: View {
             updated.sshUser      = sshUser
             updated.sshKeyPath   = sshKeyPath
             updated.notes        = notes
+            updated.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
+            updated.cloudSQLProject = cloudSQLProject
+            updated.useADC       = useADC
             KeychainManager.shared.setPassword(password, for: updated.id)
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
             appState.updateConnection(updated)
         } else {
-            var new          = Connection(
+            var new = Connection(
                 name: name, host: host, port: portInt,
                 database: database, username: username,
                 useSSL: useSSL, verifySSLCertificate: verifySSLCertificate,
                 isReadOnly: isReadOnly, color: color
             )
-            new.sshEnabled   = sshEnabled
-            new.sshHost      = sshHost
-            new.sshPort      = sshPortInt
-            new.notes        = notes
-            new.sshUser      = sshUser
-            new.sshKeyPath   = sshKeyPath
+            new.connectionType = connectionType
+            new.sshEnabled  = sshEnabled
+            new.sshHost     = sshHost
+            new.sshPort     = sshPortInt
+            new.notes       = notes
+            new.sshUser     = sshUser
+            new.sshKeyPath  = sshKeyPath
+            new.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
+            new.cloudSQLProject = cloudSQLProject
+            new.useADC      = useADC
             KeychainManager.shared.setPassword(password, for: new.id)
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
             appState.addConnection(new)
@@ -326,7 +438,17 @@ struct AddConnectionSheet: View {
         isTestingConnection = true
         testResult = nil
 
-        var info        = Connection(
+        if isCloudSQL {
+            await testCloudSQLConnection()
+        } else {
+            await testDirectConnection()
+        }
+
+        isTestingConnection = false
+    }
+
+    private func testDirectConnection() async {
+        var info = Connection(
             name: name, host: host, port: Int(port) ?? 5432,
             database: database, username: username,
             useSSL: useSSL, verifySSLCertificate: verifySSLCertificate, isReadOnly: isReadOnly
@@ -340,7 +462,6 @@ struct AddConnectionSheet: View {
         var tunnel: SSHTunnel? = nil
 
         do {
-            // Start SSH tunnel if enabled and patch host/port to the local end.
             if sshEnabled {
                 let t = SSHTunnel()
                 try await t.start(
@@ -365,7 +486,122 @@ struct AddConnectionSheet: View {
         }
 
         if let tunnel { await tunnel.stop() }
-        isTestingConnection = false
+    }
+
+    private func fetchDatabases() async {
+        isLoadingDatabases = true
+        availableDatabases = []
+        defer { isLoadingDatabases = false }
+
+        // Parse project:region:instance — project is the first component.
+        let parts = cloudSQLInstanceConnectionName.split(separator: ":").map(String.init)
+        let instanceName = parts.last ?? cloudSQLInstanceConnectionName
+        let project = parts.first ?? cloudSQLProject
+
+        guard let gcloud = CloudSQLProxy.findBinary("gcloud") else { return }
+
+        do {
+            let dbs = try await Task.detached {
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: gcloud)
+                var args = ["sql", "databases", "list",
+                            "--instance", instanceName,
+                            "--format=json"]
+                if !project.isEmpty { args += ["--project", project] }
+                proc.arguments = args
+                let pipe = Pipe()
+                proc.standardOutput = pipe
+                proc.standardError  = FileHandle.nullDevice
+                try proc.run()
+                proc.waitUntilExit()
+                guard proc.terminationStatus == 0 else { return [String]() }
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                    return [String]()
+                }
+                return json.compactMap { $0["name"] as? String }
+                           .filter { $0 != "information_schema" && $0 != "performance_schema" && $0 != "mysql" && $0 != "sys" }
+                           .sorted()
+            }.value
+            availableDatabases = dbs
+            if !dbs.isEmpty { showingDatabasePopover = true }
+        } catch {
+            // Silently fall through — user can still type the name manually.
+        }
+    }
+
+    private func testCloudSQLConnection() async {
+        let proxy = CloudSQLProxy()
+        var effectiveInfo = Connection(
+            name: name, host: "127.0.0.1", port: 5432,
+            database: database, username: username,
+            useSSL: false, verifySSLCertificate: false, isReadOnly: isReadOnly
+        )
+        do {
+            let localPort = try await proxy.start(
+                instanceConnectionName: cloudSQLInstanceConnectionName,
+                useIAMAuth: useADC
+            )
+            effectiveInfo.port = localPort
+
+            let pw: String
+            if useADC {
+                pw = try await Task.detached { try CloudSQLProxy.fetchADCToken() }.value
+            } else {
+                pw = password
+            }
+
+            let client = DatabaseClient()
+            do {
+                try await client.connect(to: effectiveInfo, password: pw)
+                await client.disconnect()
+                testResult = "✓ Connected successfully"
+            } catch {
+                testResult = "✗ \(friendlyError(error))"
+            }
+        } catch {
+            testResult = "✗ \(friendlyError(error))"
+        }
+        await proxy.stop()
+    }
+}
+
+// MARK: - Database picker popover
+
+private struct DatabasePickerPopover: View {
+    let databases: [String]
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text("Choose Database")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+            Divider()
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(databases, id: \.self) { db in
+                        Button {
+                            onSelect(db)
+                        } label: {
+                            Text(db)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .background(Color.primary.opacity(0.001))
+                        Divider()
+                    }
+                }
+            }
+        }
+        .frame(width: 200)
+        .frame(maxHeight: 240)
     }
 }
 

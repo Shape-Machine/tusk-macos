@@ -543,6 +543,20 @@ actor DatabaseClient {
         }
     }
 
+    // MARK: - Schema names (for showing empty schemas in the sidebar)
+
+    func schemaNames() async throws -> [String] {
+        let result = try await query("""
+            SELECT nspname
+            FROM pg_namespace
+            WHERE nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+              AND nspname NOT LIKE 'pg_temp_%'
+              AND nspname NOT LIKE 'pg_toast_temp_%'
+            ORDER BY nspname
+            """)
+        return result.rows.compactMap { $0[safe: 0]?.displayValue }
+    }
+
     // MARK: - Databases
 
     func databases() async throws -> [String] {

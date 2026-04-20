@@ -1,6 +1,13 @@
 import Foundation
 import SwiftUI
 
+// MARK: - ConnectionType
+
+enum ConnectionType: String, Codable, CaseIterable, Sendable {
+    case direct
+    case cloudSQL
+}
+
 // MARK: - Connection
 
 struct Connection: Identifiable, Codable, Hashable, Sendable {
@@ -24,9 +31,17 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var sshUser: String = ""
     var sshKeyPath: String = ""
 
+    // Google Cloud SQL
+    var connectionType: ConnectionType = .direct
+    var cloudSQLInstanceConnectionName: String = ""
+    var cloudSQLProject: String = ""   // display only (e.g. "my-project")
+    var useADC: Bool = false           // use Application Default Credentials instead of a password
+
     // Password is NOT stored here — lives in Keychain only.
 
-    var displayHost: String { "\(host):\(port)" }
+    var displayHost: String {
+        connectionType == .cloudSQL ? cloudSQLInstanceConnectionName : "\(host):\(port)"
+    }
 }
 
 extension Connection {
@@ -52,6 +67,10 @@ extension Connection {
         sshPort     = try c.decodeIfPresent(Int.self,     forKey: .sshPort)     ?? 22
         sshUser     = try c.decodeIfPresent(String.self,  forKey: .sshUser)     ?? ""
         sshKeyPath  = try c.decodeIfPresent(String.self,  forKey: .sshKeyPath)  ?? ""
+        connectionType                 = try c.decodeIfPresent(ConnectionType.self, forKey: .connectionType)                 ?? .direct
+        cloudSQLInstanceConnectionName = try c.decodeIfPresent(String.self,         forKey: .cloudSQLInstanceConnectionName) ?? ""
+        cloudSQLProject                = try c.decodeIfPresent(String.self,         forKey: .cloudSQLProject)                ?? ""
+        useADC                         = try c.decodeIfPresent(Bool.self,           forKey: .useADC)                         ?? false
     }
 }
 

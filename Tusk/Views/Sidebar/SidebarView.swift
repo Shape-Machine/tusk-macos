@@ -135,6 +135,7 @@ private struct ConnectionSection: View {
             .union(allEnums.map { $0.schema })
             .union(allSeqs.map { $0.schema })
             .union(allFuncs.map { $0.schema })
+            .union(appState.schemaNamesCache[connection.id] ?? [])
         let uniqueSchemas = allSchemas.sorted {
             if $0 == "public" { return true }
             if $1 == "public" { return false }
@@ -825,6 +826,13 @@ private struct ConnectionHeader: View {
                     .help("Read-only connection")
             }
 
+            if connection.connectionType == .cloudSQL {
+                CloudSQLProxyBadge(
+                    status: appState.proxyStatuses[connection.id],
+                    fontSize: sidebarFontSize
+                )
+            }
+
             if let errorMsg = appState.schemaRefreshErrors[connection.id] {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: sidebarFontSize - 3))
@@ -903,6 +911,14 @@ private struct ConnectionHeader: View {
                     }
                 }
             }
+            if connection.connectionType == .cloudSQL, isConnected {
+                if case .crashed = appState.proxyStatuses[connection.id] {
+                    Divider()
+                    Button("Restart Proxy") {
+                        Task { try? await appState.restartProxy(for: connection) }
+                    }
+                }
+            }
             Divider()
             Button("Duplicate") { appState.duplicateConnection(connection) }
             Button("Edit…") { appState.editingConnection = connection }
@@ -941,5 +957,29 @@ private struct ConnectionHeader: View {
                 err.runModal()
             }
         }
+    }
+}
+
+// MARK: - Cloud SQL proxy status badge
+
+private struct CloudSQLProxyBadge: View {
+    let status: CloudSQLProxy.Status?
+    let fontSize: Double
+
+    var body: some View {
+        let (icon, tint, label): (String, Color, String) = {
+            switch status {
+            case .running:
+                return ("cloud.fill", .green, "cloud-sql-proxy running")
+            case .crashed(let msg):
+                return ("cloud.slash.fill", .red, "cloud-sql-proxy crashed: \(msg)")
+            default:
+                return ("cloud", .secondary, "cloud-sql-proxy starting…")
+            }
+        }()
+        Image(systemName: icon)
+            .font(.system(size: fontSize - 3))
+            .foregroundStyle(tint)
+            .help(label)
     }
 }

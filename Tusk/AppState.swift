@@ -14,6 +14,10 @@ final class AppState {
     // MARK: - SSH tunnels (one per tunnelled connection)
     var tunnels: [UUID: SSHTunnel] = [:]
 
+    // MARK: - Cloud SQL proxies (one per Cloud SQL connection)
+    var cloudProxies: [UUID: CloudSQLProxy] = [:]
+    var proxyStatuses: [UUID: CloudSQLProxy.Status] = [:]
+
     // MARK: - Sidebar selection
     var selectedSidebarItem: SidebarItem? = nil
 
@@ -30,6 +34,8 @@ final class AppState {
     var schemaSequences:    [UUID: [SequenceInfo]]  = [:]
     var schemaFunctions:    [UUID: [FunctionInfo]]  = [:]
     var schemaRefreshErrors:[UUID: String]          = [:]
+    /// All non-system schema names for a connection, regardless of whether they contain objects.
+    var schemaNamesCache:   [UUID: [String]]        = [:]
     /// keyed by connectionID → "schema.table" → TableSizeInfo
     var schemaTableSizes:   [UUID: [String: TableSizeInfo]] = [:]
     /// keyed by connectionID → sorted list of database names on that server
@@ -111,10 +117,30 @@ final class AppState {
         // that table tabs backed by the existing client stay renderable during reconnect.
         var effectiveConnection = connection
         var newTunnel: SSHTunnel? = nil
+        var newProxy: CloudSQLProxy? = nil
 
-        // Start SSH tunnel if enabled; the tunnel exposes a local port that
-        // PostgresNIO will connect to instead of the real host/port.
-        if connection.sshEnabled {
+        if connection.connectionType == .cloudSQL {
+            // Cloud SQL: start the Auth Proxy and patch host/port to the local end.
+            proxyStatuses[connection.id] = .starting
+            let proxy = CloudSQLProxy()
+            do {
+                let localPort = try await proxy.start(
+                    instanceConnectionName: connection.cloudSQLInstanceConnectionName,
+                    useIAMAuth: connection.useADC
+                )
+                newProxy = proxy
+                proxyStatuses[connection.id] = .running
+                effectiveConnection.host               = "127.0.0.1"
+                effectiveConnection.port               = localPort
+                effectiveConnection.useSSL             = false
+                effectiveConnection.verifySSLCertificate = false
+            } catch {
+                proxyStatuses[connection.id] = .crashed(error.localizedDescription)
+                throw error
+            }
+        } else if connection.sshEnabled {
+            // Start SSH tunnel if enabled; the tunnel exposes a local port that
+            // PostgresNIO will connect to instead of the real host/port.
             let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id)
             let tunnel = SSHTunnel()
             try await tunnel.start(connection: connection, passphrase: passphrase)
@@ -124,13 +150,23 @@ final class AppState {
             effectiveConnection.port = localPort
         }
 
-        let password = KeychainManager.shared.password(for: connection.id) ?? ""
+        let password: String
+        if connection.connectionType == .cloudSQL && connection.useADC {
+            password = try await Task.detached { try CloudSQLProxy.fetchADCToken() }.value
+        } else {
+            password = KeychainManager.shared.password(for: connection.id) ?? ""
+        }
+
         let newClient = DatabaseClient()
         do {
             try await newClient.connect(to: effectiveConnection, password: password)
         } catch {
             await newClient.disconnect()
             if let tunnel = newTunnel { await tunnel.stop() }
+            if let proxy = newProxy {
+                proxyStatuses[connection.id] = .crashed(error.localizedDescription)
+                await proxy.stop()
+            }
             throw error
         }
 
@@ -141,7 +177,11 @@ final class AppState {
         if let oldTunnel = tunnels.removeValue(forKey: connection.id) {
             await oldTunnel.stop()
         }
+        if let oldProxy = cloudProxies.removeValue(forKey: connection.id) {
+            await oldProxy.stop()
+        }
         if let tunnel = newTunnel { tunnels[connection.id] = tunnel }
+        if let proxy = newProxy { cloudProxies[connection.id] = proxy }
         clients[connection.id] = newClient
         activeDatabase[connection.id] = connection.database
         selectedConnectionID = connection.id
@@ -166,14 +206,18 @@ final class AppState {
     func disconnect(_ connection: Connection) {
         let client = clients.removeValue(forKey: connection.id)
         let tunnel = tunnels.removeValue(forKey: connection.id)
+        let proxy  = cloudProxies.removeValue(forKey: connection.id)
+        proxyStatuses.removeValue(forKey: connection.id)
         Task {
             await client?.disconnect()
             await tunnel?.stop()
+            await proxy?.stop()
         }
         schemaTables.removeValue(forKey: connection.id)
         schemaEnums.removeValue(forKey: connection.id)
         schemaSequences.removeValue(forKey: connection.id)
         schemaFunctions.removeValue(forKey: connection.id)
+        schemaNamesCache.removeValue(forKey: connection.id)
         schemaRefreshErrors.removeValue(forKey: connection.id)
         schemaTableSizes.removeValue(forKey: connection.id)
         schemaDatabases.removeValue(forKey: connection.id)
@@ -206,6 +250,12 @@ final class AppState {
         clients[connection.id] != nil
     }
 
+    func restartProxy(for connection: Connection) async throws {
+        guard connection.connectionType == .cloudSQL else { return }
+        // Full reconnect rebuilds both the proxy and the Postgres client.
+        try await connect(connection)
+    }
+
     // MARK: - Schema refresh
 
     func refreshSchema(for connection: Connection) async throws {
@@ -215,15 +265,18 @@ final class AppState {
             async let enums     = try client.enums()
             async let sequences = try client.sequences()
             async let functions = try client.functions()
+            async let names     = try client.schemaNames()
             // Collect all results before writing — all-or-nothing to avoid partial cache state
             let t = try await tables
             let e = try await enums
             let s = try await sequences
             let f = try await functions
+            let n = try await names
             schemaTables[connection.id]    = t
             schemaEnums[connection.id]     = e
             schemaSequences[connection.id] = s
             schemaFunctions[connection.id] = f
+            schemaNamesCache[connection.id] = n
             schemaRefreshErrors.removeValue(forKey: connection.id)
             await loadSuperuserStatus(for: connection)
         } catch {
@@ -397,14 +450,25 @@ final class AppState {
         var effectiveConnection = connection
         effectiveConnection.database = database
 
-        // Reuse the existing SSH tunnel if present
+        // Reuse the existing SSH tunnel or Cloud SQL proxy if present
         if let tunnel = tunnels[connectionID] {
             let localPort = await tunnel.localPort
             effectiveConnection.host = "127.0.0.1"
             effectiveConnection.port = localPort
+        } else if let proxy = cloudProxies[connectionID] {
+            let localPort = await proxy.localPort
+            effectiveConnection.host               = "127.0.0.1"
+            effectiveConnection.port               = localPort
+            effectiveConnection.useSSL             = true
+            effectiveConnection.verifySSLCertificate = false
         }
 
-        let password = KeychainManager.shared.password(for: connectionID) ?? ""
+        let password: String
+        if connection.connectionType == .cloudSQL && connection.useADC {
+            password = try await Task.detached { try CloudSQLProxy.fetchADCToken() }.value
+        } else {
+            password = KeychainManager.shared.password(for: connectionID) ?? ""
+        }
         let newClient = DatabaseClient()
         do {
             try await newClient.connect(to: effectiveConnection, password: password)
@@ -432,6 +496,7 @@ final class AppState {
         schemaEnums.removeValue(forKey: connectionID)
         schemaSequences.removeValue(forKey: connectionID)
         schemaFunctions.removeValue(forKey: connectionID)
+        schemaNamesCache.removeValue(forKey: connectionID)
         schemaTableSizes.removeValue(forKey: connectionID)
         schemaRefreshErrors.removeValue(forKey: connectionID)
 
