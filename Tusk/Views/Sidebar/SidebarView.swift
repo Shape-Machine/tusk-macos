@@ -232,7 +232,7 @@ private struct SchemaRow: View {
     @AppStorage("tusk.sidebar.fontDesign")    private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
     @State private var isExpanded: Bool
-    @State private var tablesExpanded: Bool = true
+    @State private var tablesExpanded: Bool = false
     @State private var viewsExpanded: Bool = false
     @State private var enumsExpanded: Bool = false
     @State private var sequencesExpanded: Bool = false
@@ -248,7 +248,7 @@ private struct SchemaRow: View {
         self.onlyTables = onlyTables
         self.connection = connection
         self.tableSizes = tableSizes
-        _isExpanded = State(initialValue: schema == "public")
+        _isExpanded = State(initialValue: false)
     }
 
     var isEmpty: Bool { tables.isEmpty && views.isEmpty && enums.isEmpty && sequences.isEmpty && functions.isEmpty }
