@@ -130,6 +130,15 @@ struct CloudSQLInstancePickerSheet: View {
                 .onDoubleClick {
                     if let s = selectedInstance { onSelect(s); dismiss() }
                 }
+
+                if instances.count >= 500 {
+                    Text("Showing 500 instances — use the filter to narrow results.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(.bar)
+                }
             }
         }
         .frame(width: 480, height: 380)
@@ -156,7 +165,7 @@ struct CloudSQLInstancePickerSheet: View {
             }
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: gcloud)
-            proc.arguments     = ["sql", "instances", "list", "--format=json"]
+            proc.arguments     = ["sql", "instances", "list", "--format=json", "--limit=500"]
             let pipe = Pipe()
             proc.standardOutput = pipe
             proc.standardError  = FileHandle.nullDevice
@@ -172,7 +181,9 @@ struct CloudSQLInstancePickerSheet: View {
 
     private nonisolated static func parseInstances(from data: Data) throws -> [CloudSQLInstance] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            throw CloudSQLListError.parseError
+            let preview = String(data: data.prefix(200), encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? "(binary data)"
+            throw CloudSQLListError.parseError(preview)
         }
         return json.compactMap { item -> CloudSQLInstance? in
             guard
@@ -198,14 +209,14 @@ struct CloudSQLInstancePickerSheet: View {
 
 private enum CloudSQLListError: LocalizedError {
     case commandFailed
-    case parseError
+    case parseError(String)
 
     var errorDescription: String? {
         switch self {
         case .commandFailed:
             return "gcloud sql instances list failed. Ensure you are authenticated: gcloud auth login"
-        case .parseError:
-            return "Failed to parse gcloud output."
+        case .parseError(let preview):
+            return "Failed to parse gcloud output: \(preview)"
         }
     }
 }

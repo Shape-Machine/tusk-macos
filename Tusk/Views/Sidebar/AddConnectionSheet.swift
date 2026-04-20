@@ -42,6 +42,7 @@ struct AddConnectionSheet: View {
     @State private var isTestingConnection = false
     @State private var testResult: String? = nil
     @State private var uriError: String? = nil
+    @State private var testProxy: CloudSQLProxy? = nil
 
     var isEditing: Bool { connection != nil }
 
@@ -284,6 +285,12 @@ struct AddConnectionSheet: View {
         }
         .frame(width: 480)
         .onAppear { populate() }
+        .onDisappear {
+            if let proxy = testProxy {
+                Task { await proxy.stop() }
+                testProxy = nil
+            }
+        }
     }
 
     // MARK: - Actions
@@ -327,6 +334,13 @@ struct AddConnectionSheet: View {
     }
 
     private func save() {
+        if isCloudSQL {
+            let parts = cloudSQLInstanceConnectionName.split(separator: ":")
+            guard parts.count == 3, parts.allSatisfy({ !$0.isEmpty }) else {
+                uriError = "Instance connection name must be in the format project:region:instance"
+                return
+            }
+        }
         let portInt    = Int(port) ?? 5432
         let sshPortInt = Int(sshPort) ?? 22
         if let existing = connection {
@@ -350,7 +364,7 @@ struct AddConnectionSheet: View {
             updated.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             updated.cloudSQLProject = cloudSQLProject
             updated.useADC       = useADC
-            KeychainManager.shared.setPassword(password, for: updated.id)
+            if !useADC { KeychainManager.shared.setPassword(password, for: updated.id) }
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
             appState.updateConnection(updated)
         } else {
@@ -370,7 +384,7 @@ struct AddConnectionSheet: View {
             new.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             new.cloudSQLProject = cloudSQLProject
             new.useADC      = useADC
-            KeychainManager.shared.setPassword(password, for: new.id)
+            if !useADC { KeychainManager.shared.setPassword(password, for: new.id) }
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
             appState.addConnection(new)
         }
@@ -489,6 +503,7 @@ struct AddConnectionSheet: View {
     }
 
     private func fetchDatabases() async {
+        guard !isLoadingDatabases else { return }
         isLoadingDatabases = true
         availableDatabases = []
         defer { isLoadingDatabases = false }
@@ -532,6 +547,8 @@ struct AddConnectionSheet: View {
 
     private func testCloudSQLConnection() async {
         let proxy = CloudSQLProxy()
+        testProxy = proxy
+        defer { testProxy = nil }
         var effectiveInfo = Connection(
             name: name, host: "127.0.0.1", port: 5432,
             database: database, username: username,

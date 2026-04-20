@@ -105,8 +105,10 @@ final class AppState {
 
     func connect(_ connection: Connection) async throws {
         // Prevent overlapping connect attempts for the same connection.
-        // A second call while one is already in flight is silently dropped.
-        guard !connectingIDs.contains(connection.id) else { return }
+        guard !connectingIDs.contains(connection.id) else {
+            throw NSError(domain: "Tusk", code: 0,
+                          userInfo: [NSLocalizedDescriptionKey: "Already connecting to \(connection.name). Please wait."])
+        }
         connectingIDs.insert(connection.id)
         defer { connectingIDs.remove(connection.id) }
 
@@ -456,10 +458,24 @@ final class AppState {
             effectiveConnection.host = "127.0.0.1"
             effectiveConnection.port = localPort
         } else if let proxy = cloudProxies[connectionID] {
-            let localPort = await proxy.localPort
-            effectiveConnection.host               = "127.0.0.1"
-            effectiveConnection.port               = localPort
-            effectiveConnection.useSSL             = true
+            // If the proxy has crashed, restart it before switching databases.
+            if case .crashed = await proxy.status {
+                let newProxy = CloudSQLProxy()
+                proxyStatuses[connectionID] = .starting
+                let localPort = try await newProxy.start(
+                    instanceConnectionName: connection.cloudSQLInstanceConnectionName,
+                    useIAMAuth: connection.useADC
+                )
+                cloudProxies[connectionID] = newProxy
+                proxyStatuses[connectionID] = .running
+                effectiveConnection.host = "127.0.0.1"
+                effectiveConnection.port = localPort
+            } else {
+                let localPort = await proxy.localPort
+                effectiveConnection.host = "127.0.0.1"
+                effectiveConnection.port = localPort
+            }
+            effectiveConnection.useSSL             = false
             effectiveConnection.verifySSLCertificate = false
         }
 
