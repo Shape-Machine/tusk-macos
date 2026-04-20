@@ -129,18 +129,23 @@ struct FunctionDetailView: View {
     }
 
     private func dropFunction(_ detail: FunctionDetail) {
+        let isProcedure = detail.returnType.isEmpty
+        let kind = isProcedure ? "Procedure" : "Function"
         let alert = NSAlert()
-        alert.messageText = "Drop Function \"\(detail.name)\"?"
-        alert.informativeText = "This permanently removes the function: \(detail.schema).\(detail.name)(\(detail.arguments.map { $0.typeName }.joined(separator: ", ")))"
+        alert.messageText = "Drop \(kind) \"\(detail.name)\"?"
+        alert.informativeText = "This permanently removes the \(kind.lowercased()): \(detail.schema).\(detail.name)(\(detail.arguments.map { $0.typeName }.joined(separator: ", ")))"
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Drop Function")
+        alert.addButton(withTitle: "Drop \(kind)")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         Task {
             do {
                 let argTypes = detail.arguments.map { $0.typeName }.joined(separator: ", ")
-                _ = try await client.query("DROP FUNCTION \(quoteIdentifier(detail.schema)).\(quoteIdentifier(detail.name))(\(argTypes));")
+                let dropSQL = isProcedure
+                    ? "DROP PROCEDURE \(quoteIdentifier(detail.schema)).\(quoteIdentifier(detail.name))(\(argTypes));"
+                    : "DROP FUNCTION \(quoteIdentifier(detail.schema)).\(quoteIdentifier(detail.name))(\(argTypes));"
+                _ = try await client.query(dropSQL)
                 try? await appState.refreshSchema(for: connection)
                 if let tab = appState.openTabs.first(where: {
                     if case .function(let cid, let s, let n, _) = $0.kind {
