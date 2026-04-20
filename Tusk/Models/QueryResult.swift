@@ -126,6 +126,11 @@ func quoteIdentifier(_ name: String) -> String {
     "\"" + name.replacingOccurrences(of: "\"", with: "\"\"") + "\""
 }
 
+func copyToPasteboard(_ string: String) {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(string, forType: .string)
+}
+
 private func sqlLiteral(_ cell: QueryCell) -> String {
     switch cell {
     case .null:             return "NULL"
@@ -259,6 +264,23 @@ struct FunctionInfo: Identifiable, Sendable {
     let schema: String
     let name: String
     let signature: String   // e.g. "my_func(integer, text) → boolean"
+    let oid: UInt32         // pg_proc.oid — used for pg_get_functiondef
+}
+
+// MARK: - Sequence detail (fetched on demand)
+
+struct SequenceDetail: Sendable {
+    let schema: String
+    let name: String
+    let dataType: String
+    let startValue: Int64
+    let minValue: Int64
+    let maxValue: Int64
+    let increment: Int64
+    let cycleOption: Bool
+    let lastValue: Int64?       // nil if the sequence has never been used
+    let ownedByTable: String?   // "schema.table" if owned by a serial column
+    let ownedByColumn: String?
 }
 
 // MARK: - App-level errors

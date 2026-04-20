@@ -411,7 +411,8 @@ actor DatabaseClient {
             SELECT n.nspname,
                    p.proname,
                    pg_catalog.pg_get_function_arguments(p.oid),
-                   CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END
+                   CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END,
+                   p.oid
             FROM pg_catalog.pg_proc p
             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
@@ -425,8 +426,57 @@ actor DatabaseClient {
             let args    = row[safe: 2]?.displayValue ?? ""
             let ret     = row[safe: 3]?.displayValue ?? ""
             let sig     = ret.isEmpty ? "\(name)(\(args))" : "\(name)(\(args)) → \(ret)"
-            return FunctionInfo(schema: schema, name: name, signature: sig)
+            let oid     = UInt32(row[safe: 4]?.displayValue ?? "") ?? 0
+            return FunctionInfo(schema: schema, name: name, signature: sig, oid: oid)
         }
+    }
+
+    func sequenceDetail(schema: String, name: String) async throws -> SequenceDetail {
+        let s = schema.sqlEscaped
+        let n = name.sqlEscaped
+        let result = try await query("""
+            SELECT s.data_type,
+                   s.start_value,
+                   s.min_value,
+                   s.max_value,
+                   s.increment_by,
+                   s.cycle,
+                   s.last_value,
+                   d.refobjid::regclass::text AS owned_table,
+                   a.attname                  AS owned_column
+            FROM pg_sequences s
+            JOIN pg_class c
+                ON c.relname = s.sequencename
+               AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = s.schemaname)
+               AND c.relkind = 'S'
+            LEFT JOIN pg_depend d
+                ON d.objid = c.oid AND d.deptype = 'a'
+            LEFT JOIN pg_attribute a
+                ON a.attrelid = d.refobjid AND a.attnum = d.refobjsubid
+            WHERE s.schemaname = '\(s)'
+              AND s.sequencename = '\(n)'
+            """)
+        guard let row = result.rows.first else {
+            throw TuskError.queryFailed("Sequence \(schema).\(name) not found")
+        }
+        let lastValStr  = row[safe: 6]?.displayValue ?? ""
+        let rawOwnedTable  = row[safe: 7]?.displayValue ?? "NULL"
+        let rawOwnedColumn = row[safe: 8]?.displayValue ?? "NULL"
+        let ownedTable:  String? = rawOwnedTable  == "NULL" ? nil : rawOwnedTable
+        let ownedColumn: String? = rawOwnedColumn == "NULL" ? nil : rawOwnedColumn
+        return SequenceDetail(
+            schema:       schema,
+            name:         name,
+            dataType:     row[safe: 0]?.displayValue ?? "",
+            startValue:   Int64(row[safe: 1]?.displayValue ?? "") ?? 1,
+            minValue:     Int64(row[safe: 2]?.displayValue ?? "") ?? 1,
+            maxValue:     Int64(row[safe: 3]?.displayValue ?? "") ?? Int64.max,
+            increment:    Int64(row[safe: 4]?.displayValue ?? "") ?? 1,
+            cycleOption:  (row[safe: 5]?.displayValue ?? "false") == "true",
+            lastValue:    lastValStr == "NULL" || lastValStr.isEmpty ? nil : Int64(lastValStr),
+            ownedByTable: ownedTable,
+            ownedByColumn: ownedColumn
+        )
     }
 
     // MARK: - Raw query

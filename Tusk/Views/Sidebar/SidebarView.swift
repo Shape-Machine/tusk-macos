@@ -310,7 +310,7 @@ private struct SchemaRow: View {
                 if !enums.isEmpty {
                     DisclosureGroup(isExpanded: $enumsExpanded) {
                         ForEach(enums) { enumInfo in
-                            EnumValueRow(enumInfo: enumInfo)
+                            EnumValueRow(enumInfo: enumInfo, connection: connection)
                         }
                     } label: {
                         categoryLabel("Enums", icon: "list.bullet", count: enums.count)
@@ -327,6 +327,16 @@ private struct SchemaRow: View {
                             } icon: {
                                 Image(systemName: "arrow.clockwise")
                             }
+                            .onTapGesture { appState.openSequenceTab(for: connection, schema: seq.schema, sequenceName: seq.name) }
+                            .contextMenu {
+                                Button("Copy Name") { copyToPasteboard(seq.name) }
+                                Button("Copy Qualified Name") { copyToPasteboard("\(quoteIdentifier(seq.schema)).\(quoteIdentifier(seq.name))") }
+                                if appState.isConnected(connection) && !connection.isReadOnly {
+                                    Divider()
+                                    Button("Reset to 1…") { resetSequence(seq) }
+                                    Button("Drop Sequence…") { dropSequence(seq) }
+                                }
+                            }
                         }
                     } label: {
                         categoryLabel("Sequences", icon: "arrow.clockwise", count: sequences.count)
@@ -342,6 +352,15 @@ private struct SchemaRow: View {
                                     .font(.system(size: sidebarFontSize, design: sidebarFontDesign.design))
                             } icon: {
                                 Image(systemName: "function")
+                            }
+                            .contextMenu {
+                                Button("Copy Name") { copyToPasteboard(fn.name) }
+                                Button("Copy Signature") { copyToPasteboard(fn.signature) }
+                                Button("Copy CREATE OR REPLACE…") { copyFunctionDDL(fn) }
+                                if appState.isConnected(connection) && !connection.isReadOnly {
+                                    Divider()
+                                    Button("Drop Function…") { dropFunction(fn) }
+                                }
                             }
                         }
                     } label: {
@@ -427,6 +446,81 @@ private struct SchemaRow: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
+    }
+
+    // MARK: - Sequence context menu actions
+
+    private func resetSequence(_ seq: SequenceInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+        let alert = NSAlert()
+        alert.messageText = "Reset \"\(seq.name)\" to 1?"
+        alert.informativeText = "The next call to nextval() will return 1."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Reset")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            _ = try? await client.query("SELECT setval('\(quoteIdentifier(seq.schema)).\(quoteIdentifier(seq.name))', 1, false);")
+        }
+    }
+
+    private func dropSequence(_ seq: SequenceInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+        let alert = NSAlert()
+        alert.messageText = "Drop Sequence \"\(seq.name)\"?"
+        alert.informativeText = "This permanently removes the sequence."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Drop Sequence")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            do {
+                _ = try await client.query("DROP SEQUENCE \(quoteIdentifier(seq.schema)).\(quoteIdentifier(seq.name));")
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Drop Sequence Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
+    }
+
+    // MARK: - Function context menu actions
+
+    private func copyFunctionDDL(_ fn: FunctionInfo) {
+        guard let client = appState.clients[connection.id] else {
+            copyToPasteboard("-- client not connected")
+            return
+        }
+        Task {
+            let ddl = (try? await client.query("SELECT pg_get_functiondef(\(fn.oid));"))?.rows.first?.first?.displayValue ?? ""
+            copyToPasteboard(ddl.isEmpty ? "-- could not fetch definition" : ddl)
+        }
+    }
+
+    private func dropFunction(_ fn: FunctionInfo) {
+        guard let client = appState.clients[connection.id] else { return }
+        let alert = NSAlert()
+        alert.messageText = "Drop Function \"\(fn.name)\"?"
+        alert.informativeText = "This permanently removes the function: \(fn.signature)"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Drop Function")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            do {
+                _ = try await client.query("DROP FUNCTION \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name));")
+                try? await appState.refreshSchema(for: connection)
+            } catch {
+                let err = NSAlert()
+                err.messageText = "Drop Function Failed"
+                err.informativeText = error.localizedDescription
+                err.alertStyle = .warning
+                err.runModal()
+            }
+        }
     }
 
     // MARK: - Rename schema
@@ -787,9 +881,13 @@ private struct UsersAndRolesSection: View {
 
 private struct EnumValueRow: View {
     let enumInfo: EnumInfo
+    let connection: Connection
+
+    @Environment(AppState.self) private var appState
     @AppStorage("tusk.sidebar.fontSize")    private var sidebarFontSize   = 13.0
     @AppStorage("tusk.sidebar.fontDesign") private var sidebarFontDesign: TuskFontDesign = .sansSerif
     @State private var isExpanded = false
+    @State private var actionError: String? = nil
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -806,8 +904,73 @@ private struct EnumValueRow: View {
             } icon: {
                 Image(systemName: "list.bullet")
             }
+            .onTapGesture {
+                appState.openEnumTab(for: connection, schema: enumInfo.schema, enumName: enumInfo.name)
+            }
         }
         .animation(nil, value: isExpanded)
+        .contextMenu {
+            Button("Copy Name") { copyToPasteboard(enumInfo.name) }
+            Button("Copy CREATE TYPE…") { copyEnumDDL() }
+            if appState.isConnected(connection) && !connection.isReadOnly {
+                Divider()
+                Button("Rename…") { renameEnum() }
+                Button("Drop Enum…") { dropEnum() }
+            }
+        }
+        .alert("Action Failed", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK") { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
+        }
+    }
+
+    private func copyEnumDDL() {
+        let values = enumInfo.values.map { "    \(quoteIdentifier($0))" }.joined(separator: ",\n")
+        let ddl = "CREATE TYPE \(quoteIdentifier(enumInfo.schema)).\(quoteIdentifier(enumInfo.name)) AS ENUM (\n\(values)\n);"
+        copyToPasteboard(ddl)
+    }
+
+    private func renameEnum() {
+        guard let client = appState.clients[connection.id] else { return }
+        let alert = NSAlert()
+        alert.messageText = "Rename Enum \"\(enumInfo.name)\""
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
+        field.stringValue = enumInfo.name
+        field.selectText(nil)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty, newName != enumInfo.name else { return }
+        Task {
+            do {
+                _ = try await client.query("ALTER TYPE \(quoteIdentifier(enumInfo.schema)).\(quoteIdentifier(enumInfo.name)) RENAME TO \(quoteIdentifier(newName));")
+                try? await appState.refreshSchema(for: connection)
+            } catch { actionError = error.localizedDescription }
+        }
+    }
+
+    private func dropEnum() {
+        guard let client = appState.clients[connection.id] else { return }
+        let alert = NSAlert()
+        alert.messageText = "Drop Enum \"\(enumInfo.name)\"?"
+        alert.informativeText = "This permanently removes the enum type."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Drop Enum")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            do {
+                _ = try await client.query("DROP TYPE \(quoteIdentifier(enumInfo.schema)).\(quoteIdentifier(enumInfo.name));")
+                try? await appState.refreshSchema(for: connection)
+            } catch { actionError = error.localizedDescription }
+        }
     }
 }
 
