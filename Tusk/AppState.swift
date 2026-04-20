@@ -136,6 +136,12 @@ final class AppState {
                 effectiveConnection.port               = localPort
                 effectiveConnection.useSSL             = false
                 effectiveConnection.verifySSLCertificate = false
+                // Monitor the proxy for unexpected termination and sync status into
+                // proxyStatuses so the sidebar badge and Restart Proxy menu stay accurate.
+                let connectionID = connection.id
+                Task { [weak self] in
+                    await self?.monitorProxy(proxy, connectionID: connectionID)
+                }
             } catch {
                 proxyStatuses[connection.id] = .crashed(error.localizedDescription)
                 throw error
@@ -256,6 +262,27 @@ final class AppState {
         guard connection.connectionType == .cloudSQL else { return }
         // Full reconnect rebuilds both the proxy and the Postgres client.
         try await connect(connection)
+    }
+
+    /// Polls a running proxy until it crashes, then syncs the crash status into
+    /// proxyStatuses so the sidebar badge and "Restart Proxy" menu reflect reality.
+    private func monitorProxy(_ proxy: CloudSQLProxy, connectionID: UUID) async {
+        while true {
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 s
+            let current = await proxy.status
+            // If the proxy is still alive or we've already recorded a crash, stop.
+            guard case .running = current else {
+                if case .crashed(let msg) = current {
+                    // Only update if we still own this proxy (user may have reconnected).
+                    if cloudProxies[connectionID] === proxy {
+                        proxyStatuses[connectionID] = .crashed(msg)
+                    }
+                }
+                return
+            }
+            // Keep monitoring while the proxy's own status says it's still running.
+            if cloudProxies[connectionID] !== proxy { return }
+        }
     }
 
     // MARK: - Schema refresh
@@ -460,6 +487,7 @@ final class AppState {
         } else if let proxy = cloudProxies[connectionID] {
             // If the proxy has crashed, restart it before switching databases.
             if case .crashed = await proxy.status {
+                await proxy.stop()  // clean up pipe handlers / FDs before replacing
                 let newProxy = CloudSQLProxy()
                 proxyStatuses[connectionID] = .starting
                 let localPort = try await newProxy.start(
@@ -468,6 +496,7 @@ final class AppState {
                 )
                 cloudProxies[connectionID] = newProxy
                 proxyStatuses[connectionID] = .running
+                Task { [weak self] in await self?.monitorProxy(newProxy, connectionID: connectionID) }
                 effectiveConnection.host = "127.0.0.1"
                 effectiveConnection.port = localPort
             } else {
