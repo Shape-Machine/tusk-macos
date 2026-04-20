@@ -60,10 +60,14 @@ actor CloudSQLProxy {
         do {
             try await waitForPort(port, timeout: 15)
         } catch {
+            // Clear the handler before reading so it doesn't race with availableData.
+            stderrPipe.fileHandleForReading.readabilityHandler = nil
             proc.terminate()
             process = nil
+            // Use availableData (non-blocking) instead of readDataToEndOfFile() which
+            // blocks until EOF and can hang if the process is slow to exit.
             let stderrOutput = String(
-                data: stderrPipe.fileHandleForReading.readDataToEndOfFile(),
+                data: stderrPipe.fileHandleForReading.availableData,
                 encoding: .utf8
             )?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let detail = stderrOutput.isEmpty ? error.localizedDescription : stderrOutput

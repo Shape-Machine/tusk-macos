@@ -43,6 +43,7 @@ struct AddConnectionSheet: View {
     @State private var testResult: String? = nil
     @State private var uriError: String? = nil
     @State private var testProxy: CloudSQLProxy? = nil
+    @State private var gcloudAvailable: Bool = true
 
     var isEditing: Bool { connection != nil }
 
@@ -149,10 +150,10 @@ struct AddConnectionSheet: View {
                                       text: $cloudSQLInstanceConnectionName)
                             Button("Browse…") { showingInstancePicker = true }
                                 .buttonStyle(.borderless)
-                                .disabled(CloudSQLProxy.findBinary("gcloud") == nil)
-                                .help(CloudSQLProxy.findBinary("gcloud") == nil
-                                      ? "gcloud not found. Install Google Cloud SDK."
-                                      : "Browse Cloud SQL instances from gcloud")
+                                .disabled(!gcloudAvailable)
+                                .help(gcloudAvailable
+                                      ? "Browse Cloud SQL instances from gcloud"
+                                      : "gcloud not found. Install Google Cloud SDK.")
                         }
                         HStack {
                             TextField("Database", text: $database)
@@ -164,7 +165,7 @@ struct AddConnectionSheet: View {
                                 }
                                 .buttonStyle(.borderless)
                                 .disabled(cloudSQLInstanceConnectionName.isEmpty
-                                          || CloudSQLProxy.findBinary("gcloud") == nil)
+                                          || !gcloudAvailable)
                                 .help(cloudSQLInstanceConnectionName.isEmpty
                                       ? "Select an instance first"
                                       : "List databases on this instance")
@@ -284,7 +285,10 @@ struct AddConnectionSheet: View {
             .padding()
         }
         .frame(width: 480)
-        .onAppear { populate() }
+        .onAppear {
+            populate()
+            gcloudAvailable = CloudSQLProxy.findBinary("gcloud") != nil
+        }
         .onDisappear {
             if let proxy = testProxy {
                 Task { await proxy.stop() }
@@ -364,7 +368,11 @@ struct AddConnectionSheet: View {
             updated.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             updated.cloudSQLProject = cloudSQLProject
             updated.useADC       = useADC
-            if !useADC { KeychainManager.shared.setPassword(password, for: updated.id) }
+            if useADC {
+                KeychainManager.shared.deletePassword(for: updated.id)
+            } else {
+                KeychainManager.shared.setPassword(password, for: updated.id)
+            }
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
             appState.updateConnection(updated)
         } else {
@@ -384,7 +392,11 @@ struct AddConnectionSheet: View {
             new.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             new.cloudSQLProject = cloudSQLProject
             new.useADC      = useADC
-            if !useADC { KeychainManager.shared.setPassword(password, for: new.id) }
+            if useADC {
+                KeychainManager.shared.deletePassword(for: new.id)
+            } else {
+                KeychainManager.shared.setPassword(password, for: new.id)
+            }
             KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
             appState.addConnection(new)
         }
