@@ -288,6 +288,26 @@ struct SequenceDetail: Sendable {
     let ownedByColumn: String?
 }
 
+// MARK: - Function detail (fetched on demand)
+
+struct FunctionArg: Identifiable, Sendable {
+    var id: Int { index }
+    let index: Int
+    let name: String?       // nil when the argument is unnamed
+    let typeName: String    // e.g. "integer", "text", "character varying"
+}
+
+struct FunctionDetail: Sendable {
+    let schema: String
+    let name: String
+    let language: String        // plpgsql, sql, c, …
+    let volatility: String      // VOLATILE / STABLE / IMMUTABLE
+    let isSecurityDefiner: Bool
+    let returnType: String      // empty string for procedures
+    let source: String          // full CREATE OR REPLACE FUNCTION … text
+    let arguments: [FunctionArg]
+}
+
 // MARK: - App-level errors
 
 enum TuskError: LocalizedError {

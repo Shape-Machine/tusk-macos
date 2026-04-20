@@ -246,6 +246,7 @@ final class AppState {
                 return queryTabs.first(where: { $0.id == qid })?.connectionID == connection.id
             case .enumType(let cid, _, _): return cid == connection.id
             case .sequence(let cid, _, _): return cid == connection.id
+            case .function(let cid, _, _, _): return cid == connection.id
             }
         }
         for tab in tabsToClose { closeDetailTab(tab.id) }
@@ -480,6 +481,24 @@ final class AppState {
         activateDetailTab(tab)
     }
 
+    func openFunctionTab(for connection: Connection, fn: FunctionInfo) {
+        if let existing = openTabs.first(where: {
+            if case .function(let cid, let s, let n, _) = $0.kind { return cid == connection.id && s == fn.schema && n == fn.name }
+            return false
+        }) {
+            activateDetailTab(existing)
+            return
+        }
+        let tab = DetailTab(
+            id: UUID(),
+            title: fn.name,
+            icon: "function",
+            kind: .function(connectionID: connection.id, schema: fn.schema, functionName: fn.name, oid: fn.oid)
+        )
+        openTabs.append(tab)
+        activateDetailTab(tab)
+    }
+
     func loadTableSizes(for connection: Connection) async {
         guard let client = clients[connection.id] else { return }
         guard let sizes = try? await client.tableSizes() else { return }
@@ -707,6 +726,9 @@ final class AppState {
         case .sequence(let cid, _, _):
             selectedSidebarItem = nil
             selectedConnectionID = cid
+        case .function(let cid, _, _, _):
+            selectedSidebarItem = nil
+            selectedConnectionID = cid
         }
     }
 
@@ -757,6 +779,7 @@ struct DetailTab: Identifiable, Hashable {
         case queryEditor(queryTabID: UUID)
         case enumType(connectionID: UUID, schema: String, enumName: String)
         case sequence(connectionID: UUID, schema: String, sequenceName: String)
+        case function(connectionID: UUID, schema: String, functionName: String, oid: UInt32)
     }
 
     static func == (lhs: DetailTab, rhs: DetailTab) -> Bool { lhs.id == rhs.id }

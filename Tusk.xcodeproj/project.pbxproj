@@ -31,6 +31,7 @@
 		88CB8E03F6BAAA888B4887F2 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B49B9D6360FE850DD93363 /* AppState.swift */; };
 		8BC64A5B72B6437F52A7EC49 /* ActivityMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B070C67054E9379142805B /* ActivityMonitorView.swift */; };
 		8BFABBAE3E2552D7B68ED705 /* SplitViewAutosave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */; };
+		9EF64556295E01772AA50486 /* FunctionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61F1FC4557C5B581972CE00D /* FunctionDetailView.swift */; };
 		A2845865FD833A6DE48D7963 /* SQLTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B5D84046EF2C8F752BDD6C /* SQLTextEditor.swift */; };
 		B2123B053A58F7D78FEE550A /* SettingsPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1C8E9BF3BF31794B0FF27A /* SettingsPopover.swift */; };
 		B3A1EC28832572F3CC389E9B /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A2CA1E506E6FDF0786437 /* Connection.swift */; };
@@ -62,6 +63,7 @@
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61F1FC4557C5B581972CE00D /* FunctionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionDetailView.swift; sourceTree = "<group>"; };
 		64EF8F3C6D1DAA9DADEBD38E /* SplitViewAutosave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewAutosave.swift; sourceTree = "<group>"; };
 		67200EE52B28AE64A17D09E7 /* TuskFontDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuskFontDesign.swift; sourceTree = "<group>"; };
 		6F7C45A0E07237D92F1C1FC4 /* SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHTunnel.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
 				9D9E80D332E3F0E63E0DEBF9 /* EnumDetailView.swift */,
 				F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */,
+				61F1FC4557C5B581972CE00D /* FunctionDetailView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
 				7D55DC649CC6986737268922 /* RelationsView.swift */,
 				A053CF122F6C07ED2D8AB8D8 /* RoleDetailView.swift */,
@@ -349,6 +352,7 @@
 				4485D687490F834C172D3905 /* EnumDetailView.swift in Sources */,
 				FA1608BC33176CC583BE610B /* ExplainPlanView.swift in Sources */,
 				ED65F385DAFD91259FA6AD73 /* FileExplorerView.swift in Sources */,
+				9EF64556295E01772AA50486 /* FunctionDetailView.swift in Sources */,
 				BEF51C28F2EF37A71F450340 /* HelpView.swift in Sources */,
 				5EC184771B4FC8EB6B55DF1A /* KeychainManager.swift in Sources */,
 				16C056E3414DCF8938D6DFA4 /* QueryEditorView.swift in Sources */,

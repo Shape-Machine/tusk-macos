@@ -433,6 +433,67 @@ actor DatabaseClient {
         }
     }
 
+    func functionDetail(oid: UInt32) async throws -> FunctionDetail {
+        let result = try await query("""
+            SELECT n.nspname,
+                   p.proname,
+                   l.lanname,
+                   CASE p.provolatile
+                       WHEN 'i' THEN 'IMMUTABLE'
+                       WHEN 's' THEN 'STABLE'
+                       ELSE 'VOLATILE'
+                   END,
+                   p.prosecdef,
+                   CASE p.prokind WHEN 'p' THEN '' ELSE pg_catalog.pg_get_function_result(p.oid) END,
+                   pg_catalog.pg_get_functiondef(p.oid),
+                   pg_catalog.pg_get_function_identity_arguments(p.oid),
+                   array_to_string(p.proargnames, ',')
+            FROM pg_catalog.pg_proc p
+            JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+            JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+            WHERE p.oid = \(oid)
+            """)
+
+        guard let row = result.rows.first else {
+            throw TuskError.queryFailed("Function with oid \(oid) not found")
+        }
+
+        let schema           = row[safe: 0]?.displayValue ?? ""
+        let name             = row[safe: 1]?.displayValue ?? ""
+        let language         = row[safe: 2]?.displayValue ?? ""
+        let volatility       = row[safe: 3]?.displayValue ?? "VOLATILE"
+        let secdef           = row[safe: 4]?.displayValue ?? "false"
+        let returnType       = row[safe: 5]?.displayValue ?? ""
+        let source           = row[safe: 6]?.displayValue ?? ""
+        let identityArgs     = row[safe: 7]?.displayValue ?? ""
+        let argNamesRaw      = row[safe: 8]?.displayValue ?? ""
+
+        // Build FunctionArg list from identity args (types) and proargnames
+        let typeTokens = identityArgs.isEmpty
+            ? []
+            : identityArgs.components(separatedBy: ", ")
+        let nameTokens = argNamesRaw.isEmpty
+            ? []
+            : argNamesRaw.components(separatedBy: ",")
+
+        let arguments: [FunctionArg] = typeTokens.enumerated().map { idx, typeName in
+            let rawName = idx < nameTokens.count ? nameTokens[idx] : ""
+            let argName = rawName.isEmpty ? nil : rawName
+            return FunctionArg(index: idx, name: argName, typeName: typeName.trimmingCharacters(in: .whitespaces))
+        }
+
+        return FunctionDetail(
+            schema:            schema,
+            name:              name,
+            language:          language,
+            volatility:        volatility,
+            isSecurityDefiner: secdef == "true",
+            returnType:        returnType == "NULL" ? "" : returnType,
+            source:            source,
+            arguments:         arguments
+        )
+    }
+
     func sequenceDetail(schema: String, name: String) async throws -> SequenceDetail {
         let s = schema.sqlEscaped
         let n = name.sqlEscaped

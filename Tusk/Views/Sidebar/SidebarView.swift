@@ -353,6 +353,7 @@ private struct SchemaRow: View {
                             } icon: {
                                 Image(systemName: "function")
                             }
+                            .onTapGesture { appState.openFunctionTab(for: connection, fn: fn) }
                             .contextMenu {
                                 Button("Copy Name") { copyToPasteboard(fn.name) }
                                 Button("Copy Signature") { copyToPasteboard(fn.signature) }
