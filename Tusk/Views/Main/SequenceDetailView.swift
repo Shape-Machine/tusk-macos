@@ -157,7 +157,8 @@ struct SequenceDetailView: View {
         guard let newVal = Int64(setValueText) else { return }
         Task {
             do {
-                _ = try await client.query("SELECT setval('\(quoteIdentifier(schema)).\(quoteIdentifier(sequenceName))', \(newVal));")
+                let regclass = "\(quoteIdentifier(schema)).\(quoteIdentifier(sequenceName))".replacingOccurrences(of: "'", with: "''")
+                _ = try await client.query("SELECT setval('\(regclass)', \(newVal));")
                 setValueText = ""
                 await reload()
             } catch {
@@ -177,7 +178,8 @@ struct SequenceDetailView: View {
 
         Task {
             do {
-                _ = try await client.query("SELECT setval('\(quoteIdentifier(schema)).\(quoteIdentifier(sequenceName))', 1, false);")
+                let regclass = "\(quoteIdentifier(schema)).\(quoteIdentifier(sequenceName))".replacingOccurrences(of: "'", with: "''")
+                _ = try await client.query("SELECT setval('\(regclass)', 1, false);")
                 await reload()
             } catch {
                 actionError = error.localizedDescription

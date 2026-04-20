@@ -460,7 +460,8 @@ private struct SchemaRow: View {
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task {
-            _ = try? await client.query("SELECT setval('\(quoteIdentifier(seq.schema)).\(quoteIdentifier(seq.name))', 1, false);")
+            let regclass = "\(quoteIdentifier(seq.schema)).\(quoteIdentifier(seq.name))".replacingOccurrences(of: "'", with: "''")
+            _ = try? await client.query("SELECT setval('\(regclass)', 1, false);")
         }
     }
 
@@ -511,7 +512,7 @@ private struct SchemaRow: View {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task {
             do {
-                _ = try await client.query("DROP FUNCTION \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name));")
+                _ = try await client.query("DROP FUNCTION \(quoteIdentifier(fn.schema)).\(quoteIdentifier(fn.name))(\(fn.identityArgs));")
                 try? await appState.refreshSchema(for: connection)
             } catch {
                 let err = NSAlert()
