@@ -51,17 +51,11 @@ struct EnumDetailView: View {
                 enumName: enumName,
                 existingValues: values,
                 onAdd: { newValue, beforeValue in
-                    Task {
-                        do {
-                            let posClause = beforeValue.map { " BEFORE \(quoteLiteral($0))" } ?? ""
-                            let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteLiteral(newValue))\(posClause);"
-                            _ = try await client.query(sql)
-                            try? await appState.refreshSchema(for: connection)
-                            await reload()
-                        } catch {
-                            actionError = error.localizedDescription
-                        }
-                    }
+                    let posClause = beforeValue.map { " BEFORE \(quoteLiteral($0))" } ?? ""
+                    let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteLiteral(newValue))\(posClause);"
+                    _ = try await client.query(sql)
+                    try? await appState.refreshSchema(for: connection)
+                    await reload()
                 }
             )
         }
@@ -145,8 +139,14 @@ struct EnumDetailView: View {
             values = cached.values
         } else {
             if let all = try? await client.enums() {
-                values = all.first(where: { $0.schema == schema && $0.name == enumName })?.values ?? []
+                if let found = all.first(where: { $0.schema == schema && $0.name == enumName }) {
+                    values = found.values
+                } else {
+                    values = []
+                    loadFailed = true
+                }
             } else {
+                values = []
                 loadFailed = true
             }
         }
@@ -241,13 +241,15 @@ struct EnumDetailView: View {
 private struct AddEnumValueSheet: View {
     let enumName: String
     let existingValues: [String]
-    let onAdd: (String, String?) -> Void
+    let onAdd: (String, String?) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
 
     @State private var newValue = ""
     @State private var insertBefore: String = ""   // empty string = append
+    @State private var isSubmitting = false
+    @State private var submitError: String? = nil
 
     private var isValid: Bool { !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
@@ -263,6 +265,7 @@ private struct AddEnumValueSheet: View {
                 TextField("new_value", text: $newValue)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: contentFontSize, design: .monospaced))
+                    .disabled(isSubmitting)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -276,20 +279,37 @@ private struct AddEnumValueSheet: View {
                     }
                 }
                 .labelsHidden()
+                .disabled(isSubmitting)
+            }
+
+            if let submitError {
+                Text(submitError)
+                    .font(.system(size: contentFontSize - 1))
+                    .foregroundStyle(.red)
             }
 
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                    .disabled(isSubmitting)
                 Button("Add Value") {
                     let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                     let before: String? = insertBefore.isEmpty ? nil : insertBefore
-                    onAdd(trimmed, before)
-                    dismiss()
+                    isSubmitting = true
+                    submitError = nil
+                    Task {
+                        do {
+                            try await onAdd(trimmed, before)
+                            dismiss()
+                        } catch {
+                            submitError = error.localizedDescription
+                            isSubmitting = false
+                        }
+                    }
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+                .disabled(!isValid || isSubmitting)
             }
         }
         .padding(20)
