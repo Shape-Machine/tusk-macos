@@ -25,7 +25,8 @@ struct FunctionDetailView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let detail {
-                if isExecutorVisible {
+                let canRun = !isReadOnly || detail.volatility == "IMMUTABLE"
+                if canRun && isExecutorVisible {
                     VSplitView {
                         sourcePane(detail: detail)
                             .frame(minHeight: 120)
@@ -48,6 +49,11 @@ struct FunctionDetailView: View {
             }
         }
         .task { await reload() }
+        .onChange(of: isReadOnly) {
+            if let detail, isReadOnly && detail.volatility != "IMMUTABLE" {
+                isExecutorVisible = false
+            }
+        }
     }
 
     // MARK: - Toolbar

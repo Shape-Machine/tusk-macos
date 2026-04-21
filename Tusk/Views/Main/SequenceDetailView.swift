@@ -169,7 +169,9 @@ struct SequenceDetailView: View {
     // MARK: - Mutations
 
     private func setvalue() {
-        guard let newVal = Int64(setValueText) else { return }
+        guard let newVal = Int64(setValueText),
+              let detail,
+              newVal >= detail.minValue && newVal <= detail.maxValue else { return }
         Task {
             do {
                 let regclass = "\(quoteIdentifier(schema)).\(quoteIdentifier(sequenceName))".replacingOccurrences(of: "'", with: "''")
