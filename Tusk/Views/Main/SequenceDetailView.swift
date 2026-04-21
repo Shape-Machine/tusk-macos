@@ -38,9 +38,15 @@ struct SequenceDetailView: View {
                     .padding(16)
                 }
             } else {
-                Text("Failed to load sequence details.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ContentUnavailableView {
+                    Label("Failed to Load Sequence", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text("Could not retrieve details for \(schema).\(sequenceName).")
+                } actions: {
+                    Button("Retry") { Task { await reload() } }
+                        .buttonStyle(.bordered)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .alert("Action Failed", isPresented: Binding(
@@ -58,7 +64,7 @@ struct SequenceDetailView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            Image(systemName: "arrow.clockwise")
+            Image(systemName: "list.number")
                 .foregroundStyle(.secondary)
             Text("\(schema).\(sequenceName)")
                 .font(.system(size: contentFontSize, weight: .semibold, design: contentFontDesign.design))
@@ -118,15 +124,25 @@ struct SequenceDetailView: View {
                 .foregroundStyle(.secondary)
 
             // Set value
-            HStack(spacing: 8) {
-                TextField("New value…", text: $setValueText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 140)
-                    .font(.system(size: contentFontSize, design: contentFontDesign.design))
-                Button("Set Value") { setvalue() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(Int64(setValueText) == nil)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    TextField("New value…", text: $setValueText)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 140)
+                        .font(.system(size: contentFontSize, design: contentFontDesign.design))
+                    Button("Set Value") { setvalue() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled({
+                            guard let v = Int64(setValueText) else { return true }
+                            return v < detail.minValue || v > detail.maxValue
+                        }())
+                }
+                if let v = Int64(setValueText), (v < detail.minValue || v > detail.maxValue) {
+                    Text("Must be between \(detail.minValue) and \(detail.maxValue)")
+                        .font(.system(size: contentFontSize - 2))
+                        .foregroundStyle(.orange)
+                }
             }
 
             // Reset to 1
