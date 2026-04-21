@@ -56,6 +56,15 @@ struct AddConnectionSheet: View {
         return name.isEmpty || host.isEmpty || database.isEmpty || username.isEmpty
     }
 
+    /// A string that changes whenever any field that affects connectivity changes.
+    /// Used to clear the stale test result via a single .onChange modifier.
+    private var connectivityFingerprint: String {
+        [host, port, database, username, password,
+         useSSL ? "ssl" : "", verifySSLCertificate ? "verify" : "",
+         sshEnabled ? "ssh" : "", sshHost, sshPort, sshUser, sshKeyPath, sshPassphrase,
+         cloudSQLInstanceConnectionName, useADC ? "adc" : ""].joined(separator: "|")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -261,15 +270,16 @@ struct AddConnectionSheet: View {
                     Button {
                         Task { await testConnection() }
                     } label: {
-                        if isTestingConnection {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Test Connection")
+                        HStack(spacing: 6) {
+                            if isTestingConnection {
+                                ProgressView().controlSize(.mini)
+                            }
+                            Text(isTestingConnection ? "Testing…" : "Test Connection")
                         }
                     }
                     .disabled({
-                        if isCloudSQL { return cloudSQLInstanceConnectionName.isEmpty || database.isEmpty || username.isEmpty }
-                        return host.isEmpty || database.isEmpty || username.isEmpty
+                        if isCloudSQL { return isTestingConnection || cloudSQLInstanceConnectionName.isEmpty || database.isEmpty || username.isEmpty }
+                        return isTestingConnection || host.isEmpty || database.isEmpty || username.isEmpty
                     }())
 
                     Spacer()
@@ -285,6 +295,7 @@ struct AddConnectionSheet: View {
             .padding()
         }
         .frame(width: 480)
+        .onChange(of: connectivityFingerprint) { _, _ in testResult = nil }
         .onAppear {
             populate()
             gcloudAvailable = CloudSQLProxy.findBinary("gcloud") != nil

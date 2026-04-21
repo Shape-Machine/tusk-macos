@@ -77,7 +77,7 @@ struct RoleDetailView: View {
                 .foregroundStyle(.secondary)
             Text(roleName)
                 .font(.system(size: contentFontSize, weight: .semibold, design: contentFontDesign.design))
-            if isSuperuser {
+            if role?.superuser == true {
                 Text("superuser")
                     .font(.system(size: contentFontSize - 2, design: contentFontDesign.design))
                     .foregroundStyle(.secondary)
@@ -477,19 +477,31 @@ private struct ConnLimitEditor: View {
 
     @State private var editing = false
     @State private var text = ""
+    @State private var inputError: String? = nil
 
     var body: some View {
         if editing {
-            HStack(spacing: 4) {
-                TextField("", text: $text)
-                    .font(.system(size: fontSize, design: .monospaced))
-                    .frame(width: 60)
-                    .multilineTextAlignment(.trailing)
-                    .onSubmit { commit() }
-                Button("OK") { commit() }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    TextField("blank = unlimited", text: $text)
+                        .font(.system(size: fontSize, design: .monospaced))
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                        .onSubmit { commit() }
+                        .onChange(of: text) { _, _ in inputError = nil }
+                    Button("OK") { commit() }
+                        .controlSize(.small)
+                    Button("Cancel") {
+                        editing = false
+                        inputError = nil
+                    }
                     .controlSize(.small)
-                Button("Cancel") { editing = false }
-                    .controlSize(.small)
+                }
+                if let inputError {
+                    Text(inputError)
+                        .font(.system(size: fontSize - 2))
+                        .foregroundStyle(.red)
+                }
             }
         } else {
             HStack(spacing: 4) {
@@ -506,8 +518,21 @@ private struct ConnLimitEditor: View {
     }
 
     private func commit() {
-        let v = Int(text.trimmingCharacters(in: .whitespaces)) ?? -1
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let v: Int
+        if trimmed.isEmpty {
+            v = -1
+        } else if let parsed = Int(trimmed), parsed >= -1 {
+            v = parsed
+        } else if let parsed = Int(trimmed), parsed < -1 {
+            inputError = "Must be ≥ 0, or blank for unlimited"
+            return
+        } else {
+            inputError = "Enter a whole number, or leave blank for unlimited"
+            return
+        }
         editing = false
+        inputError = nil
         Task { await onCommit(v) }
     }
 }
