@@ -36,9 +36,15 @@ struct FunctionDetailView: View {
                     sourcePane(detail: detail)
                 }
             } else {
-                Text("Failed to load function details.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ContentUnavailableView {
+                    Label("Failed to Load Function", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text("Could not retrieve details for this function.")
+                } actions: {
+                    Button("Retry") { Task { await reload() } }
+                        .buttonStyle(.bordered)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .task { await reload() }
@@ -55,7 +61,7 @@ struct FunctionDetailView: View {
             Spacer()
             if let detail, !isLoading {
                 metadataBadges(detail: detail)
-                if !isReadOnly || detail.volatility != "VOLATILE" {
+                if !isReadOnly || detail.volatility == "IMMUTABLE" {
                     Toggle(isOn: $isExecutorVisible) {
                         Label("Run", systemImage: "play.fill")
                             .font(.callout)

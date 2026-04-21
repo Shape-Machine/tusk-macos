@@ -14,7 +14,9 @@ struct EnumDetailView: View {
 
     @State private var values: [String] = []
     @State private var isLoading = true
+    @State private var loadFailed = false
     @State private var actionError: String? = nil
+    @State private var showAddValueSheet = false
 
     private var isReadOnly: Bool { connection.isReadOnly }
 
@@ -25,6 +27,16 @@ struct EnumDetailView: View {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if loadFailed {
+                ContentUnavailableView {
+                    Label("Failed to Load Enum", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text("Could not retrieve values for \(schema).\(enumName).")
+                } actions: {
+                    Button("Retry") { Task { await reload() } }
+                        .buttonStyle(.bordered)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -33,6 +45,25 @@ struct EnumDetailView: View {
                     .padding(16)
                 }
             }
+        }
+        .sheet(isPresented: $showAddValueSheet) {
+            AddEnumValueSheet(
+                enumName: enumName,
+                existingValues: values,
+                onAdd: { newValue, beforeValue in
+                    Task {
+                        do {
+                            let posClause = beforeValue.map { " BEFORE \(quoteLiteral($0))" } ?? ""
+                            let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteLiteral(newValue))\(posClause);"
+                            _ = try await client.query(sql)
+                            try? await appState.refreshSchema(for: connection)
+                            await reload()
+                        } catch {
+                            actionError = error.localizedDescription
+                        }
+                    }
+                }
+            )
         }
         .alert("Action Failed", isPresented: Binding(
             get: { actionError != nil },
@@ -55,7 +86,7 @@ struct EnumDetailView: View {
                 .font(.system(size: contentFontSize, weight: .semibold, design: contentFontDesign.design))
             Spacer()
             if !isReadOnly {
-                Button("Add Value…") { addValue() }
+                Button("Add Value…") { showAddValueSheet = true }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 Button("Rename…") { renameEnum() }
@@ -89,6 +120,11 @@ struct EnumDetailView: View {
                         .font(.system(size: contentFontSize, design: contentFontDesign.design))
                 }
                 .padding(.vertical, 3)
+                .contextMenu {
+                    if !isReadOnly {
+                        Button("Rename Value…") { renameValue(value) }
+                    }
+                }
                 Divider()
             }
             if values.isEmpty {
@@ -103,51 +139,39 @@ struct EnumDetailView: View {
 
     private func reload() async {
         isLoading = true
+        loadFailed = false
         // Re-fetch from the live cache in AppState if available, else fall back to a direct query.
         if let cached = appState.schemaEnums[connection.id]?.first(where: { $0.schema == schema && $0.name == enumName }) {
             values = cached.values
         } else {
             if let all = try? await client.enums() {
                 values = all.first(where: { $0.schema == schema && $0.name == enumName })?.values ?? []
+            } else {
+                loadFailed = true
             }
         }
         isLoading = false
     }
 
-    private func addValue() {
+    private func renameValue(_ oldValue: String) {
         let alert = NSAlert()
-        alert.messageText = "Add Value to \"\(enumName)\""
-        alert.addButton(withTitle: "Add")
+        alert.messageText = "Rename Value \"\(oldValue)\""
+        alert.addButton(withTitle: "Rename")
         alert.addButton(withTitle: "Cancel")
 
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
-        field.placeholderString = "new_value"
+        field.stringValue = oldValue
+        field.selectText(nil)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let newValue = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newValue.isEmpty else { return }
-
-        // Optional BEFORE/AFTER positioning
-        let posAlert = NSAlert()
-        posAlert.messageText = "Position (optional)"
-        posAlert.informativeText = "Insert BEFORE an existing value, or leave blank to append at the end. (Note: PostgreSQL does not support AFTER for enum values.)"
-        posAlert.addButton(withTitle: "Add")
-        posAlert.addButton(withTitle: "Cancel")
-        let posField = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
-        posField.placeholderString = "existing_value (BEFORE) — leave blank to append"
-        posAlert.accessoryView = posField
-        posAlert.window.initialFirstResponder = posField
-
-        guard posAlert.runModal() == .alertFirstButtonReturn else { return }
-        let beforeValue = posField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newValue.isEmpty, newValue != oldValue else { return }
 
         Task {
             do {
-                let posClause = beforeValue.isEmpty ? "" : " BEFORE \(quoteLiteral(beforeValue))"
-                let sql = "ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) ADD VALUE \(quoteLiteral(newValue))\(posClause);"
-                _ = try await client.query(sql)
+                _ = try await client.query("ALTER TYPE \(quoteIdentifier(schema)).\(quoteIdentifier(enumName)) RENAME VALUE \(quoteLiteral(oldValue)) TO \(quoteLiteral(newValue));")
                 try? await appState.refreshSchema(for: connection)
                 await reload()
             } catch {
@@ -209,5 +233,66 @@ struct EnumDetailView: View {
                 actionError = error.localizedDescription
             }
         }
+    }
+}
+
+// MARK: - Add Enum Value Sheet
+
+private struct AddEnumValueSheet: View {
+    let enumName: String
+    let existingValues: [String]
+    let onAdd: (String, String?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+
+    @State private var newValue = ""
+    @State private var insertBefore: String = ""   // empty string = append
+
+    private var isValid: Bool { !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Add Value to \"\(enumName)\"")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Value name")
+                    .font(.system(size: contentFontSize - 1))
+                    .foregroundStyle(.secondary)
+                TextField("new_value", text: $newValue)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: contentFontSize, design: .monospaced))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Position (optional)")
+                    .font(.system(size: contentFontSize - 1))
+                    .foregroundStyle(.secondary)
+                Picker("Insert before", selection: $insertBefore) {
+                    Text("Append at end").tag("")
+                    ForEach(existingValues, id: \.self) { v in
+                        Text("Before \"\(v)\"").tag(v)
+                    }
+                }
+                .labelsHidden()
+            }
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Add Value") {
+                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let before: String? = insertBefore.isEmpty ? nil : insertBefore
+                    onAdd(trimmed, before)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!isValid)
+            }
+        }
+        .padding(20)
+        .frame(width: 340)
     }
 }
