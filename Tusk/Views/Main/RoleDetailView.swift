@@ -522,11 +522,12 @@ private struct ConnLimitEditor: View {
         let v: Int
         if trimmed.isEmpty {
             v = -1
-        } else if let parsed = Int(trimmed), parsed >= -1 {
+        } else if let parsed = Int(trimmed) {
+            guard parsed >= -1 else {
+                inputError = "Must be 0 or higher (blank or -1 = unlimited)"
+                return
+            }
             v = parsed
-        } else if let parsed = Int(trimmed), parsed < -1 {
-            inputError = "Must be ≥ 0, or blank for unlimited"
-            return
         } else {
             inputError = "Enter a whole number, or leave blank for unlimited"
             return
