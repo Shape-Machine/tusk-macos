@@ -60,7 +60,7 @@ struct AddConnectionSheet: View {
     /// Used to clear the stale test result via a single .onChange modifier.
     private var connectivityFingerprint: String {
         [host, port, database, username, password,
-         useSSL ? "ssl" : "", verifySSLCertificate ? "verify" : "",
+         useSSL ? "ssl" : "", useSSL && verifySSLCertificate ? "verify" : "",
          sshEnabled ? "ssh" : "", sshHost, sshPort, sshUser, sshKeyPath, sshPassphrase,
          cloudSQLInstanceConnectionName, useADC ? "adc" : ""].joined(separator: "|")
     }
