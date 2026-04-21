@@ -124,6 +124,8 @@ struct SequenceDetailView: View {
                 .foregroundStyle(.secondary)
 
             // Set value
+            let parsedValue = Int64(setValueText)
+            let outOfRange = parsedValue.map { $0 < detail.minValue || $0 > detail.maxValue } ?? false
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     TextField("New value…", text: $setValueText)
@@ -133,12 +135,9 @@ struct SequenceDetailView: View {
                     Button("Set Value") { setvalue() }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
-                        .disabled({
-                            guard let v = Int64(setValueText) else { return true }
-                            return v < detail.minValue || v > detail.maxValue
-                        }())
+                        .disabled(parsedValue == nil || outOfRange)
                 }
-                if let v = Int64(setValueText), (v < detail.minValue || v > detail.maxValue) {
+                if outOfRange {
                     Text("Must be between \(detail.minValue) and \(detail.maxValue)")
                         .font(.system(size: contentFontSize - 2))
                         .foregroundStyle(.orange)
