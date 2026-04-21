@@ -18,7 +18,7 @@ struct WelcomeView: View {
                     .font(.system(size: contentFontSize + 14, weight: .semibold, design: contentFontDesign.design))
 
                 VStack(spacing: 4) {
-                    Text("Native MacOS client for PostgreSQL.")
+                    Text("Native macOS client for PostgreSQL.")
                         .foregroundStyle(.secondary)
 
                     Text("Zero-telemetry. Privacy-focused.")
