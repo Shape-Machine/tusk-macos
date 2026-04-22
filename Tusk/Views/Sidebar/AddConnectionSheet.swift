@@ -59,7 +59,8 @@ struct AddConnectionSheet: View {
     /// A string that changes whenever any field that affects connectivity changes.
     /// Used to clear the stale test result via a single .onChange modifier.
     private var connectivityFingerprint: String {
-        [host, port, database, username, password,
+        [connectionType.rawValue,
+         host, port, database, username, password,
          useSSL ? "ssl" : "", useSSL && verifySSLCertificate ? "verify" : "",
          sshEnabled ? "ssh" : "", sshHost, sshPort, sshUser, sshKeyPath, sshPassphrase,
          cloudSQLInstanceConnectionName, useADC ? "adc" : ""].joined(separator: "|")
@@ -276,6 +277,7 @@ struct AddConnectionSheet: View {
                             }
                             Text(isTestingConnection ? "Testing…" : "Test Connection")
                         }
+                        .frame(minWidth: 120)
                     }
                     .disabled({
                         if isCloudSQL { return isTestingConnection || cloudSQLInstanceConnectionName.isEmpty || database.isEmpty || username.isEmpty }
@@ -472,19 +474,20 @@ struct AddConnectionSheet: View {
     }
 
     private func testConnection() async {
+        let startedFingerprint = connectivityFingerprint
         isTestingConnection = true
         testResult = nil
 
         if isCloudSQL {
-            await testCloudSQLConnection()
+            await testCloudSQLConnection(startedFingerprint: startedFingerprint)
         } else {
-            await testDirectConnection()
+            await testDirectConnection(startedFingerprint: startedFingerprint)
         }
 
         isTestingConnection = false
     }
 
-    private func testDirectConnection() async {
+    private func testDirectConnection(startedFingerprint: String) async {
         var info = Connection(
             name: name, host: host, port: Int(port) ?? 5432,
             database: database, username: username,
@@ -514,12 +517,12 @@ struct AddConnectionSheet: View {
             do {
                 try await client.connect(to: info, password: password)
                 await client.disconnect()
-                testResult = "✓ Connected successfully"
+                if connectivityFingerprint == startedFingerprint { testResult = "✓ Connected successfully" }
             } catch {
-                testResult = "✗ \(friendlyError(error))"
+                if connectivityFingerprint == startedFingerprint { testResult = "✗ \(friendlyError(error))" }
             }
         } catch {
-            testResult = "✗ \(friendlyError(error))"
+            if connectivityFingerprint == startedFingerprint { testResult = "✗ \(friendlyError(error))" }
         }
 
         if let tunnel { await tunnel.stop() }
@@ -568,7 +571,7 @@ struct AddConnectionSheet: View {
         }
     }
 
-    private func testCloudSQLConnection() async {
+    private func testCloudSQLConnection(startedFingerprint: String) async {
         let proxy = CloudSQLProxy()
         testProxy = proxy
         defer { testProxy = nil }
@@ -595,12 +598,12 @@ struct AddConnectionSheet: View {
             do {
                 try await client.connect(to: effectiveInfo, password: pw)
                 await client.disconnect()
-                testResult = "✓ Connected successfully"
+                if connectivityFingerprint == startedFingerprint { testResult = "✓ Connected successfully" }
             } catch {
-                testResult = "✗ \(friendlyError(error))"
+                if connectivityFingerprint == startedFingerprint { testResult = "✗ \(friendlyError(error))" }
             }
         } catch {
-            testResult = "✗ \(friendlyError(error))"
+            if connectivityFingerprint == startedFingerprint { testResult = "✗ \(friendlyError(error))" }
         }
         await proxy.stop()
     }
