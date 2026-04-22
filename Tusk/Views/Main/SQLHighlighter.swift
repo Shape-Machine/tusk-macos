@@ -45,6 +45,8 @@ enum SQLHighlighter {
 
     // MARK: - Public API
 
+    /// Full-document highlight. Wraps in beginEditing/endEditing.
+    /// Use for programmatic text replacement (tab switch, font change, initial load).
     static func highlight(_ textStorage: NSTextStorage, font: NSFont) {
         let text = textStorage.string
         let fullRange = NSRange(location: 0, length: text.utf16.count)
@@ -55,35 +57,67 @@ enum SQLHighlighter {
         textStorage.beginEditing()
 
         if !text.isEmpty {
-        // 1. Reset everything to base style
-        textStorage.setAttributes([.font: font, .foregroundColor: NSColor.labelColor], range: fullRange)
+            applyHighlighting(to: textStorage, text: text, in: fullRange, font: font)
+        }
+
+        textStorage.endEditing()
+    }
+
+    /// Incremental highlight called from NSTextStorageDelegate.textStorage(_:willProcessEditing:range:changeInLength:).
+    /// Must NOT call beginEditing/endEditing — the text storage is already inside an editing session.
+    /// Highlights only the affected paragraph(s), falling back to a full-document pass when
+    /// the document contains block comment delimiters (/* or */).
+    static func highlightEdited(_ textStorage: NSTextStorage, editedRange: NSRange, font: NSFont) {
+        let text = textStorage.string
+        guard !text.isEmpty else { return }
+        let fullRange = NSRange(location: 0, length: text.utf16.count)
+
+        // Fall back to full-document pass when block comments are present — they can span
+        // multiple paragraphs and require whole-document context to highlight correctly.
+        let highlightRange: NSRange
+        if text.contains("/*") || text.contains("*/") {
+            highlightRange = fullRange
+        } else {
+            highlightRange = (text as NSString).paragraphRange(for: editedRange)
+        }
+
+        applyHighlighting(to: textStorage, text: text, in: highlightRange, font: font)
+    }
+
+    // MARK: - Internal
+
+    /// Applies syntax highlighting to `range` without begin/endEditing guards.
+    private static func applyHighlighting(to textStorage: NSTextStorage, text: String, in range: NSRange, font: NSFont) {
+        let fullRange = NSRange(location: 0, length: text.utf16.count)
+
+        // 1. Reset the target range to base style
+        textStorage.setAttributes([.font: font, .foregroundColor: NSColor.labelColor], range: range)
 
         // 2. Keywords — lowest priority, overwritten by string / comment passes
-        identRE.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-            guard let range = match?.range else { return }
-            let word = (text as NSString).substring(with: range).uppercased()
+        identRE.enumerateMatches(in: text, range: range) { match, _, _ in
+            guard let r = match?.range else { return }
+            let word = (text as NSString).substring(with: r).uppercased()
             if keywords.contains(word) {
-                textStorage.addAttribute(.foregroundColor, value: keywordColour, range: range)
+                textStorage.addAttribute(.foregroundColor, value: keywordColour, range: r)
             }
         }
 
         // 3. Numbers
-        colorMatches(of: numberRE, in: text, range: fullRange, color: numberColour, to: textStorage)
+        colorMatches(of: numberRE, in: text, range: range, color: numberColour, to: textStorage)
 
-        // 4. Collect string literal ranges first; apply their colour and use them
-        //    to shield string contents from the comment passes below.
-        let stringRanges = collectRanges(of: stringRE, in: text, range: fullRange)
+        // 4. Collect string literal ranges (scoped to the highlight range) first; apply their
+        //    colour and use them to shield string contents from the comment passes below.
+        let stringRanges = collectRanges(of: stringRE, in: text, range: range)
         for r in stringRanges {
             textStorage.addAttribute(.foregroundColor, value: stringColour, range: r)
         }
 
-        // 5. Comments — highest priority, but must not fire inside string literals
-        //    (e.g. `'hello -- world'` should stay orange, not turn gray).
-        colorMatches(of: lineCommentRE,  in: text, range: fullRange, color: commentColour, to: textStorage, excluding: stringRanges)
-        colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage, excluding: stringRanges)
-        } // end if !text.isEmpty
-
-        textStorage.endEditing()
+        // 5. Comments — highest priority, but must not fire inside string literals.
+        //    Line comments are always single-line, so the paragraph range is sufficient.
+        //    Block comments use the full document range so multi-paragraph spans are caught.
+        colorMatches(of: lineCommentRE, in: text, range: range, color: commentColour, to: textStorage, excluding: stringRanges)
+        let blockStringRanges = range == fullRange ? stringRanges : collectRanges(of: stringRE, in: text, range: fullRange)
+        colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage, excluding: blockStringRanges)
     }
 
     // MARK: - Helpers

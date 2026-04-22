@@ -89,35 +89,51 @@ func exportResultAsCSV(_ result: QueryResult, defaultName: String) {
 // MARK: - Clipboard copy helpers
 
 /// Copies rows as CSV (header + data) to the system clipboard.
+/// The string is built off @MainActor; the pasteboard write happens on @MainActor via the completion.
 @MainActor
-func copyRowsAsCSV(columns: [QueryColumn], rows: [[QueryCell]]) {
-    let lines = csvLines(columns: columns, rows: rows)
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+func copyRowsAsCSV(columns: [QueryColumn], rows: [[QueryCell]], completion: (@MainActor () -> Void)? = nil) {
+    let cols = columns, rs = rows
+    Task {
+        let text = await Task.detached(priority: .userInitiated) {
+            csvLines(columns: cols, rows: rs).joined(separator: "\n")
+        }.value
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        completion?()
+    }
 }
 
 /// Copies rows as a JSON array of objects to the system clipboard.
 /// Values are serialized with native JSON types: null, number, bool, string.
+/// The JSON is built off @MainActor; the pasteboard write happens on @MainActor via the completion.
 @MainActor
-func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]]) {
-    let objects: [[String: Any]] = rows.map { row in
-        var obj: [String: Any] = [:]
-        for (col, cell) in zip(columns, row) {
-            switch cell {
-            case .null:             obj[col.name] = NSNull()
-            case .integer(let i):  obj[col.name] = NSNumber(value: i)
-            case .double(let d):   obj[col.name] = NSNumber(value: d)
-            case .bool(let b):     obj[col.name] = b
-            case .text(let s):     obj[col.name] = s
-            case .bytes(let data): obj[col.name] = data.base64EncodedString()
+func copyRowsAsJSON(columns: [QueryColumn], rows: [[QueryCell]], completion: (@MainActor () -> Void)? = nil) {
+    let cols = columns, rs = rows
+    Task {
+        let text = await Task.detached(priority: .userInitiated) {
+            let objects: [[String: Any]] = rs.map { row in
+                var obj: [String: Any] = [:]
+                for (col, cell) in zip(cols, row) {
+                    switch cell {
+                    case .null:             obj[col.name] = NSNull()
+                    case .integer(let i):  obj[col.name] = NSNumber(value: i)
+                    case .double(let d):   obj[col.name] = NSNumber(value: d)
+                    case .bool(let b):     obj[col.name] = b
+                    case .text(let s):     obj[col.name] = s
+                    case .bytes(let data): obj[col.name] = data.base64EncodedString()
+                    }
+                }
+                return obj
             }
-        }
-        return obj
+            guard let data = try? JSONSerialization.data(withJSONObject: objects, options: [.prettyPrinted, .sortedKeys]),
+                  let str = String(data: data, encoding: .utf8) else { return "" }
+            return str
+        }.value
+        guard !text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        completion?()
     }
-    guard let data = try? JSONSerialization.data(withJSONObject: objects, options: [.prettyPrinted, .sortedKeys]),
-          let str = String(data: data, encoding: .utf8) else { return }
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(str, forType: .string)
 }
 
 // MARK: - INSERT copy helpers
@@ -160,11 +176,18 @@ func copyRowAsInsert(schema: String, table: String, columns: [QueryColumn], row:
 }
 
 /// Copies all rows as PostgreSQL INSERT statements (one per line) to the clipboard.
+/// The SQL is built off @MainActor; the pasteboard write happens on @MainActor via the completion.
 @MainActor
-func copyRowsAsInsert(schema: String, table: String, columns: [QueryColumn], rows: [[QueryCell]]) {
-    let statements = rows.map { insertStatement(schema: schema, table: table, columns: columns, row: $0) }.joined(separator: "\n")
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(statements, forType: .string)
+func copyRowsAsInsert(schema: String, table: String, columns: [QueryColumn], rows: [[QueryCell]], completion: (@MainActor () -> Void)? = nil) {
+    let s = schema, t = table, cols = columns, rs = rows
+    Task {
+        let text = await Task.detached(priority: .userInitiated) {
+            rs.map { insertStatement(schema: s, table: t, columns: cols, row: $0) }.joined(separator: "\n")
+        }.value
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        completion?()
+    }
 }
 
 // MARK: - Multi-statement execution

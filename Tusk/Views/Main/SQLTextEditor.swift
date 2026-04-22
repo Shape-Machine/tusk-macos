@@ -49,8 +49,11 @@ struct SQLTextEditor: NSViewRepresentable {
         scrollView.drawsBackground = true
 
         if !text.isEmpty, let storage = textView.textStorage {
+            storage.delegate = context.coordinator
             textView.string = text
             SQLHighlighter.highlight(storage, font: editorFont)
+        } else {
+            textView.textStorage?.delegate = context.coordinator
         }
         textView.typingAttributes = baseTypingAttributes
 
@@ -81,23 +84,38 @@ struct SQLTextEditor: NSViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, @preconcurrency NSTextStorageDelegate {
         var parent: SQLTextEditor
 
         init(_ parent: SQLTextEditor) { self.parent = parent }
 
+        // MARK: - NSTextStorageDelegate
+
+        /// Called from within the text storage editing session (inside endEditing).
+        /// Must NOT call beginEditing/endEditing — use incremental highlight path only.
+        /// AppKit always calls this on the main thread; @MainActor isolation is safe.
+        func textStorage(
+            _ textStorage: NSTextStorage,
+            willProcessEditing editedMask: NSTextStorageEditActions,
+            range editedRange: NSRange,
+            changeInLength delta: Int
+        ) {
+            // Only re-highlight when actual characters changed, not attribute-only updates
+            // (attribute-only updates come from the highlighter itself — guard prevents re-entry).
+            guard editedMask.contains(.editedCharacters) else { return }
+            SQLHighlighter.highlightEdited(textStorage, editedRange: editedRange, font: parent.editorFont)
+        }
+
+        // MARK: - NSTextViewDelegate
+
         func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView,
-                  let storage = textView.textStorage else { return }
+            guard let textView = notification.object as? NSTextView else { return }
             // Push text change to binding
             parent.text = textView.string
-            // Re-apply highlighting, preserving caret position
-            let sel = textView.selectedRange()
-            SQLHighlighter.highlight(storage, font: parent.editorFont)
-            // Always restore base typing attributes so the next inserted
-            // character never inherits stale colour from a deleted token.
+            // Restore base typing attributes so the next inserted character never
+            // inherits stale colour from a deleted token. Highlighting was already
+            // applied by the NSTextStorageDelegate callback above.
             textView.typingAttributes = parent.baseTypingAttributes
-            textView.setSelectedRange(sel)
         }
 
         @objc func selectionDidChange(_ notification: Notification) {

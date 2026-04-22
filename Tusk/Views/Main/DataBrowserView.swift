@@ -10,6 +10,7 @@ final class DataBrowserState {
     var error: String? = nil
     var offset: Int = 0
     var filterText: String = ""
+    var filterColumn: String? = nil
     var loadTask: Task<Void, Never>? = nil
     var filterDebounceTask: Task<Void, Never>? = nil
 }
@@ -99,6 +100,7 @@ struct DataBrowserView: View {
         .task { if state.result == nil { triggerLoad() } }
         .onChange(of: schemaName + "." + tableName) { _, _ in
             state.offset = 0
+            state.filterColumn = nil
             sortColumn = nil
             sortAscending = true
             triggerLoad()
@@ -130,8 +132,25 @@ struct DataBrowserView: View {
 
             Spacer()
 
+            Picker("Column", selection: $state.filterColumn) {
+                Text("All columns").tag(nil as String?)
+                ForEach(columns, id: \.name) { col in
+                    Text(col.name).tag(col.name as String?)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 110)
+            .help("Filter on a specific column, or all columns")
+            .onChange(of: state.filterColumn) { _, _ in
+                guard !state.filterText.isEmpty else { return }
+                state.offset = 0
+                triggerLoad()
+            }
+
             ZStack(alignment: .trailing) {
-                TextField("Filter…", text: $state.filterText)
+                TextField(state.filterColumn == nil ? "Filter all columns…" : "Filter \(state.filterColumn!)…",
+                          text: $state.filterText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 180)
                 if state.isLoading && !state.filterText.isEmpty {
@@ -209,10 +228,11 @@ struct DataBrowserView: View {
 
             if !isView && !isReadOnly {
                 Button {
-                    copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows)
-                    copiedInsert = true
-                    copiedInsertTask?.cancel()
-                    copiedInsertTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedInsert = false } }
+                    copyRowsAsInsert(schema: schemaName, table: tableName, columns: result.columns, rows: result.rows) {
+                        copiedInsert = true
+                        copiedInsertTask?.cancel()
+                        copiedInsertTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedInsert = false } }
+                    }
                 } label: {
                     Label(copiedInsert ? "Copied!" : "Copy INSERT",
                           systemImage: copiedInsert ? "checkmark" : "doc.on.clipboard")
@@ -222,10 +242,11 @@ struct DataBrowserView: View {
                 .help("Copy all rows as INSERT statements")
             }
             Button {
-                copyRowsAsCSV(columns: result.columns, rows: result.rows)
-                copiedCSV = true
-                copiedCSVTask?.cancel()
-                copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
+                copyRowsAsCSV(columns: result.columns, rows: result.rows) {
+                    copiedCSV = true
+                    copiedCSVTask?.cancel()
+                    copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
+                }
             } label: {
                 Label(copiedCSV ? "Copied!" : "Copy CSV",
                       systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard")
@@ -234,10 +255,11 @@ struct DataBrowserView: View {
             .buttonStyle(.borderless)
             .help("Copy all rows as CSV")
             Button {
-                copyRowsAsJSON(columns: result.columns, rows: result.rows)
-                copiedJSON = true
-                copiedJSONTask?.cancel()
-                copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
+                copyRowsAsJSON(columns: result.columns, rows: result.rows) {
+                    copiedJSON = true
+                    copiedJSONTask?.cancel()
+                    copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
+                }
             } label: {
                 Label(copiedJSON ? "Copied!" : "Copy JSON",
                       systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard")
@@ -276,7 +298,11 @@ struct DataBrowserView: View {
         var sql = "SELECT * FROM \(qualifiedName)"
 
         if !state.filterText.isEmpty {
-            sql += " WHERE \"\(tableName)\"::text ILIKE '%\(state.filterText)%'"
+            if let col = state.filterColumn {
+                sql += " WHERE \(quoteIdentifier(col)) ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
+            } else {
+                sql += " WHERE \"\(tableName)\"::text ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
+            }
         }
 
         if let col = sortColumn {

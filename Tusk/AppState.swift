@@ -267,24 +267,14 @@ final class AppState {
         try await connect(connection)
     }
 
-    /// Polls a running proxy until it crashes, then syncs the crash status into
-    /// proxyStatuses so the sidebar badge and "Restart Proxy" menu reflect reality.
+    /// Awaits proxy termination, then syncs the crash status into proxyStatuses
+    /// so the sidebar badge and "Restart Proxy" menu reflect reality.
     private func monitorProxy(_ proxy: CloudSQLProxy, connectionID: UUID) async {
-        while true {
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 s
-            let current = await proxy.status
-            // If the proxy is still alive or we've already recorded a crash, stop.
-            guard case .running = current else {
-                if case .crashed(let msg) = current {
-                    // Only update if we still own this proxy (user may have reconnected).
-                    if cloudProxies[connectionID] === proxy {
-                        proxyStatuses[connectionID] = .crashed(msg)
-                    }
-                }
-                return
-            }
-            // Keep monitoring while the proxy's own status says it's still running.
-            if cloudProxies[connectionID] !== proxy { return }
+        await proxy.waitForTermination()
+        // Only update if we still own this proxy (user may have reconnected).
+        guard cloudProxies[connectionID] === proxy else { return }
+        if case .crashed(let msg) = await proxy.status {
+            proxyStatuses[connectionID] = .crashed(msg)
         }
     }
 

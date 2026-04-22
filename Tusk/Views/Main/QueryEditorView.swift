@@ -43,22 +43,24 @@ struct QueryEditorView: View {
             if let index = appState.queryTabs.firstIndex(where: { $0.id == tab.id }) {
                 appState.queryTabs[index].sql = newValue
             }
-            // Debounced auto-save to disk (500 ms)
-            guard tab.sourceURL != nil else { return }
+            // Debounced auto-save to disk (500 ms) — file write runs off @MainActor
+            guard let saveURL = tab.sourceURL else { return }
             autoSaveTask?.cancel()
-            autoSaveTask = Task {
+            autoSaveTask = Task.detached(priority: .utility) {
                 try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled, let url = tab.sourceURL else { return }
+                guard !Task.isCancelled else { return }
                 do {
-                    try newValue.write(to: url, atomically: true, encoding: .utf8)
+                    try newValue.write(to: saveURL, atomically: true, encoding: .utf8)
                 } catch {
                     return
                 }
-                savedIndicatorTask?.cancel()
-                savedIndicatorTask = Task {
-                    savedIndicator = true
-                    try? await Task.sleep(for: .seconds(2))
-                    if !Task.isCancelled { savedIndicator = false }
+                await MainActor.run {
+                    savedIndicatorTask?.cancel()
+                    savedIndicatorTask = Task {
+                        savedIndicator = true
+                        try? await Task.sleep(for: .seconds(2))
+                        if !Task.isCancelled { savedIndicator = false }
+                    }
                 }
             }
         }
@@ -507,7 +509,6 @@ struct QueryEditorView: View {
                 executions[entryIndex].outcome = .error(error.localizedDescription)
                 break
             }
-            persistResultStateToTab()
         }
 
         isRunning = false
@@ -1628,19 +1629,11 @@ struct CellDetailView: View {
     let columnDataType: String
     @Environment(\.dismiss) private var dismiss
     @State private var showTree = true
+    @State private var cachedPrettyJSON: String? = nil
 
     private var parsedJSON: JSONValue? {
         guard columnDataType == "json" || columnDataType == "jsonb" else { return nil }
         return parseJSONValue(value)
-    }
-
-    private var prettyJSON: String {
-        guard let data = value.data(using: .utf8),
-              let obj = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
-              let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-              let str = String(data: pretty, encoding: .utf8)
-        else { return value }
-        return str
     }
 
     var body: some View {
@@ -1682,7 +1675,7 @@ struct CellDetailView: View {
             if let j = json, showTree {
                 JSONTreeView(value: j)
             } else {
-                let displayText = json != nil ? prettyJSON : value
+                let displayText = json != nil ? (cachedPrettyJSON ?? value) : value
                 ScrollView([.horizontal, .vertical]) {
                     if displayText.isEmpty {
                         Text("''")
@@ -1703,6 +1696,15 @@ struct CellDetailView: View {
             }
         }
         .frame(minWidth: 480, minHeight: 300)
+        .onAppear {
+            guard columnDataType == "json" || columnDataType == "jsonb" else { return }
+            guard let data = value.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+                  let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+                  let str = String(data: pretty, encoding: .utf8)
+            else { return }
+            cachedPrettyJSON = str
+        }
     }
 }
 
