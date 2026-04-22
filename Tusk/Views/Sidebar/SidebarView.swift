@@ -120,20 +120,36 @@ private struct ConnectionSection: View {
     let connection: Connection
     var filterText: String = ""
 
+    private typealias SchemaGroupEntry = (id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], onlyTables: Bool)
+
+    /// Cached result of the expensive grouping+sorting step. nil on first render;
+    /// populated by .task(id: schemaStamp) when schema data changes.
+    @State private var cachedGrouped: [SchemaGroupEntry]? = nil
+
     var isConnected: Bool { appState.isConnected(connection) }
 
-    /// All schemas present in the cache, public first then alphabetical.
-    /// When `filterText` is non-empty, each schema's object arrays are narrowed to
-    /// names containing the filter string (case-insensitive), and schemas with no
-    /// matching objects are omitted entirely.
-    var schemas: [(id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], onlyTables: Bool)] {
-        let all       = appState.schemaTables[connection.id] ?? []
-        let allEnums  = appState.schemaEnums[connection.id] ?? []
-        let allSeqs   = appState.schemaSequences[connection.id] ?? []
-        let allFuncs  = appState.schemaFunctions[connection.id] ?? []
+    /// A hash of the connection-specific schema data. Changing this value tells
+    /// .task(id:) to recompute cachedGrouped without re-running on every AppState mutation.
+    private var schemaStamp: Int {
+        var hasher = Hasher()
+        hasher.combine(appState.schemaTables[connection.id] ?? [])
+        hasher.combine((appState.schemaEnums[connection.id] ?? []).map(\.id))
+        hasher.combine((appState.schemaSequences[connection.id] ?? []).map(\.id))
+        hasher.combine((appState.schemaFunctions[connection.id] ?? []).map(\.id))
+        hasher.combine(Array(appState.schemaNamesCache[connection.id] ?? []).sorted())
+        return hasher.finalize()
+    }
+
+    /// Builds the full grouped+sorted list without applying the filter.
+    /// This is the expensive step; results are cached in cachedGrouped.
+    private func computeGrouped() -> [SchemaGroupEntry] {
+        let all      = appState.schemaTables[connection.id] ?? []
+        let allEnums = appState.schemaEnums[connection.id] ?? []
+        let allSeqs  = appState.schemaSequences[connection.id] ?? []
+        let allFuncs = appState.schemaFunctions[connection.id] ?? []
         let allSchemas = Set(all.map { $0.schema })
             .union(allEnums.map { $0.schema })
-            .union(allSeqs.map { $0.schema })
+            .union(allSeqs.map  { $0.schema })
             .union(allFuncs.map { $0.schema })
             .union(appState.schemaNamesCache[connection.id] ?? [])
         let uniqueSchemas = allSchemas.sorted {
@@ -147,37 +163,41 @@ private struct ConnectionSection: View {
         let seqsBySchema   = Dictionary(grouping: allSeqs,  by: { $0.schema })
         let funcsBySchema  = Dictionary(grouping: allFuncs, by: { $0.schema })
 
-        let filter = filterText.lowercased()
-
-        func matches(_ name: String) -> Bool {
-            filter.isEmpty || name.lowercased().contains(filter)
-        }
-
-        // Include connection.id in the row ID so that identically-named schemas
-        // across different connections get distinct SwiftUI identities in the
-        // flattened List — otherwise @State (isExpanded) is shared between them.
-        let rows = uniqueSchemas.map { schema -> (id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], onlyTables: Bool) in
+        return uniqueSchemas.map { schema in
+            let tables = tablesBySchema[schema] ?? []
+            let views  = viewsBySchema[schema]  ?? []
+            let enums  = enumsBySchema[schema]  ?? []
+            let seqs   = seqsBySchema[schema]   ?? []
+            let funcs  = funcsBySchema[schema]  ?? []
             // onlyTables computed from unfiltered data so it doesn't flip when
             // a search filter removes views/enums/etc. from the result set.
-            let unfilteredTables = tablesBySchema[schema] ?? []
-            let unfilteredViews  = viewsBySchema[schema]  ?? []
-            let unfilteredEnums  = enumsBySchema[schema]  ?? []
-            let unfilteredSeqs   = seqsBySchema[schema]   ?? []
-            let unfilteredFuncs  = funcsBySchema[schema]  ?? []
-            let onlyTablesFlag   = !unfilteredTables.isEmpty &&
-                                   unfilteredViews.isEmpty &&
-                                   unfilteredEnums.isEmpty &&
-                                   unfilteredSeqs.isEmpty &&
-                                   unfilteredFuncs.isEmpty
+            let onlyTablesFlag = !tables.isEmpty && views.isEmpty && enums.isEmpty && seqs.isEmpty && funcs.isEmpty
             return (
-                id:        "\(connection.id)-\(schema)",
-                name:      schema,
-                tables:    unfilteredTables.filter { matches($0.name) },
-                views:     unfilteredViews.filter  { matches($0.name) },
-                enums:     unfilteredEnums.filter  { matches($0.name) },
-                sequences: unfilteredSeqs.filter   { matches($0.name) },
-                functions: unfilteredFuncs.filter  { matches($0.signature) },
+                id: "\(connection.id)-\(schema)", name: schema,
+                tables: tables, views: views, enums: enums, sequences: seqs, functions: funcs,
                 onlyTables: onlyTablesFlag
+            )
+        }
+    }
+
+    /// All schemas, public first then alphabetical. When `filterText` is non-empty,
+    /// each schema's object arrays are narrowed and empty schemas are omitted.
+    /// Uses cachedGrouped for the expensive grouping step; filtering is a cheap second pass.
+    private var schemas: [SchemaGroupEntry] {
+        let grouped = cachedGrouped ?? computeGrouped()
+        let filter  = filterText.lowercased()
+
+        func matches(_ name: String) -> Bool { filter.isEmpty || name.lowercased().contains(filter) }
+
+        let rows: [SchemaGroupEntry] = grouped.map { e in
+            (
+                id: e.id, name: e.name,
+                tables:    e.tables.filter    { matches($0.name) },
+                views:     e.views.filter     { matches($0.name) },
+                enums:     e.enums.filter     { matches($0.name) },
+                sequences: e.sequences.filter { matches($0.name) },
+                functions: e.functions.filter { matches($0.signature) },
+                onlyTables: e.onlyTables
             )
         }
 
@@ -209,6 +229,9 @@ private struct ConnectionSection: View {
             }
         } header: {
             ConnectionHeader(connection: connection)
+        }
+        .task(id: schemaStamp) {
+            cachedGrouped = computeGrouped()
         }
     }
 }
