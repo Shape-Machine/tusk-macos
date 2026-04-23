@@ -72,13 +72,18 @@ enum SQLHighlighter {
         guard !text.isEmpty else { return }
         let fullRange = NSRange(location: 0, length: text.utf16.count)
 
-        // Fall back to full-document pass when block comments are present — they can span
-        // multiple paragraphs and require whole-document context to highlight correctly.
+        // Fall back to full-document pass when block comments or multi-paragraph string literals
+        // may be present — both require whole-document context to highlight correctly.
+        // Odd single-quote count in the paragraph signals an unterminated string that started
+        // in a prior paragraph (or continues into the next), so full context is needed.
+        let paragraphRange = (text as NSString).paragraphRange(for: editedRange)
+        let paragraphText  = (text as NSString).substring(with: paragraphRange)
+        let quoteCount     = paragraphText.filter { $0 == "'" }.count
         let highlightRange: NSRange
-        if text.contains("/*") || text.contains("*/") {
+        if text.contains("/*") || text.contains("*/") || quoteCount % 2 != 0 {
             highlightRange = fullRange
         } else {
-            highlightRange = (text as NSString).paragraphRange(for: editedRange)
+            highlightRange = paragraphRange
         }
 
         applyHighlighting(to: textStorage, text: text, in: highlightRange, font: font)

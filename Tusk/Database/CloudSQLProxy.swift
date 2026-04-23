@@ -18,7 +18,7 @@ actor CloudSQLProxy {
     private(set) var logLines: [String] = []
 
     private var process: Process?
-    private var terminationContinuation: CheckedContinuation<Void, Never>?
+    private var terminationContinuations: [CheckedContinuation<Void, Never>] = []
 
     // MARK: - Start
 
@@ -112,8 +112,7 @@ actor CloudSQLProxy {
             if case .crashed = status {
                 cont.resume()
             } else {
-                precondition(terminationContinuation == nil, "waitForTermination() called concurrently — only one caller supported")
-                terminationContinuation = cont
+                terminationContinuations.append(cont)
             }
         }
     }
@@ -122,8 +121,8 @@ actor CloudSQLProxy {
         guard case .running = status else { return }
         let lastLog = logLines.last ?? "Proxy exited unexpectedly."
         status = .crashed(lastLog)
-        terminationContinuation?.resume()
-        terminationContinuation = nil
+        terminationContinuations.forEach { $0.resume() }
+        terminationContinuations = []
     }
 
     private func waitForPort(_ port: Int, timeout: TimeInterval) async throws {

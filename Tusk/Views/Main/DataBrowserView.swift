@@ -299,7 +299,7 @@ struct DataBrowserView: View {
 
         if !state.filterText.isEmpty {
             if let col = state.filterColumn {
-                sql += " WHERE \(quoteIdentifier(col)) ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
+                sql += " WHERE \(quoteIdentifier(col))::text ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
             } else {
                 sql += " WHERE \"\(tableName)\"::text ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
             }
