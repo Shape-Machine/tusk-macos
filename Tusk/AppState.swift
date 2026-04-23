@@ -49,6 +49,7 @@ final class AppState {
 
     // MARK: - UI state
     var isAddingConnection = false
+    var isImportingPgpass = false
     var isShowingSettings = false
     var editingConnection: Connection? = nil
     var connectingIDs: Set<UUID> = []
