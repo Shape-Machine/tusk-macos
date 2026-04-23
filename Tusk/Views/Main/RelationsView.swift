@@ -39,6 +39,7 @@ struct RelationsView: View {
 
     struct Edge: Identifiable {
         var id: String { "\(isOutgoing ? "out" : "in"):\(relatedTable):\(label)" }
+        let relatedSchema: String
         let relatedTable: String
         let label: String       // "fromCol → toCol"
         let isOutgoing: Bool    // true = arrow points away from focal node
@@ -46,12 +47,14 @@ struct RelationsView: View {
 
     var edges: [Edge] {
         let out = outgoing.map {
-            Edge(relatedTable: $0.toTable,
+            Edge(relatedSchema: $0.toSchema,
+                 relatedTable: $0.toTable,
                  label: "\($0.fromColumn) → \($0.toColumn)",
                  isOutgoing: true)
         }
         let inc = incoming.map {
-            Edge(relatedTable: $0.fromTable,
+            Edge(relatedSchema: $0.fromSchema,
+                 relatedTable: $0.fromTable,
                  label: "\($0.fromColumn) → \($0.toColumn)",
                  isOutgoing: false)
         }
@@ -237,12 +240,9 @@ struct RelationsView: View {
                 if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
             .onTapGesture {
-                // Resolve schema: look up the table in schemaTables; fall back to the focal table's schema.
-                let resolvedSchema = appState.schemaTables[connectionID]?
-                    .first(where: { $0.name == edge.relatedTable })?.schema ?? schemaName
                 appState.openOrActivateTableTab(
                     connectionID: connectionID,
-                    schema: resolvedSchema,
+                    schema: edge.relatedSchema,
                     tableName: edge.relatedTable
                 )
             }
