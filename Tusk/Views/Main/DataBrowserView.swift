@@ -157,6 +157,15 @@ struct DataBrowserView: View {
                     ProgressView()
                         .controlSize(.mini)
                         .padding(.trailing, 6)
+                } else if !state.filterText.isEmpty {
+                    Button {
+                        state.filterText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 6)
                 }
             }
             .frame(width: 180)

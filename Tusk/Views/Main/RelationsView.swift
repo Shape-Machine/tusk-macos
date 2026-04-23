@@ -4,8 +4,11 @@ import SwiftUI
 
 struct RelationsView: View {
     let client: DatabaseClient
+    let connectionID: UUID
     let schemaName: String
     let tableName: String
+
+    @Environment(AppState.self) private var appState
 
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
@@ -230,6 +233,19 @@ struct RelationsView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(borderColor.opacity(0.7), lineWidth: 1.5)
             )
+            .onHover { inside in
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            .onTapGesture {
+                // Resolve schema: look up the table in schemaTables; fall back to the focal table's schema.
+                let resolvedSchema = appState.schemaTables[connectionID]?
+                    .first(where: { $0.name == edge.relatedTable })?.schema ?? schemaName
+                appState.openOrActivateTableTab(
+                    connectionID: connectionID,
+                    schema: resolvedSchema,
+                    tableName: edge.relatedTable
+                )
+            }
     }
 
     private func edgeLabelView(_ text: String, isOutgoing: Bool) -> some View {

@@ -149,7 +149,7 @@ struct TableDetailView: View {
         case .keys:
             keysTab
         case .relations:
-            RelationsView(client: client, schemaName: schemaName, tableName: tableName)
+            RelationsView(client: client, connectionID: connectionID, schemaName: schemaName, tableName: tableName)
         case .indexes:
             indexesTab
         case .triggers:
