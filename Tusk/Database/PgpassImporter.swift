@@ -20,10 +20,10 @@ struct PgpassEntry {
 
 enum PgpassImporter {
 
-    /// Reads the file at `url` and returns all valid, non-wildcard entries.
-    /// Lines that are comments (starting with `#`) or that have all five fields
-    /// as `*` are skipped. Lines with a wildcard in any single field are still
-    /// returned — the caller decides what to do with them.
+    /// Reads the file at `url` and returns all concrete, importable entries.
+    /// Lines that are comments (starting with `#`) or that have a wildcard in
+    /// any identifying field (host, database, username) are skipped, since they
+    /// cannot be turned into a concrete connection.
     static func parse(url: URL) throws -> [PgpassEntry] {
         let contents = try String(contentsOf: url, encoding: .utf8)
         return parse(string: contents)
@@ -47,19 +47,17 @@ enum PgpassImporter {
             let username = fields[3]
             let password = fields[4]
 
-            // Skip entries where every field is a wildcard — they can't be
-            // turned into a concrete connection.
-            if host == "*" && portStr == "*" && database == "*" && username == "*" {
-                continue
-            }
+            // Skip entries with wildcards in any identifying field — they can't
+            // be turned into a concrete connection.
+            guard host != "*", database != "*", username != "*" else { continue }
 
             let port = Int(portStr) ?? 5432
 
             entries.append(PgpassEntry(
-                host:     host == "*" ? "" : host,
+                host:     host,
                 port:     port,
-                database: database == "*" ? "" : database,
-                username: username == "*" ? "" : username,
+                database: database,
+                username: username,
                 password: password
             ))
         }
