@@ -112,6 +112,7 @@ actor CloudSQLProxy {
             if case .crashed = status {
                 cont.resume()
             } else {
+                precondition(terminationContinuation == nil, "waitForTermination() called concurrently — only one caller supported")
                 terminationContinuation = cont
             }
         }

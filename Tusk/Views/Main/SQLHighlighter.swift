@@ -116,8 +116,12 @@ enum SQLHighlighter {
         //    Line comments are always single-line, so the paragraph range is sufficient.
         //    Block comments use the full document range so multi-paragraph spans are caught.
         colorMatches(of: lineCommentRE, in: text, range: range, color: commentColour, to: textStorage, excluding: stringRanges)
-        let blockStringRanges = range == fullRange ? stringRanges : collectRanges(of: stringRE, in: text, range: fullRange)
-        colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage, excluding: blockStringRanges)
+        // Block comments require whole-document context — only run on full-document passes.
+        // Paragraph-mode calls (from highlightEdited) only reach here when no /* or */ exists,
+        // so this pass would match nothing anyway; skip it to avoid an O(doc_size) scan.
+        if range == fullRange {
+            colorMatches(of: blockCommentRE, in: text, range: fullRange, color: commentColour, to: textStorage, excluding: stringRanges)
+        }
     }
 
     // MARK: - Helpers

@@ -122,9 +122,9 @@ private struct ConnectionSection: View {
 
     private typealias SchemaGroupEntry = (id: String, name: String, tables: [TableInfo], views: [TableInfo], enums: [EnumInfo], sequences: [SequenceInfo], functions: [FunctionInfo], onlyTables: Bool)
 
-    /// Cached result of the expensive grouping+sorting step. nil on first render;
-    /// populated by .task(id: schemaStamp) when schema data changes.
-    @State private var cachedGrouped: [SchemaGroupEntry]? = nil
+    /// Cached result of the expensive grouping+sorting step.
+    /// Populated by .onChange(of: schemaStamp, initial: true) — empty until first appear.
+    @State private var cachedGrouped: [SchemaGroupEntry] = []
 
     var isConnected: Bool { appState.isConnected(connection) }
 
@@ -133,9 +133,9 @@ private struct ConnectionSection: View {
     private var schemaStamp: Int {
         var hasher = Hasher()
         hasher.combine(appState.schemaTables[connection.id] ?? [])
-        hasher.combine((appState.schemaEnums[connection.id] ?? []).map(\.id))
-        hasher.combine((appState.schemaSequences[connection.id] ?? []).map(\.id))
-        hasher.combine((appState.schemaFunctions[connection.id] ?? []).map(\.id))
+        hasher.combine(appState.schemaEnums[connection.id] ?? [])
+        hasher.combine(appState.schemaSequences[connection.id] ?? [])
+        hasher.combine(appState.schemaFunctions[connection.id] ?? [])
         hasher.combine(Array(appState.schemaNamesCache[connection.id] ?? []).sorted())
         return hasher.finalize()
     }
@@ -184,7 +184,7 @@ private struct ConnectionSection: View {
     /// each schema's object arrays are narrowed and empty schemas are omitted.
     /// Uses cachedGrouped for the expensive grouping step; filtering is a cheap second pass.
     private var schemas: [SchemaGroupEntry] {
-        let grouped = cachedGrouped ?? computeGrouped()
+        let grouped = cachedGrouped
         let filter  = filterText.lowercased()
 
         func matches(_ name: String) -> Bool { filter.isEmpty || name.lowercased().contains(filter) }
@@ -230,7 +230,7 @@ private struct ConnectionSection: View {
         } header: {
             ConnectionHeader(connection: connection)
         }
-        .task(id: schemaStamp) {
+        .onChange(of: schemaStamp, initial: true) { _, _ in
             cachedGrouped = computeGrouped()
         }
     }

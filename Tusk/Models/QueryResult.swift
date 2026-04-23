@@ -273,20 +273,20 @@ struct ExplainResult: Sendable {
 
 // MARK: - Schema object models
 
-struct EnumInfo: Identifiable, Sendable {
+struct EnumInfo: Identifiable, Hashable, Sendable {
     var id: String { "\(schema).\(name)" }
     let schema: String
     let name: String
     let values: [String]
 }
 
-struct SequenceInfo: Identifiable, Sendable {
+struct SequenceInfo: Identifiable, Hashable, Sendable {
     var id: String { "\(schema).\(name)" }
     let schema: String
     let name: String
 }
 
-struct FunctionInfo: Identifiable, Sendable {
+struct FunctionInfo: Identifiable, Hashable, Sendable {
     var id: String { "\(schema).\(signature)" }
     let schema: String
     let name: String
