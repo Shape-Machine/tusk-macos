@@ -143,6 +143,7 @@ struct ForeignKeyInfo: Identifiable, Sendable {
     var id: String { constraintName }
     let constraintName: String
     let fromColumn: String
+    let toSchema: String
     let toTable: String
     let toColumn: String
 }

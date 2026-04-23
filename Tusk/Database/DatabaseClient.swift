@@ -206,6 +206,7 @@ actor DatabaseClient {
             SELECT
                 tc.constraint_name,
                 kcu.column_name,
+                ccu.table_schema AS foreign_schema,
                 ccu.table_name  AS foreign_table,
                 ccu.column_name AS foreign_column
             FROM information_schema.table_constraints AS tc
@@ -222,8 +223,9 @@ actor DatabaseClient {
             ForeignKeyInfo(
                 constraintName: row[safe: 0]?.displayValue ?? "",
                 fromColumn:     row[safe: 1]?.displayValue ?? "",
-                toTable:        row[safe: 2]?.displayValue ?? "",
-                toColumn:       row[safe: 3]?.displayValue ?? ""
+                toSchema:       row[safe: 2]?.displayValue ?? "",
+                toTable:        row[safe: 3]?.displayValue ?? "",
+                toColumn:       row[safe: 4]?.displayValue ?? ""
             )
         }
     }
