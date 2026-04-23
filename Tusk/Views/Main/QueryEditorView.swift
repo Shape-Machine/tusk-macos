@@ -389,10 +389,11 @@ struct QueryEditorView: View {
                 Spacer()
                 if !result.rows.isEmpty {
                     Button {
-                        copyRowsAsCSV(columns: result.columns, rows: result.rows)
-                        copiedCSV = true
                         copiedCSVTask?.cancel()
-                        copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
+                        copyRowsAsCSV(columns: result.columns, rows: result.rows) {
+                            copiedCSV = true
+                            copiedCSVTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedCSV = false } }
+                        }
                     } label: {
                         Label(copiedCSV ? "Copied!" : "Copy CSV",
                               systemImage: copiedCSV ? "checkmark" : "doc.on.clipboard").font(.caption)
@@ -400,10 +401,11 @@ struct QueryEditorView: View {
                     .buttonStyle(.borderless).controlSize(.small)
                     .help("Copy all rows as CSV")
                     Button {
-                        copyRowsAsJSON(columns: result.columns, rows: result.rows)
-                        copiedJSON = true
                         copiedJSONTask?.cancel()
-                        copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
+                        copyRowsAsJSON(columns: result.columns, rows: result.rows) {
+                            copiedJSON = true
+                            copiedJSONTask = Task { try? await Task.sleep(for: .milliseconds(1500)); if !Task.isCancelled { copiedJSON = false } }
+                        }
                     } label: {
                         Label(copiedJSON ? "Copied!" : "Copy JSON",
                               systemImage: copiedJSON ? "checkmark" : "doc.on.clipboard").font(.caption)
