@@ -10,6 +10,7 @@ struct ImportPgpassSheet: View {
     @State private var loadError: String? = nil
     @State private var isLoading = true
     @State private var fileURL: URL = PgpassImporter.defaultURL
+    @State private var loadGeneration = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,6 +115,8 @@ struct ImportPgpassSheet: View {
     // MARK: - Load
 
     private func load(url: URL) async {
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         loadError = nil
         entries = []
@@ -124,6 +127,7 @@ struct ImportPgpassSheet: View {
             let parsed = try await Task.detached(priority: .userInitiated) {
                 try PgpassImporter.parse(url: url)
             }.value
+            guard generation == loadGeneration else { return }
             entries = parsed.map { entry in
                 let isDuplicate = connections.contains {
                     $0.host == entry.host &&
@@ -139,6 +143,7 @@ struct ImportPgpassSheet: View {
             }
             isLoading = false
         } catch {
+            guard generation == loadGeneration else { return }
             loadError = error.localizedDescription
             isLoading = false
         }
