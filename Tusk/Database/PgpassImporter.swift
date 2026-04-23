@@ -60,7 +60,7 @@ enum PgpassImporter {
                 port:     port,
                 database: database == "*" ? "" : database,
                 username: username == "*" ? "" : username,
-                password: unescape(password)
+                password: password
             ))
         }
 
@@ -91,13 +91,6 @@ enum PgpassImporter {
         }
         fields.append(current)
         return fields
-    }
-
-    /// Converts pgpass escape sequences in field values back to literal characters.
-    private static func unescape(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\:", with: ":")
-            .replacingOccurrences(of: "\\\\", with: "\\")
     }
 
     /// Returns the URL of the default ~/.pgpass file.

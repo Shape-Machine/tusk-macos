@@ -55,7 +55,6 @@ struct ImportPgpassSheet: View {
                     TableColumn("") { entry in
                         Toggle("", isOn: bindingFor(entry))
                             .labelsHidden()
-                            .disabled(entry.status == .duplicate && !entry.selected)
                     }
                     .width(24)
                     TableColumn("Connection") { entry in
@@ -109,21 +108,24 @@ struct ImportPgpassSheet: View {
             .padding()
         }
         .frame(width: 720, height: 420)
-        .onAppear { load(url: fileURL) }
+        .onAppear { Task { await load(url: fileURL) } }
     }
 
     // MARK: - Load
 
-    private func load(url: URL) {
+    private func load(url: URL) async {
         isLoading = true
         loadError = nil
         entries = []
         fileURL = url
 
+        let connections = appState.connections
         do {
-            let parsed = try PgpassImporter.parse(url: url)
+            let parsed = try await Task.detached(priority: .userInitiated) {
+                try PgpassImporter.parse(url: url)
+            }.value
             entries = parsed.map { entry in
-                let isDuplicate = appState.connections.contains {
+                let isDuplicate = connections.contains {
                     $0.host == entry.host &&
                     $0.port == entry.port &&
                     $0.database == entry.database &&
@@ -180,7 +182,7 @@ struct ImportPgpassSheet: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         if panel.runModal() == .OK, let url = panel.url {
-            load(url: url)
+            Task { await load(url: url) }
         }
     }
 
