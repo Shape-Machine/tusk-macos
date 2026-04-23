@@ -164,10 +164,14 @@ struct ImportPgpassSheet: View {
                    $0.username == conn.username
                }) {
                 // Overwrite password only — keep existing connection metadata
-                KeychainManager.shared.setPassword(entry.pgpassEntry.password, for: existing.id)
+                if !entry.pgpassEntry.password.isEmpty {
+                    KeychainManager.shared.setPassword(entry.pgpassEntry.password, for: existing.id)
+                }
             } else {
                 appState.addConnection(conn)
-                KeychainManager.shared.setPassword(entry.pgpassEntry.password, for: conn.id)
+                if !entry.pgpassEntry.password.isEmpty {
+                    KeychainManager.shared.setPassword(entry.pgpassEntry.password, for: conn.id)
+                }
             }
         }
         dismiss()
