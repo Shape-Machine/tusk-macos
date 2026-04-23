@@ -102,13 +102,22 @@ struct SidebarView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    appState.isAddingConnection = true
+                Menu {
+                    Button("New Connection…") {
+                        appState.isAddingConnection = true
+                    }
+                    Button("Import from .pgpass…") {
+                        appState.isImportingPgpass = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
+                .menuIndicator(.hidden)
                 .help("Add connection")
             }
+        }
+        .sheet(isPresented: $appState.isImportingPgpass) {
+            ImportPgpassSheet()
         }
     }
 }
