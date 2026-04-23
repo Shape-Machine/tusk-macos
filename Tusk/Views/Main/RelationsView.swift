@@ -38,7 +38,7 @@ struct RelationsView: View {
     // MARK: - Edge model
 
     struct Edge: Identifiable {
-        var id: String { "\(isOutgoing ? "out" : "in"):\(relatedTable):\(label)" }
+        var id: String { "\(isOutgoing ? "out" : "in"):\(relatedSchema).\(relatedTable):\(label)" }
         let relatedSchema: String
         let relatedTable: String
         let label: String       // "fromCol → toCol"
@@ -130,6 +130,7 @@ struct RelationsView: View {
                 ForEach(Array(edges.enumerated()), id: \.element.id) { i, edge in
                     relatedNodeView(edge)
                         .position(positions[i])
+                        .onDisappear { NSCursor.pop() }
                 }
 
                 // Focal (center) node — on top
