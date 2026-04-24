@@ -551,12 +551,24 @@ actor DatabaseClient {
     // MARK: - Raw query
 
     func query(_ sql: String, rowLimit: Int? = nil) async throws -> QueryResult {
+        try await executeQuery(PostgresQuery(unsafeSQL: sql), rowLimit: rowLimit)
+    }
+
+    /// Executes a query where a single string parameter is bound as `$1`.
+    /// The full query is formed by concatenating `prefix`, the bound `filterParam`, and `suffix`.
+    /// This allows PostgreSQL to cache the query plan across different filter values.
+    func queryParameterized(prefix: String, filterParam: String, suffix: String, rowLimit: Int? = nil) async throws -> QueryResult {
+        let pgQuery: PostgresQuery = "\(unescaped: prefix)\(filterParam)\(unescaped: suffix)"
+        return try await executeQuery(pgQuery, rowLimit: rowLimit)
+    }
+
+    private func executeQuery(_ pgQuery: PostgresQuery, rowLimit: Int? = nil) async throws -> QueryResult {
         guard let conn = box?.connection else { throw TuskError.notConnected }
 
         let start = Date()
         let pgRows: PostgresRowSequence
         do {
-            pgRows = try await conn.query(PostgresQuery(unsafeSQL: sql), logger: logger)
+            pgRows = try await conn.query(pgQuery, logger: logger)
         } catch let psql as PSQLError {
             let msg = psql.serverInfo?[.message]
                 ?? psql.serverInfo?[.detail]

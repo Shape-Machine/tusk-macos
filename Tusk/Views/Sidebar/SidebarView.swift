@@ -134,6 +134,9 @@ private struct ConnectionSection: View {
     /// Cached result of the expensive grouping+sorting step.
     /// Populated by .onChange(of: schemaStamp, initial: true) — empty until first appear.
     @State private var cachedGrouped: [SchemaGroupEntry] = []
+    /// Debounced copy of filterText — updated 250 ms after the last keystroke (#211)
+    @State private var debouncedFilter: String = ""
+    @State private var filterDebounceTask: Task<Void, Never>? = nil
 
     var isConnected: Bool { appState.isConnected(connection) }
 
@@ -189,12 +192,12 @@ private struct ConnectionSection: View {
         }
     }
 
-    /// All schemas, public first then alphabetical. When `filterText` is non-empty,
+    /// All schemas, public first then alphabetical. When `debouncedFilter` is non-empty,
     /// each schema's object arrays are narrowed and empty schemas are omitted.
     /// Uses cachedGrouped for the expensive grouping step; filtering is a cheap second pass.
     private var schemas: [SchemaGroupEntry] {
         let grouped = cachedGrouped
-        let filter  = filterText.lowercased()
+        let filter  = debouncedFilter.lowercased()
 
         func matches(_ name: String) -> Bool { filter.isEmpty || name.lowercased().contains(filter) }
 
@@ -241,6 +244,15 @@ private struct ConnectionSection: View {
         }
         .onChange(of: schemaStamp, initial: true) { _, _ in
             cachedGrouped = computeGrouped()
+        }
+        .onChange(of: filterText) { _, newValue in
+            // Debounce the filter to avoid re-filtering on every keystroke (#211)
+            filterDebounceTask?.cancel()
+            filterDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                debouncedFilter = newValue
+            }
         }
     }
 }

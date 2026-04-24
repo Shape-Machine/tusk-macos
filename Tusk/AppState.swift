@@ -46,6 +46,9 @@ final class AppState {
     var superuserConnections: Set<UUID>             = []
     /// keyed by connectionID → cached role list (users + roles)
     var connectionRoles:      [UUID: [RoleInfo]]    = [:]
+    /// Column info cache — keyed by connectionID → "schema.table" → [ColumnInfo] (#214)
+    /// Invalidated on schema refresh and disconnect.
+    var columnCache:          [UUID: [String: [ColumnInfo]]] = [:]
 
     // MARK: - UI state
     var isAddingConnection = false
@@ -206,10 +209,14 @@ final class AppState {
         if (try? await refreshSchema(for: connection)) == nil {
             await loadSuperuserStatus(for: connection)
         }
+        // Load table sizes and databases concurrently — they are independent (#213)
         if UserDefaults.standard.bool(forKey: "tusk.sidebar.showTableSizes") {
-            await loadTableSizes(for: connection)
+            async let sizes: Void = loadTableSizes(for: connection)
+            async let dbs:   Void = loadDatabases(for: connection)
+            _ = await (sizes, dbs)
+        } else {
+            await loadDatabases(for: connection)
         }
-        await loadDatabases(for: connection)
     }
 
     func disconnect(_ connection: Connection) {
@@ -233,6 +240,7 @@ final class AppState {
         activeDatabase.removeValue(forKey: connection.id)
         superuserConnections.remove(connection.id)
         connectionRoles.removeValue(forKey: connection.id)
+        columnCache.removeValue(forKey: connection.id)
         if createTableTarget?.connectionID == connection.id {
             createTableTarget = nil
         }
@@ -301,11 +309,26 @@ final class AppState {
             schemaFunctions[connection.id] = f
             schemaNamesCache[connection.id] = n
             schemaRefreshErrors.removeValue(forKey: connection.id)
+            // Column metadata may have changed — invalidate the cache (#214)
+            columnCache.removeValue(forKey: connection.id)
             await loadSuperuserStatus(for: connection)
         } catch {
             schemaRefreshErrors[connection.id] = error.localizedDescription
             throw error
         }
+    }
+
+    /// Returns cached column info for a table, or fetches and caches it if not yet available.
+    /// Cache is invalidated on schema refresh and disconnect (#214).
+    func cachedColumns(connectionID: UUID, schema: String, table: String, using client: DatabaseClient) async throws -> [ColumnInfo] {
+        let key = "\(schema).\(table)"
+        if let cached = columnCache[connectionID]?[key] {
+            return cached
+        }
+        let cols = try await client.columns(schema: schema, table: table)
+        if columnCache[connectionID] == nil { columnCache[connectionID] = [:] }
+        columnCache[connectionID]?[key] = cols
+        return cols
     }
 
     // MARK: - Query tabs
@@ -592,6 +615,7 @@ final class AppState {
         schemaNamesCache.removeValue(forKey: connectionID)
         schemaTableSizes.removeValue(forKey: connectionID)
         schemaRefreshErrors.removeValue(forKey: connectionID)
+        columnCache.removeValue(forKey: connectionID)
 
         if (try? await refreshSchema(for: connection)) == nil {
             await loadSuperuserStatus(for: connection)
