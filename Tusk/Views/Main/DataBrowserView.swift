@@ -192,11 +192,10 @@ struct DataBrowserView: View {
             }
             .frame(width: 220)
             .onChange(of: state.filterText) { _, newValue in
-                if newValue.isEmpty {
-                    state.countTask?.cancel()
-                    state.filteredRowCount = nil
-                    state.isLoadingFilteredCount = false
-                }
+                // Cancel any in-flight count whenever filter changes — stale results must not overwrite the new filter's count
+                state.countTask?.cancel()
+                state.filteredRowCount = nil
+                state.isLoadingFilteredCount = false
                 state.filterDebounceTask?.cancel()
                 state.filterDebounceTask = Task {
                     try? await Task.sleep(for: .milliseconds(300))
@@ -380,7 +379,7 @@ struct DataBrowserView: View {
                 if let col = state.filterColumn {
                     whereClause = " WHERE \(quoteIdentifier(col))::text ILIKE "
                 } else {
-                    whereClause = " WHERE \"\(tableName)\"::text ILIKE "
+                    whereClause = " WHERE \(quoteIdentifier(tableName))::text ILIKE "
                 }
                 queryResult = try await client.queryParameterized(
                     prefix: baseSQL + whereClause,
@@ -435,7 +434,7 @@ struct DataBrowserView: View {
         if let col = state.filterColumn {
             wherePrefix = "SELECT COUNT(*) FROM \(qualifiedName) WHERE \(quoteIdentifier(col))::text ILIKE "
         } else {
-            wherePrefix = "SELECT COUNT(*) FROM \(qualifiedName) WHERE \"\(tableName)\"::text ILIKE "
+            wherePrefix = "SELECT COUNT(*) FROM \(qualifiedName) WHERE \(quoteIdentifier(tableName))::text ILIKE "
         }
         guard let result = try? await client.queryParameterized(prefix: wherePrefix, filterParam: filterValue, suffix: ""),
               let row = result.rows.first,
