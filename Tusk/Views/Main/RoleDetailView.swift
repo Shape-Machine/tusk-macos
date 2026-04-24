@@ -210,6 +210,7 @@ struct RoleDetailView: View {
                 membershipColumn(
                     title: "Member of",
                     items: memberships,
+                    emptyMessage: "This role is not a member of any groups.",
                     addHelp: "Grant membership in a role",
                     onAdd: { grantMembership(type: .memberOf) },
                     onRemove: { revokeMembership(roleName: $0, type: .memberOf) }
@@ -218,6 +219,7 @@ struct RoleDetailView: View {
                 membershipColumn(
                     title: "Has members",
                     items: members,
+                    emptyMessage: "No roles are members of this role.",
                     addHelp: "Grant a role membership here",
                     onAdd: { grantMembership(type: .hasMember) },
                     onRemove: { revokeMembership(roleName: $0, type: .hasMember) }
@@ -234,7 +236,7 @@ struct RoleDetailView: View {
     private enum MembershipType { case memberOf, hasMember }
 
     @ViewBuilder
-    private func membershipColumn(title: String, items: [String], addHelp: String, onAdd: @escaping () -> Void, onRemove: @escaping (String) -> Void) -> some View {
+    private func membershipColumn(title: String, items: [String], emptyMessage: String, addHelp: String, onAdd: @escaping () -> Void, onRemove: @escaping (String) -> Void) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
@@ -262,7 +264,7 @@ struct RoleDetailView: View {
                 Label("No Memberships", systemImage: "person.2")
                     .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
                     .foregroundStyle(.tertiary)
-                Text("This role is not a member of any groups.")
+                Text(emptyMessage)
                     .font(.system(size: contentFontSize - 2, design: contentFontDesign.design))
                     .foregroundStyle(.tertiary)
             } else {
