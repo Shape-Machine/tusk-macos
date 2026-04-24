@@ -16,37 +16,18 @@ struct PlanNodeLayout: Identifiable {
     static let hGap:  CGFloat = 18
     static let vGap:  CGFloat = 52
 
-    // MARK: Layout
+    // MARK: Layout entry point
 
-    static func build(node: ExplainNode, topLeft: CGPoint) -> PlanNodeLayout {
-        let sw = subtreeWidth(node)
-        let cx = topLeft.x + sw / 2
-        let cy = topLeft.y + cardH / 2
-
-        guard !node.children.isEmpty else {
-            return PlanNodeLayout(node: node, centerX: cx, centerY: cy, children: [])
-        }
-
-        let childY = topLeft.y + cardH + vGap
-        var childX = topLeft.x
-        var childLayouts: [PlanNodeLayout] = []
-        for child in node.children {
-            let csw = subtreeWidth(child)
-            childLayouts.append(build(node: child, topLeft: CGPoint(x: childX, y: childY)))
-            childX += csw + hGap
-        }
-        let parentCX = (childLayouts.first!.centerX + childLayouts.last!.centerX) / 2
-        return PlanNodeLayout(node: node, centerX: parentCX, centerY: cy, children: childLayouts)
-    }
-
-    static func canvasSize(root: ExplainNode) -> CGSize {
-        let w = subtreeWidth(root)
-        let d = depth(root)
+    /// Builds the layout tree and canvas size in a single traversal — no redundant subtree walks.
+    static func buildAll(node: ExplainNode) -> (layout: PlanNodeLayout, size: CGSize) {
+        let (layout, w) = build(node: node, topLeft: .zero)
+        let d = treeDepth(node)
         let h = CGFloat(d) * (cardH + vGap) - vGap
-        return CGSize(width: max(w, cardW), height: max(h, cardH))
+        let size = CGSize(width: max(w, cardW), height: max(h, cardH))
+        return (layout, size)
     }
 
-    /// Flattened list of all nodes in breadth-first order (for ForEach rendering).
+    /// Flattened list of all nodes depth-first (for ForEach rendering).
     func allLayouts() -> [PlanNodeLayout] {
         var result: [PlanNodeLayout] = [self]
         for child in children { result += child.allLayouts() }
@@ -55,16 +36,34 @@ struct PlanNodeLayout: Identifiable {
 
     // MARK: Private helpers
 
-    private static func subtreeWidth(_ node: ExplainNode) -> CGFloat {
-        if node.children.isEmpty { return cardW }
-        let total = node.children.map { subtreeWidth($0) }.reduce(0, +)
-        let gaps  = CGFloat(node.children.count - 1) * hGap
-        return max(cardW, total + gaps)
+    /// Returns (layout, subtreeWidth). Each subtree is traversed exactly once:
+    /// the child's width comes from the recursive return value, not a second subtreeWidth() call.
+    private static func build(node: ExplainNode, topLeft: CGPoint) -> (PlanNodeLayout, CGFloat) {
+        guard !node.children.isEmpty else {
+            let cx = topLeft.x + cardW / 2
+            let cy = topLeft.y + cardH / 2
+            return (PlanNodeLayout(node: node, centerX: cx, centerY: cy, children: []), cardW)
+        }
+
+        let childY = topLeft.y + cardH + vGap
+        var childX = topLeft.x
+        var childLayouts: [PlanNodeLayout] = []
+
+        for (i, child) in node.children.enumerated() {
+            let (childLayout, childW) = build(node: child, topLeft: CGPoint(x: childX, y: childY))
+            childLayouts.append(childLayout)
+            childX += childW + (i < node.children.count - 1 ? hGap : 0)
+        }
+
+        let sw = max(cardW, childX - topLeft.x)
+        let parentCX = (childLayouts.first!.centerX + childLayouts.last!.centerX) / 2
+        let cy = topLeft.y + cardH / 2
+        return (PlanNodeLayout(node: node, centerX: parentCX, centerY: cy, children: childLayouts), sw)
     }
 
-    private static func depth(_ node: ExplainNode) -> Int {
+    private static func treeDepth(_ node: ExplainNode) -> Int {
         if node.children.isEmpty { return 1 }
-        return 1 + (node.children.map { depth($0) }.max() ?? 0)
+        return 1 + (node.children.map { treeDepth($0) }.max() ?? 0)
     }
 }
 
@@ -74,48 +73,48 @@ struct ExplainGraphView: View {
     let result: ExplainResult
     private let rootLayout: PlanNodeLayout
     private let baseSize: CGSize
+    private let allNodeLayouts: [PlanNodeLayout]
+    private let maxNodeTime: Double
 
     @State private var scale: CGFloat = 1.0
     @GestureState private var liveScale: CGFloat = 1.0
 
     init(result: ExplainResult) {
-        self.result     = result
-        self.rootLayout = PlanNodeLayout.build(node: result.plan, topLeft: .zero)
-        self.baseSize   = PlanNodeLayout.canvasSize(root: result.plan)
-    }
-
-    private var maxNodeTime: Double {
-        func maxTime(_ node: ExplainNode) -> Double {
-            let t = node.actualTotalTime ?? 0
-            return ([t] + node.children.map { maxTime($0) }).max() ?? 0
-        }
-        return maxTime(result.plan)
+        self.result = result
+        let (layout, size) = PlanNodeLayout.buildAll(node: result.plan)
+        self.rootLayout     = layout
+        self.baseSize       = size
+        self.allNodeLayouts = layout.allLayouts()
+        // Compute max actual time once; used by PlanNodeCard for relative colour-coding
+        self.maxNodeTime = {
+            func maxT(_ node: ExplainNode) -> Double {
+                let t = node.actualTotalTime ?? 0
+                return ([t] + node.children.map { maxT($0) }).max() ?? 0
+            }
+            return maxT(result.plan)
+        }()
     }
 
     var body: some View {
         let effectiveScale = max(0.3, min(4.0, scale * liveScale))
         let canvasW = baseSize.width  * effectiveScale
         let canvasH = baseSize.height * effectiveScale
-        let layout  = rootLayout
-        let all     = layout.allLayouts()
-        let rootCost = result.plan.totalCost
-        let maxTime  = maxNodeTime
 
         ScrollView([.horizontal, .vertical]) {
             ZStack(alignment: .topLeading) {
                 // Edge layer
                 Canvas { ctx, _ in
-                    drawEdges(ctx: &ctx, layout: layout, scale: effectiveScale)
+                    drawEdges(ctx: &ctx, layout: rootLayout, scale: effectiveScale)
                 }
                 .frame(width: canvasW, height: canvasH)
 
-                // Node cards
-                ForEach(all) { nodeLayout in
+                // Node cards — pre-flattened list avoids tree traversal in body
+                ForEach(allNodeLayouts) { nodeLayout in
                     PlanNodeCard(
                         layout:   nodeLayout,
                         scale:    effectiveScale,
-                        rootCost: rootCost,
-                        maxTime:  maxTime
+                        rootCost: result.plan.totalCost,
+                        maxTime:  maxNodeTime
                     )
                 }
             }
