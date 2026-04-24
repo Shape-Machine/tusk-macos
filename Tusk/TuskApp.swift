@@ -14,7 +14,7 @@ struct TuskApp: App {
                 .onAppear {
                     UNUserNotificationCenter.current().delegate = notificationDelegate
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .tuskActivateQueryTab)) { note in
+                .onReceive(NotificationCenter.default.publisher(for: .tuskActivateQueryTab).receive(on: RunLoop.main)) { note in
                     guard let tabID = note.userInfo?["tabID"] as? UUID,
                           let detailTab = appState.openTabs.first(where: {
                               guard case .queryEditor(let qid) = $0.kind else { return false }
