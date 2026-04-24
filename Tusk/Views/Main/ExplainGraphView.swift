@@ -42,7 +42,7 @@ struct PlanNodeLayout: Identifiable {
     static func canvasSize(root: ExplainNode) -> CGSize {
         let w = subtreeWidth(root)
         let d = depth(root)
-        let h = CGFloat(d) * (cardH + vGap) - vGap + cardH
+        let h = CGFloat(d) * (cardH + vGap) - vGap
         return CGSize(width: max(w, cardW), height: max(h, cardH))
     }
 
@@ -72,16 +72,16 @@ struct PlanNodeLayout: Identifiable {
 
 struct ExplainGraphView: View {
     let result: ExplainResult
+    private let rootLayout: PlanNodeLayout
+    private let baseSize: CGSize
 
     @State private var scale: CGFloat = 1.0
     @GestureState private var liveScale: CGFloat = 1.0
 
-    private var rootLayout: PlanNodeLayout {
-        PlanNodeLayout.build(node: result.plan, topLeft: .zero)
-    }
-
-    private var baseSize: CGSize {
-        PlanNodeLayout.canvasSize(root: result.plan)
+    init(result: ExplainResult) {
+        self.result     = result
+        self.rootLayout = PlanNodeLayout.build(node: result.plan, topLeft: .zero)
+        self.baseSize   = PlanNodeLayout.canvasSize(root: result.plan)
     }
 
     private var maxNodeTime: Double {
