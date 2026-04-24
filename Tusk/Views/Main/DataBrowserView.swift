@@ -163,6 +163,7 @@ struct DataBrowserView: View {
                 guard !state.filterText.isEmpty else { return }
                 state.offset = 0
                 triggerLoad()
+                triggerFilteredCount()
             }
 
             ZStack(alignment: .trailing) {
