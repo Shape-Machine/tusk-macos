@@ -401,7 +401,11 @@ struct AddConnectionSheet: View {
             } else {
                 KeychainManager.shared.setPassword(password, for: updated.id)
             }
-            KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
+            if sshUseAgent {
+                KeychainManager.shared.deleteSshPassphrase(for: updated.id)
+            } else {
+                KeychainManager.shared.setSshPassphrase(sshPassphrase, for: updated.id)
+            }
             appState.updateConnection(updated)
         } else {
             var new = Connection(
@@ -426,7 +430,9 @@ struct AddConnectionSheet: View {
             } else {
                 KeychainManager.shared.setPassword(password, for: new.id)
             }
-            KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
+            if !sshUseAgent {
+                KeychainManager.shared.setSshPassphrase(sshPassphrase, for: new.id)
+            }
             appState.addConnection(new)
         }
         dismiss()
