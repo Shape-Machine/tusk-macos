@@ -13,6 +13,12 @@ final class DataBrowserState {
     var filterColumn: String? = nil
     var loadTask: Task<Void, Never>? = nil
     var filterDebounceTask: Task<Void, Never>? = nil
+
+    // Row count display (#200)
+    var estimatedRowCount: Int64? = nil
+    var filteredRowCount: Int64? = nil
+    var isLoadingFilteredCount = false
+    var countTask: Task<Void, Never>? = nil
 }
 
 // MARK: - Data browser view
@@ -56,8 +62,11 @@ struct DataBrowserView: View {
             } else if let result = state.result {
                 VStack(spacing: 0) {
                     if result.rows.isEmpty {
+                        let canInsert = !isView && !isReadOnly && columns.contains(where: { $0.isPrimaryKey })
                         ContentUnavailableView("Empty Table", systemImage: "tray",
-                            description: Text("This table has no data."))
+                            description: Text(canInsert
+                                ? "This table has no data. Use the + button in the toolbar to add the first row."
+                                : "This table has no data."))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ResultsGrid(
@@ -97,13 +106,19 @@ struct DataBrowserView: View {
                 Color(nsColor: .textBackgroundColor)
             }
         }
-        .task { if state.result == nil { triggerLoad() } }
+        .task {
+            if state.result == nil { triggerLoad() }
+            if state.estimatedRowCount == nil { await loadEstimatedRowCount() }
+        }
         .onChange(of: schemaName + "." + tableName) { _, _ in
             state.offset = 0
             state.filterColumn = nil
+            state.estimatedRowCount = nil
+            state.filteredRowCount = nil
             sortColumn = nil
             sortAscending = true
             triggerLoad()
+            Task { await loadEstimatedRowCount() }
         }
     }
 
@@ -130,6 +145,8 @@ struct DataBrowserView: View {
                 }
             }
 
+            rowCountView
+
             Spacer()
 
             Picker("Column", selection: $state.filterColumn) {
@@ -149,10 +166,14 @@ struct DataBrowserView: View {
             }
 
             ZStack(alignment: .trailing) {
-                TextField(state.filterColumn == nil ? "Filter all columns…" : "Filter \(state.filterColumn!)…",
-                          text: $state.filterText)
+                TextField(
+                    state.filterColumn == nil
+                        ? "Filter rows (case-insensitive, all columns)…"
+                        : "Filter \(state.filterColumn!) (case-insensitive)…",
+                    text: $state.filterText)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 180)
+                    .frame(width: 220)
+                    .help("Filters using PostgreSQL ILIKE. Use % as a wildcard (e.g. %smith%).")
                 if state.isLoading && !state.filterText.isEmpty {
                     ProgressView()
                         .controlSize(.mini)
@@ -168,16 +189,22 @@ struct DataBrowserView: View {
                     .padding(.trailing, 6)
                 }
             }
-            .frame(width: 180)
-            .onChange(of: state.filterText) { _, _ in
-                    state.filterDebounceTask?.cancel()
-                    state.filterDebounceTask = Task {
-                        try? await Task.sleep(for: .milliseconds(300))
-                        guard !Task.isCancelled else { return }
-                        state.offset = 0
-                        triggerLoad()
-                    }
+            .frame(width: 220)
+            .onChange(of: state.filterText) { _, newValue in
+                if newValue.isEmpty {
+                    state.countTask?.cancel()
+                    state.filteredRowCount = nil
+                    state.isLoadingFilteredCount = false
                 }
+                state.filterDebounceTask?.cancel()
+                state.filterDebounceTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    state.offset = 0
+                    triggerLoad()
+                    if !state.filterText.isEmpty { triggerFilteredCount() }
+                }
+            }
 
             Picker("Rows", selection: $pageSize) {
                 Text("50").tag(50)
@@ -289,6 +316,38 @@ struct DataBrowserView: View {
         .background(.bar)
     }
 
+    // MARK: - Row count view (#200)
+
+    @ViewBuilder
+    private var rowCountView: some View {
+        if let total = state.estimatedRowCount {
+            Group {
+                if !state.filterText.isEmpty {
+                    if state.isLoadingFilteredCount {
+                        HStack(spacing: 4) {
+                            ProgressView().controlSize(.mini)
+                            Text("of ~\(abbreviatedCount(total)) rows")
+                        }
+                    } else if let filtered = state.filteredRowCount {
+                        Text("\(filtered.formatted()) of ~\(abbreviatedCount(total)) rows")
+                    }
+                } else {
+                    Text("~\(abbreviatedCount(total)) rows")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private func abbreviatedCount(_ n: Int64) -> String {
+        switch n {
+        case ..<1_000:       return n.formatted()
+        case ..<1_000_000:   return String(format: "%.1fK", Double(n) / 1_000)
+        default:             return String(format: "%.1fM", Double(n) / 1_000_000)
+        }
+    }
+
     // MARK: - Load
 
     /// Cancels any in-flight load and starts a fresh one.
@@ -304,24 +363,32 @@ struct DataBrowserView: View {
         // Only clear isLoading when this task was not superseded by a newer one.
         defer { if !Task.isCancelled { state.isLoading = false } }
 
-        var sql = "SELECT * FROM \(qualifiedName)"
-
-        if !state.filterText.isEmpty {
-            if let col = state.filterColumn {
-                sql += " WHERE \(quoteIdentifier(col))::text ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
-            } else {
-                sql += " WHERE \"\(tableName)\"::text ILIKE '%\(state.filterText.replacingOccurrences(of: "'", with: "''"))%'"
-            }
-        }
-
+        let baseSQL = "SELECT * FROM \(qualifiedName)"
+        var orderAndPage = ""
         if let col = sortColumn {
-            sql += " ORDER BY \(quoteIdentifier(col)) \(sortAscending ? "ASC" : "DESC")"
+            orderAndPage += " ORDER BY \(quoteIdentifier(col)) \(sortAscending ? "ASC" : "DESC")"
         }
-
-        sql += " LIMIT \(effectivePageSize) OFFSET \(state.offset)"
+        orderAndPage += " LIMIT \(effectivePageSize) OFFSET \(state.offset)"
 
         do {
-            let queryResult = try await client.query(sql)
+            let queryResult: QueryResult
+            if !state.filterText.isEmpty {
+                // Use a parameterized query so PostgreSQL can cache the plan (#216)
+                let filterValue = "%\(state.filterText)%"
+                let whereClause: String
+                if let col = state.filterColumn {
+                    whereClause = " WHERE \(quoteIdentifier(col))::text ILIKE "
+                } else {
+                    whereClause = " WHERE \"\(tableName)\"::text ILIKE "
+                }
+                queryResult = try await client.queryParameterized(
+                    prefix: baseSQL + whereClause,
+                    filterParam: filterValue,
+                    suffix: orderAndPage
+                )
+            } else {
+                queryResult = try await client.query(baseSQL + orderAndPage)
+            }
             guard !Task.isCancelled else { return }
             state.result = queryResult
         } catch is CancellationError {
@@ -331,6 +398,49 @@ struct DataBrowserView: View {
             guard !Task.isCancelled else { return }
             state.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Estimated row count (#200)
+
+    private func loadEstimatedRowCount() async {
+        let escapedSchema = schemaName.replacingOccurrences(of: "'", with: "''")
+        let escapedTable  = tableName.replacingOccurrences(of: "'", with: "''")
+        let sql = """
+            SELECT reltuples::bigint
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = '\(escapedSchema)' AND c.relname = '\(escapedTable)'
+            """
+        guard let result = try? await client.query(sql),
+              let row = result.rows.first,
+              case .integer(let count) = row.first else { return }
+        state.estimatedRowCount = count >= 0 ? count : nil
+    }
+
+    private func triggerFilteredCount() {
+        state.countTask?.cancel()
+        state.isLoadingFilteredCount = true
+        state.countTask = Task { await loadFilteredCount() }
+    }
+
+    private func loadFilteredCount() async {
+        guard !Task.isCancelled, !state.filterText.isEmpty else {
+            state.isLoadingFilteredCount = false
+            return
+        }
+        defer { if !Task.isCancelled { state.isLoadingFilteredCount = false } }
+        let filterValue = "%\(state.filterText)%"
+        let wherePrefix: String
+        if let col = state.filterColumn {
+            wherePrefix = "SELECT COUNT(*) FROM \(qualifiedName) WHERE \(quoteIdentifier(col))::text ILIKE "
+        } else {
+            wherePrefix = "SELECT COUNT(*) FROM \(qualifiedName) WHERE \"\(tableName)\"::text ILIKE "
+        }
+        guard let result = try? await client.queryParameterized(prefix: wherePrefix, filterParam: filterValue, suffix: ""),
+              let row = result.rows.first,
+              case .integer(let count) = row.first,
+              !Task.isCancelled else { return }
+        state.filteredRowCount = count
     }
 
     // MARK: - Mutating SQL

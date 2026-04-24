@@ -8,6 +8,7 @@ struct TableDetailView: View {
     var isView: Bool = false
     var isReadOnly: Bool = false
 
+    @Environment(AppState.self) private var appState
     @AppStorage("tusk.content.fontSize")   private var contentFontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var contentFontDesign: TuskFontDesign = .sansSerif
 
@@ -600,7 +601,8 @@ struct TableDetailView: View {
 
     private func loadMeta() async {
         isLoadingMeta = true
-        async let cols = try? await client.columns(schema: schemaName, table: tableName)
+        // Use the AppState column cache so repeat opens are instant (#214)
+        async let cols = try? await appState.cachedColumns(connectionID: connectionID, schema: schemaName, table: tableName, using: client)
         async let fks  = try? await client.foreignKeys(schema: schemaName, table: tableName)
         columns     = await cols ?? []
         foreignKeys = await fks  ?? []
