@@ -200,6 +200,7 @@ struct AddConnectionSheet: View {
                                 .foregroundStyle(.secondary)
                         }
                         Toggle("Read-only", isOn: $isReadOnly)
+                            .help("Prevents any INSERT, UPDATE, DELETE, or DDL statements from executing on this connection.")
                     }
 
                     Section {

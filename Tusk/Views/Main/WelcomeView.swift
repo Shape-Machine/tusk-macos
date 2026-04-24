@@ -39,6 +39,15 @@ struct WelcomeView: View {
                 Text("Click any table in the sidebar to browse its data and schema.")
                     .foregroundStyle(.tertiary)
                     .font(.callout)
+
+                VStack(spacing: 6) {
+                    shortcutRow("⌘T", "New query tab")
+                    shortcutRow("⌘↵", "Run query")
+                    shortcutRow("⇧⌘↵", "Run current query")
+                    shortcutRow("⌘W", "Close tab")
+                    shortcutRow("⌘[ / ⌘]", "Previous / next tab")
+                }
+                .padding(.top, 8)
             } else {
                 Text("Select a connection in the sidebar to get started.")
                     .foregroundStyle(.tertiary)
