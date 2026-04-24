@@ -1172,8 +1172,21 @@ private struct ConnectionHeader: View {
             Divider()
             Button("Duplicate") { appState.duplicateConnection(connection) }
             Button("Edit…") { appState.editingConnection = connection }
-            Button("Delete", role: .destructive) { appState.removeConnection(connection) }
+            Button("Delete", role: .destructive) { confirmDeleteConnection(connection) }
         }
+    }
+
+    // MARK: - Delete connection
+
+    private func confirmDeleteConnection(_ connection: Connection) {
+        let alert = NSAlert()
+        alert.messageText = "Delete \"\(connection.name)\"?"
+        alert.informativeText = "This will also remove its stored password from the Keychain."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete").hasDestructiveAction = true
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        appState.removeConnection(connection)
     }
 
     // MARK: - Create schema
