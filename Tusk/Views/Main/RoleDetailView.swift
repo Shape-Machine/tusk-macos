@@ -259,8 +259,11 @@ struct RoleDetailView: View {
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             } else if items.isEmpty {
-                Text("None")
+                Label("No Memberships", systemImage: "person.2")
                     .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
+                    .foregroundStyle(.tertiary)
+                Text("This role is not a member of any groups.")
+                    .font(.system(size: contentFontSize - 2, design: contentFontDesign.design))
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(items, id: \.self) { name in

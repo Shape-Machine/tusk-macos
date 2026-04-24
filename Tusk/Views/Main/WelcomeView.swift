@@ -35,6 +35,10 @@ struct WelcomeView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+            } else if !appState.clients.isEmpty {
+                Text("Click any table in the sidebar to browse its data and schema.")
+                    .foregroundStyle(.tertiary)
+                    .font(.callout)
             } else {
                 Text("Select a connection in the sidebar to get started.")
                     .foregroundStyle(.tertiary)

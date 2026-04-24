@@ -219,8 +219,10 @@ struct AddConnectionSheet: View {
                             TextField("Host", text: $host)
                             TextField("Port", text: $port)
                                 .frame(width: 70)
+                                .help("The PostgreSQL server port. Default is 5432.")
                         }
                         TextField("Database", text: $database)
+                            .help("The specific database to connect to. Leave blank to connect to the default database (usually your username).")
                     }
 
                     Section("Authentication") {
@@ -232,10 +234,12 @@ struct AddConnectionSheet: View {
                                 .padding(.leading, 16)
                         }
                         Toggle("Read-only", isOn: $isReadOnly)
+                            .help("Prevents any INSERT, UPDATE, DELETE, or DDL statements from executing on this connection.")
                     }
 
                     Section("SSH Tunnel") {
                         Toggle("Use SSH Tunnel", isOn: $sshEnabled)
+                            .help("Route the connection through an SSH server. Useful for databases not exposed to the public internet.")
 
                         if sshEnabled {
                             HStack {

@@ -521,7 +521,7 @@ struct TableDetailView: View {
                     Button {
                         showingCreateIndex = true
                     } label: {
-                        Label("Create Index", systemImage: "plus")
+                        Label("Add Index", systemImage: "plus")
                             .font(.caption)
                     }
                     .buttonStyle(.borderless)
