@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 
 struct SettingsPopover: View {
     @Environment(\.openWindow) private var openWindow

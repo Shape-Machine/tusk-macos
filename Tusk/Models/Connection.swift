@@ -171,11 +171,18 @@ struct TableSchema: Sendable {
 // MARK: - Activity monitor entry
 
 /// Masks plaintext passwords so they never appear in the UI.
-/// Covers: PASSWORD 'literal'
+/// Covers: PASSWORD 'literal'  PASSWORD $$secret$$  PASSWORD $tag$secret$tag$
 func redactSQLForDisplay(_ sql: String) -> String {
     guard sql.localizedCaseInsensitiveContains("password") else { return sql }
-    let pattern = #"(?i)\bPASSWORD\s+'[^']*'"#
-    return sql.replacingOccurrences(of: pattern, with: "PASSWORD '***'", options: .regularExpression)
+    let patterns = [
+        #"(?i)\bPASSWORD\s+'[^']*'"#,          // single-quoted:  PASSWORD 'secret'
+        #"(?i)\bPASSWORD\s+(\$[^$]*\$).*?\1"#, // dollar-quoted:  PASSWORD $$secret$$
+    ]
+    var result = sql
+    for pattern in patterns {
+        result = result.replacingOccurrences(of: pattern, with: "PASSWORD '***'", options: .regularExpression)
+    }
+    return result
 }
 
 struct ActivityEntry: Identifiable, Sendable {
