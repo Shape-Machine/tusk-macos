@@ -153,7 +153,7 @@ final class AppState {
         } else if connection.sshEnabled {
             // Start SSH tunnel if enabled; the tunnel exposes a local port that
             // PostgresNIO will connect to instead of the real host/port.
-            let passphrase = KeychainManager.shared.sshPassphrase(for: connection.id)
+            let passphrase = connection.sshUseAgent ? nil : KeychainManager.shared.sshPassphrase(for: connection.id)
             let tunnel = SSHTunnel()
             try await tunnel.start(connection: connection, passphrase: passphrase)
             newTunnel = tunnel

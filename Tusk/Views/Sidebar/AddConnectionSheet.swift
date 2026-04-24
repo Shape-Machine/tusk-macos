@@ -29,6 +29,7 @@ struct AddConnectionSheet: View {
     @State private var sshUser: String = ""
     @State private var sshKeyPath: String = ""
     @State private var sshPassphrase: String = ""
+    @State private var sshUseAgent: Bool = false
 
     // Cloud SQL fields
     @State private var cloudSQLInstanceConnectionName: String = ""
@@ -62,7 +63,7 @@ struct AddConnectionSheet: View {
         [connectionType.rawValue,
          host, port, database, username, password,
          useSSL ? "ssl" : "", useSSL && verifySSLCertificate ? "verify" : "",
-         sshEnabled ? "ssh" : "", sshHost, sshPort, sshUser, sshKeyPath, sshPassphrase,
+         sshEnabled ? "ssh" : "", sshHost, sshPort, sshUser, sshKeyPath, sshPassphrase, sshUseAgent ? "agent" : "",
          cloudSQLInstanceConnectionName, useADC ? "adc" : ""].joined(separator: "|")
     }
 
@@ -249,12 +250,19 @@ struct AddConnectionSheet: View {
                                     .frame(width: 70)
                             }
                             TextField("User", text: $sshUser)
-                            HStack {
-                                TextField("Key Path", text: $sshKeyPath)
-                                Button("Browse…") { pickKey() }
-                                    .buttonStyle(.borderless)
+                            Picker("Auth", selection: $sshUseAgent) {
+                                Text("Private Key").tag(false)
+                                Text("SSH Agent").tag(true)
                             }
-                            SecureField("Passphrase", text: $sshPassphrase)
+                            .help("SSH Agent uses $SSH_AUTH_SOCK (1Password, Secretive, ssh-agent). Private Key uses a key file on disk.")
+                            if !sshUseAgent {
+                                HStack {
+                                    TextField("Key Path", text: $sshKeyPath)
+                                    Button("Browse…") { pickKey() }
+                                        .buttonStyle(.borderless)
+                                }
+                                SecureField("Passphrase", text: $sshPassphrase)
+                            }
                         }
                     }
                 }
@@ -336,6 +344,7 @@ struct AddConnectionSheet: View {
         sshUser         = c.sshUser
         sshKeyPath      = c.sshKeyPath
         sshPassphrase   = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
+        sshUseAgent     = c.sshUseAgent
         notes           = c.notes
         cloudSQLInstanceConnectionName = c.cloudSQLInstanceConnectionName
         cloudSQLProject = c.cloudSQLProject
@@ -382,6 +391,7 @@ struct AddConnectionSheet: View {
             updated.sshPort      = sshPortInt
             updated.sshUser      = sshUser
             updated.sshKeyPath   = sshKeyPath
+            updated.sshUseAgent  = sshUseAgent
             updated.notes        = notes
             updated.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             updated.cloudSQLProject = cloudSQLProject
@@ -407,6 +417,7 @@ struct AddConnectionSheet: View {
             new.notes       = notes
             new.sshUser     = sshUser
             new.sshKeyPath  = sshKeyPath
+            new.sshUseAgent = sshUseAgent
             new.cloudSQLInstanceConnectionName = cloudSQLInstanceConnectionName
             new.cloudSQLProject = cloudSQLProject
             new.useADC      = useADC
@@ -498,11 +509,12 @@ struct AddConnectionSheet: View {
             database: database, username: username,
             useSSL: useSSL, verifySSLCertificate: verifySSLCertificate, isReadOnly: isReadOnly
         )
-        info.sshEnabled = sshEnabled
-        info.sshHost    = sshHost
-        info.sshPort    = Int(sshPort) ?? 22
-        info.sshUser    = sshUser
-        info.sshKeyPath = sshKeyPath
+        info.sshEnabled  = sshEnabled
+        info.sshHost     = sshHost
+        info.sshPort     = Int(sshPort) ?? 22
+        info.sshUser     = sshUser
+        info.sshKeyPath  = sshKeyPath
+        info.sshUseAgent = sshUseAgent
 
         var tunnel: SSHTunnel? = nil
 
@@ -511,7 +523,7 @@ struct AddConnectionSheet: View {
                 let t = SSHTunnel()
                 try await t.start(
                     connection: info,
-                    passphrase: sshPassphrase.isEmpty ? nil : sshPassphrase
+                    passphrase: sshUseAgent || sshPassphrase.isEmpty ? nil : sshPassphrase
                 )
                 tunnel    = t
                 info.host = "127.0.0.1"
