@@ -13,32 +13,51 @@ actor SSHTunnel {
     func start(connection: Connection, passphrase: String?) async throws {
         localPort = try Self.findFreePort()
 
-        // Write a temp askpass script if a passphrase is needed.
-        // SSH calls it when prompted for the key passphrase.
+        var env = ProcessInfo.processInfo.environment
         var askpassURL: URL? = nil
-        if let passphrase, !passphrase.isEmpty {
-            askpassURL = try Self.writeAskpassScript(passphrase: passphrase)
-        }
 
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        p.arguments = [
-            "-N",
-            "-L", "\(localPort):\(connection.host):\(connection.port)",
-            "-p", "\(connection.sshPort)",
-            "-i", connection.sshKeyPath,
-            "-o", "StrictHostKeyChecking=accept-new",
-            "-o", "ExitOnForwardFailure=yes",
-            "-o", "BatchMode=\(passphrase == nil || passphrase!.isEmpty ? "yes" : "no")",
-            "-o", "ServerAliveInterval=30",
-            "\(connection.sshUser)@\(connection.sshHost)"
-        ]
 
-        var env = ProcessInfo.processInfo.environment
-        if let url = askpassURL {
-            env["SSH_ASKPASS"]         = url.path
-            env["SSH_ASKPASS_REQUIRE"] = "force"
-            env["DISPLAY"]             = ":0"
+        if connection.sshUseAgent {
+            // Agent mode: ssh picks up identities from SSH_AUTH_SOCK automatically.
+            // No -i flag, no BatchMode override (agent handles auth interactively if needed).
+            guard let sock = env["SSH_AUTH_SOCK"], !sock.isEmpty else {
+                throw TuskError.sshTunnelFailed(
+                    "SSH_AUTH_SOCK is not set. Start your SSH agent (or launch Tusk from a " +
+                    "terminal where the agent is running) and try again."
+                )
+            }
+            p.arguments = [
+                "-N",
+                "-L", "\(localPort):\(connection.host):\(connection.port)",
+                "-p", "\(connection.sshPort)",
+                "-o", "StrictHostKeyChecking=accept-new",
+                "-o", "ExitOnForwardFailure=yes",
+                "-o", "ServerAliveInterval=30",
+                "\(connection.sshUser)@\(connection.sshHost)"
+            ]
+        } else {
+            // Key-file mode: write a temp askpass script if a passphrase is provided.
+            if let passphrase, !passphrase.isEmpty {
+                askpassURL = try Self.writeAskpassScript(passphrase: passphrase)
+            }
+            p.arguments = [
+                "-N",
+                "-L", "\(localPort):\(connection.host):\(connection.port)",
+                "-p", "\(connection.sshPort)",
+                "-i", connection.sshKeyPath,
+                "-o", "StrictHostKeyChecking=accept-new",
+                "-o", "ExitOnForwardFailure=yes",
+                "-o", "BatchMode=\(passphrase == nil || passphrase!.isEmpty ? "yes" : "no")",
+                "-o", "ServerAliveInterval=30",
+                "\(connection.sshUser)@\(connection.sshHost)"
+            ]
+            if let url = askpassURL {
+                env["SSH_ASKPASS"]         = url.path
+                env["SSH_ASKPASS_REQUIRE"] = "force"
+                env["DISPLAY"]             = ":0"
+            }
         }
         let stderrPipe   = Pipe()
         p.environment    = env

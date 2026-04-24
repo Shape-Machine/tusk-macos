@@ -30,6 +30,7 @@ struct Connection: Identifiable, Codable, Hashable, Sendable {
     var sshPort: Int = 22
     var sshUser: String = ""
     var sshKeyPath: String = ""
+    var sshUseAgent: Bool = false   // use SSH agent ($SSH_AUTH_SOCK) instead of a key file
 
     // Google Cloud SQL
     var connectionType: ConnectionType = .direct
@@ -67,6 +68,7 @@ extension Connection {
         sshPort     = try c.decodeIfPresent(Int.self,     forKey: .sshPort)     ?? 22
         sshUser     = try c.decodeIfPresent(String.self,  forKey: .sshUser)     ?? ""
         sshKeyPath  = try c.decodeIfPresent(String.self,  forKey: .sshKeyPath)  ?? ""
+        sshUseAgent = try c.decodeIfPresent(Bool.self,    forKey: .sshUseAgent) ?? false
         connectionType                 = try c.decodeIfPresent(ConnectionType.self, forKey: .connectionType)                 ?? .direct
         cloudSQLInstanceConnectionName = try c.decodeIfPresent(String.self,         forKey: .cloudSQLInstanceConnectionName) ?? ""
         cloudSQLProject                = try c.decodeIfPresent(String.self,         forKey: .cloudSQLProject)                ?? ""
