@@ -14,7 +14,7 @@ struct EnumDetailView: View {
 
     @State private var values: [String] = []
     @State private var isLoading = true
-    @State private var loadFailed = false
+    @State private var loadError: String? = nil
     @State private var actionError: String? = nil
     @State private var showAddValueSheet = false
 
@@ -27,11 +27,11 @@ struct EnumDetailView: View {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if loadFailed {
+            } else if let loadError {
                 ContentUnavailableView {
                     Label("Failed to Load Enum", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text("Could not retrieve values for \(schema).\(enumName).")
+                    Text(loadError)
                 } actions: {
                     Button("Retry") { Task { await reload() } }
                         .buttonStyle(.bordered)
@@ -133,21 +133,22 @@ struct EnumDetailView: View {
 
     private func reload() async {
         isLoading = true
-        loadFailed = false
+        loadError = nil
         // Re-fetch from the live cache in AppState if available, else fall back to a direct query.
         if let cached = appState.schemaEnums[connection.id]?.first(where: { $0.schema == schema && $0.name == enumName }) {
             values = cached.values
         } else {
-            if let all = try? await client.enums() {
+            do {
+                let all = try await client.enums()
                 if let found = all.first(where: { $0.schema == schema && $0.name == enumName }) {
                     values = found.values
                 } else {
                     values = []
-                    loadFailed = true
+                    loadError = "No enum named \(schema).\(enumName) was found."
                 }
-            } else {
+            } catch {
                 values = []
-                loadFailed = true
+                loadError = error.localizedDescription
             }
         }
         isLoading = false

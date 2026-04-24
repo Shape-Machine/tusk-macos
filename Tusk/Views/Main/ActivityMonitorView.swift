@@ -149,7 +149,7 @@ struct ActivityMonitorView: View {
                 }
                 .width(80)
 
-                TableColumn("Query") { entry in
+                TableColumn("Current Query") { entry in
                     let display = entry.query.isEmpty ? "—" : redactSQL(entry.query)
                     Text(display)
                         .lineLimit(1)

@@ -13,6 +13,7 @@ struct FunctionDetailView: View {
 
     @State private var detail: FunctionDetail? = nil
     @State private var isLoading = true
+    @State private var loadError: String? = nil
     @State private var isExecutorVisible = false
 
     private var isReadOnly: Bool { connection.isReadOnly }
@@ -40,7 +41,7 @@ struct FunctionDetailView: View {
                 ContentUnavailableView {
                     Label("Failed to Load Function", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text("Could not retrieve details for this function.")
+                    Text(loadError ?? "Could not retrieve details for this function.")
                 } actions: {
                     Button("Retry") { Task { await reload() } }
                         .buttonStyle(.bordered)
@@ -136,7 +137,13 @@ struct FunctionDetailView: View {
 
     private func reload() async {
         isLoading = true
-        detail = try? await client.functionDetail(oid: oid)
+        loadError = nil
+        do {
+            detail = try await client.functionDetail(oid: oid)
+        } catch {
+            detail = nil
+            loadError = error.localizedDescription
+        }
         isLoading = false
     }
 

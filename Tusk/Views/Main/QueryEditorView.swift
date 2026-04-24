@@ -242,7 +242,11 @@ struct QueryEditorView: View {
     @ViewBuilder
     private var resultContent: some View {
         if executions.isEmpty {
-            Color(nsColor: .textBackgroundColor)
+            Text("Results will appear here after you run a query (⌘↵).")
+                .font(.callout)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(nsColor: .textBackgroundColor))
         } else if selectedResultTab == 0 {
             executionLog
         } else {

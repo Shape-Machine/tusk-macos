@@ -14,6 +14,7 @@ struct SequenceDetailView: View {
 
     @State private var detail: SequenceDetail? = nil
     @State private var isLoading = true
+    @State private var loadError: String? = nil
     @State private var setValueText: String = ""
     @State private var actionError: String? = nil
 
@@ -41,7 +42,7 @@ struct SequenceDetailView: View {
                 ContentUnavailableView {
                     Label("Failed to Load Sequence", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text("Could not retrieve details for \(schema).\(sequenceName).")
+                    Text(loadError ?? "Could not retrieve details for \(schema).\(sequenceName).")
                 } actions: {
                     Button("Retry") { Task { await reload() } }
                         .buttonStyle(.bordered)
@@ -162,7 +163,13 @@ struct SequenceDetailView: View {
 
     private func reload() async {
         isLoading = true
-        detail = try? await client.sequenceDetail(schema: schema, name: sequenceName)
+        loadError = nil
+        do {
+            detail = try await client.sequenceDetail(schema: schema, name: sequenceName)
+        } catch {
+            detail = nil
+            loadError = error.localizedDescription
+        }
         isLoading = false
     }
 
