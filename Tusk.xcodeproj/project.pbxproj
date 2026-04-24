@@ -50,6 +50,7 @@
 		EF9609485D94E215A340F95B /* TableDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84F6197423F6B815DCFF5EC /* TableDetailView.swift */; };
 		FA1608BC33176CC583BE610B /* ExplainPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */; };
 		FB2DF2917401EB297E0173FA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193CE42C808DDA972A10DACE /* Constants.swift */; };
+		FCDDE405184AE961876101F8 /* ExplainGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A21E2050EA43639A678CD93 /* ExplainGraphView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +65,7 @@
 		1FF763FE618CB1AE4E595F53 /* Tusk.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tusk.entitlements; sourceTree = "<group>"; };
 		27CA54BB707DD57462515F8E /* CloudSQLInstancePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSQLInstancePickerSheet.swift; sourceTree = "<group>"; };
 		37B4E572B48F16D9767046C1 /* AddConnectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConnectionSheet.swift; sourceTree = "<group>"; };
+		3A21E2050EA43639A678CD93 /* ExplainGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplainGraphView.swift; sourceTree = "<group>"; };
 		54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEditorView.swift; sourceTree = "<group>"; };
 		615C3C512A905EBC9A2F5662 /* Tusk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tusk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61F1FC4557C5B581972CE00D /* FunctionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionDetailView.swift; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 				75B070C67054E9379142805B /* ActivityMonitorView.swift */,
 				934FF1C0EBB58E15CCAFABEA /* DataBrowserView.swift */,
 				9D9E80D332E3F0E63E0DEBF9 /* EnumDetailView.swift */,
+				3A21E2050EA43639A678CD93 /* ExplainGraphView.swift */,
 				F73CB2DC9ECA618E4D65A9DE /* ExplainPlanView.swift */,
 				61F1FC4557C5B581972CE00D /* FunctionDetailView.swift */,
 				54DB2C1EDCFE2EC1D9FC21ED /* QueryEditorView.swift */,
@@ -356,6 +359,7 @@
 				D2C2E33CC9F0F6438C8814A7 /* DataBrowserView.swift in Sources */,
 				166F02A3D80B0F112F3C008C /* DatabaseClient.swift in Sources */,
 				4485D687490F834C172D3905 /* EnumDetailView.swift in Sources */,
+				FCDDE405184AE961876101F8 /* ExplainGraphView.swift in Sources */,
 				FA1608BC33176CC583BE610B /* ExplainPlanView.swift in Sources */,
 				ED65F385DAFD91259FA6AD73 /* FileExplorerView.swift in Sources */,
 				9EF64556295E01772AA50486 /* FunctionDetailView.swift in Sources */,
