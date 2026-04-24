@@ -343,8 +343,8 @@ struct AddConnectionSheet: View {
         sshPort         = String(c.sshPort)
         sshUser         = c.sshUser
         sshKeyPath      = c.sshKeyPath
-        sshPassphrase   = KeychainManager.shared.sshPassphrase(for: c.id) ?? ""
         sshUseAgent     = c.sshUseAgent
+        sshPassphrase   = c.sshUseAgent ? "" : (KeychainManager.shared.sshPassphrase(for: c.id) ?? "")
         notes           = c.notes
         cloudSQLInstanceConnectionName = c.cloudSQLInstanceConnectionName
         cloudSQLProject = c.cloudSQLProject
