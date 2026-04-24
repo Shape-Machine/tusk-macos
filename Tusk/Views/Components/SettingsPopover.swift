@@ -1,13 +1,15 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsPopover: View {
     @Environment(\.openWindow) private var openWindow
-    @AppStorage("tusk.sidebar.fontSize")       private var sidebarFontSize   = 13.0
-    @AppStorage("tusk.sidebar.fontDesign")     private var sidebarFontDesign: TuskFontDesign = .sansSerif
-    @AppStorage("tusk.content.fontSize")       private var contentFontSize   = 13.0
-    @AppStorage("tusk.content.fontDesign")     private var contentFontDesign: TuskFontDesign = .sansSerif
-    @AppStorage("tusk.sidebar.showTableSizes") private var showTableSizes    = false
-    @AppStorage("tusk.dataBrowser.pageSize")   private var dataBrowserPageSize = 1_000
+    @AppStorage("tusk.sidebar.fontSize")             private var sidebarFontSize        = 13.0
+    @AppStorage("tusk.sidebar.fontDesign")           private var sidebarFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.content.fontSize")             private var contentFontSize        = 13.0
+    @AppStorage("tusk.content.fontDesign")           private var contentFontDesign: TuskFontDesign = .sansSerif
+    @AppStorage("tusk.sidebar.showTableSizes")       private var showTableSizes         = false
+    @AppStorage("tusk.dataBrowser.pageSize")         private var dataBrowserPageSize    = 1_000
+    @AppStorage("tusk.notifications.queryThreshold") private var queryNotifyThreshold   = 5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -38,6 +40,28 @@ struct SettingsPopover: View {
 
             Divider()
             settingsSection("Content", fontDesign: $contentFontDesign, fontSize: $contentFontSize)
+
+            Divider()
+
+            Text("Notifications")
+                .font(.headline)
+
+            HStack {
+                Text("Notify after query")
+                    .font(.callout)
+                Spacer()
+                Picker("Notify after query", selection: $queryNotifyThreshold) {
+                    Text("Never").tag(-1)
+                    Text("2 s").tag(2)
+                    Text("5 s").tag(5)
+                    Text("10 s").tag(10)
+                    Text("30 s").tag(30)
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 80)
+            }
+            .font(.callout)
 
             Divider()
 

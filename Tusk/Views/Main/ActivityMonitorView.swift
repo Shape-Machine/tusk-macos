@@ -150,8 +150,7 @@ struct ActivityMonitorView: View {
                 .width(80)
 
                 TableColumn("Current Query") { entry in
-                    let display = entry.query.isEmpty ? "—" : redactSQL(entry.query)
-                    Text(display)
+                    Text(entry.displayQuery)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .font(.system(size: contentFontSize - 1, design: .monospaced))
@@ -187,16 +186,6 @@ struct ActivityMonitorView: View {
         return Text(label)
             .font(.system(size: contentFontSize - 1, design: contentFontDesign.design))
             .foregroundStyle(color)
-    }
-
-    /// Replace plaintext passwords in SQL so they never appear in the UI.
-    /// Covers: PASSWORD 'literal'  PASSWORD NULL
-    private func redactSQL(_ sql: String) -> String {
-        guard sql.localizedCaseInsensitiveContains("password") else { return sql }
-        let pattern = #"(?i)\bPASSWORD\s+'[^']*'"#
-        let redacted = sql.replacingOccurrences(of: pattern, with: "PASSWORD '***'",
-                                                options: .regularExpression)
-        return redacted
     }
 
     private func formatDuration(_ seconds: Int) -> String {

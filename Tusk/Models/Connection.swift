@@ -170,15 +170,37 @@ struct TableSchema: Sendable {
 
 // MARK: - Activity monitor entry
 
+/// Masks plaintext passwords so they never appear in the UI.
+/// Covers: PASSWORD 'literal'
+func redactSQLForDisplay(_ sql: String) -> String {
+    guard sql.localizedCaseInsensitiveContains("password") else { return sql }
+    let pattern = #"(?i)\bPASSWORD\s+'[^']*'"#
+    return sql.replacingOccurrences(of: pattern, with: "PASSWORD '***'", options: .regularExpression)
+}
+
 struct ActivityEntry: Identifiable, Sendable {
     let pid: Int
     var id: Int { pid }
     let applicationName: String
     let state: String           // active, idle, idle in transaction, …
     let query: String
+    /// SQL with passwords redacted — computed once at init, used by the UI.
+    let displayQuery: String
     let durationSeconds: Int?   // nil when query_start is NULL
     let waitEventType: String?
     let waitEvent: String?
+
+    init(pid: Int, applicationName: String, state: String, query: String,
+         durationSeconds: Int?, waitEventType: String?, waitEvent: String?) {
+        self.pid = pid
+        self.applicationName = applicationName
+        self.state = state
+        self.query = query
+        self.displayQuery = query.isEmpty ? "—" : redactSQLForDisplay(query)
+        self.durationSeconds = durationSeconds
+        self.waitEventType = waitEventType
+        self.waitEvent = waitEvent
+    }
 }
 
 // MARK: - Table size info

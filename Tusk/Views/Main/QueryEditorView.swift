@@ -1,14 +1,17 @@
 import SwiftUI
+import UserNotifications
 
 struct QueryEditorView: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("tusk.content.fontSize") private var contentFontSize = 13.0
+    @AppStorage("tusk.content.fontSize")             private var contentFontSize      = 13.0
+    @AppStorage("tusk.notifications.queryThreshold") private var queryNotifyThreshold = 5
     let tab: QueryTab
     let client: DatabaseClient?
 
     @State private var sql: String = ""
     @State private var selectedRange: NSRange = NSRange()
     @State private var executions: [ExecutionEntry] = []
+    @State private var executionsTruncated = false
     @State private var selectedResultTab: Int = 0   // 0 = Log, 1+ = Result N
     @State private var isRunning = false
     @State private var executeTask: Task<Void, Never>? = nil
@@ -290,6 +293,14 @@ struct QueryEditorView: View {
     private var executionLog: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
+                if executionsTruncated {
+                    Text("Showing the \(executionHistoryCap) most recent results.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                    Divider()
+                }
                 ForEach(executions) { entry in
                     executionLogRow(entry)
                     Divider()
@@ -469,6 +480,7 @@ struct QueryEditorView: View {
         guard !statements.isEmpty else { return }
 
         executions = []
+        executionsTruncated = false
         selectedResultTab = 0
         isRunning = true
         persistResultStateToTab()
@@ -481,6 +493,11 @@ struct QueryEditorView: View {
             }
             let idx = executions.count + 1
             executions.append(ExecutionEntry(index: idx, sql: stmt, outcome: .running))
+            // Cap history — drop the oldest entry when limit is exceeded
+            if executions.count > executionHistoryCap {
+                executions.removeFirst()
+                executionsTruncated = true
+            }
             let entryIndex = executions.count - 1
 
             let (finalSQL, capped) = cappedSQL(stmt)
@@ -538,6 +555,45 @@ struct QueryEditorView: View {
         if resultCount == 1 && !hasError { selectedResultTab = 1 }
 
         persistResultStateToTab()
+
+        // Fire a macOS notification if the query took long enough and the app is in the background
+        let totalDuration = executions.reduce(0.0) { sum, entry in
+            switch entry.outcome {
+            case .ok(let d):        return sum + d
+            case .rows(let r, _):   return sum + r.duration
+            default:                return sum
+            }
+        }
+        let threshold = queryNotifyThreshold
+        if threshold >= 0, totalDuration >= Double(threshold), !NSApp.isActive {
+            let connectionName = appState.connections.first(where: { $0.id == liveConnectionID })?.name ?? "Tusk"
+            sendQueryCompletionNotification(
+                connectionName: connectionName,
+                duration: totalDuration,
+                succeeded: !hasError,
+                tabID: tab.id
+            )
+        }
+    }
+
+    // MARK: - Notifications
+
+    private func sendQueryCompletionNotification(connectionName: String, duration: TimeInterval, succeeded: Bool, tabID: UUID) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = succeeded ? "Query completed" : "Query failed"
+            let durationStr = duration < 60
+                ? String(format: "%.1f s", duration)
+                : String(format: "%.0f m %.0f s", floor(duration / 60), duration.truncatingRemainder(dividingBy: 60))
+            content.body = "\(connectionName) · \(durationStr)"
+            content.sound = .default
+            content.userInfo = ["tabID": tabID.uuidString]
+            let request = UNNotificationRequest(identifier: tabID.uuidString + "-\(Date().timeIntervalSince1970)",
+                                                content: content, trigger: nil)
+            center.add(request, withCompletionHandler: nil)
+        }
     }
 
     // MARK: - Explain
