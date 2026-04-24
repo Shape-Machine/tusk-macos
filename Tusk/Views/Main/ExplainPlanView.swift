@@ -1,14 +1,20 @@
 import SwiftUI
 
+private enum ExplainViewMode: String, CaseIterable {
+    case tree  = "Tree"
+    case graph = "Graph"
+}
+
 struct ExplainPlanView: View {
     let result: ExplainResult
 
     @AppStorage("tusk.content.fontSize")   private var fontSize   = 13.0
     @AppStorage("tusk.content.fontDesign") private var fontDesign: TuskFontDesign = .sansSerif
+    @State private var viewMode: ExplainViewMode = .tree
 
     var body: some View {
         VStack(spacing: 0) {
-            // Footer bar: planning + execution time
+            // Header bar: timing stats + view toggle
             HStack(spacing: 6) {
                 if let exec = result.executionMs {
                     Text(String(format: "Execution: %.3f ms", exec))
@@ -26,6 +32,14 @@ struct ExplainPlanView: View {
                     .font(.system(size: fontSize - 1, design: fontDesign.design))
                     .foregroundStyle(.secondary)
                 Spacer()
+                Picker("View", selection: $viewMode) {
+                    ForEach(ExplainViewMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .controlSize(.small)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -33,15 +47,20 @@ struct ExplainPlanView: View {
 
             Divider()
 
-            ScrollView([.vertical, .horizontal]) {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ExplainNodeRow(node: result.plan, depth: 0,
-                                  totalCost: result.plan.totalCost,
-                                  fontSize: fontSize, fontDesign: fontDesign.design)
+            switch viewMode {
+            case .tree:
+                ScrollView([.vertical, .horizontal]) {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ExplainNodeRow(node: result.plan, depth: 0,
+                                      totalCost: result.plan.totalCost,
+                                      fontSize: fontSize, fontDesign: fontDesign.design)
+                    }
+                    .padding(12)
                 }
-                .padding(12)
+                .background(Color(nsColor: .textBackgroundColor))
+            case .graph:
+                ExplainGraphView(result: result)
             }
-            .background(Color(nsColor: .textBackgroundColor))
         }
     }
 }
