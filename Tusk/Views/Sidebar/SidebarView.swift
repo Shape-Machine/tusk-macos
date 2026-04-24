@@ -245,6 +245,7 @@ private struct ConnectionSection: View {
         .onChange(of: schemaStamp, initial: true) { _, _ in
             cachedGrouped = computeGrouped()
         }
+        .onAppear { debouncedFilter = filterText }
         .onChange(of: filterText) { _, newValue in
             // Debounce the filter to avoid re-filtering on every keystroke (#211)
             filterDebounceTask?.cancel()
