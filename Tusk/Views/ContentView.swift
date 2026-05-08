@@ -24,6 +24,9 @@ struct ContentView: View {
             AddConnectionSheet(connection: connection)
                 .environment(\.font, .system(size: contentFontSize, design: contentFontDesign.design))
         }
+        .sheet(isPresented: $appState.isShowingChristmasEasterEgg) {
+            ChristmasEasterEggView()
+        }
     }
 }
 
