@@ -820,6 +820,10 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         guard let bits = buf.readInteger(as: UInt64.self) else { break }
         return String(Double(bitPattern: bits))
 
+    case .numeric:
+        guard let numeric = pgNumericString(bytes: bytes) else { break }
+        return numeric
+
     case .uuid:
         guard let b = buf.readBytes(length: 16) else { break }
         let t: uuid_t = (b[0],  b[1],  b[2],  b[3],
@@ -905,8 +909,84 @@ private func pgCellString(bytes: ByteBuffer, dataType: PostgresDataType) -> Stri
         break
     }
 
-    // Remaining types (text, varchar, json, numeric, …): UTF-8 text from the server
+    // Remaining types (text, varchar, json, …): UTF-8 text from the server
     return bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes) ?? ""
+}
+
+/// Decodes PostgreSQL's binary `numeric` format into its display string.
+private func pgNumericString(bytes: ByteBuffer) -> String? {
+    var buf = bytes
+    guard let ndigitsRaw = buf.readInteger(endianness: .big, as: Int16.self),
+          let weight = buf.readInteger(endianness: .big, as: Int16.self),
+          let sign = buf.readInteger(endianness: .big, as: Int16.self),
+          let dscaleRaw = buf.readInteger(endianness: .big, as: Int16.self),
+          ndigitsRaw >= 0,
+          dscaleRaw >= 0 else { return nil }
+
+    switch UInt16(bitPattern: sign) {
+    case 0xC000: return "NaN"
+    case 0xD000: return "Infinity"
+    case 0xF000: return "-Infinity"
+    default: break
+    }
+
+    let ndigits = Int(ndigitsRaw)
+    let dscale = Int(dscaleRaw)
+    guard buf.readableBytes >= ndigits * MemoryLayout<Int16>.size else { return nil }
+
+    var digits: [Int] = []
+    digits.reserveCapacity(ndigits)
+    for _ in 0..<ndigits {
+        guard let digit = buf.readInteger(endianness: .big, as: Int16.self),
+              digit >= 0,
+              digit < 10_000 else { return nil }
+        digits.append(Int(digit))
+    }
+
+    guard !digits.isEmpty else {
+        return dscale > 0 ? "0." + String(repeating: "0", count: dscale) : "0"
+    }
+
+    var integer = ""
+    var fractional = ""
+
+    for (offset, digit) in digits.enumerated() {
+        let group = offset == 0 && weight >= 0
+            ? String(digit)
+            : String(format: "%04d", digit)
+        if Int(weight) - offset >= 0 {
+            integer += group
+        } else {
+            fractional += group
+        }
+    }
+
+    let missingGroups: Int
+    if weight > 0 {
+        missingGroups = Int(weight) + 1 - ndigits
+    } else if weight < 0 {
+        missingGroups = abs(Int(weight) + 1)
+    } else {
+        missingGroups = 0
+    }
+
+    if missingGroups > 0 {
+        if weight > 0 {
+            integer += String(repeating: "0000", count: missingGroups)
+        } else {
+            fractional = String(repeating: "0000", count: missingGroups) + fractional
+        }
+    }
+
+    if integer.isEmpty { integer = "0" }
+    if fractional.count < dscale {
+        fractional += String(repeating: "0", count: dscale - fractional.count)
+    } else if fractional.count > dscale {
+        fractional = String(fractional.prefix(dscale))
+    }
+
+    let numeric = fractional.isEmpty ? integer : "\(integer).\(fractional)"
+    return (UInt16(bitPattern: sign) & 0x4000) != 0 ? "-\(numeric)" : numeric
 }
 
 /// Formats microseconds-since-midnight as `HH:MM:SS[.ffffff]`.

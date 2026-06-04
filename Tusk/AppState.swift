@@ -629,6 +629,7 @@ final class AppState {
         var queryTab = QueryTab()
         queryTab.connectionID = connection.id
         queryTab.connectionName = connection.name
+        queryTab.focusRequestID = UUID()
         queryTabs.append(queryTab)
 
         let detailTab = DetailTab(
@@ -639,6 +640,12 @@ final class AppState {
         )
         openTabs.append(detailTab)
         activateDetailTab(detailTab)
+    }
+
+    func clearQueryTabFocusRequest(tabID: UUID, requestID: UUID) {
+        guard let idx = queryTabs.firstIndex(where: { $0.id == tabID }),
+              queryTabs[idx].focusRequestID == requestID else { return }
+        queryTabs[idx].focusRequestID = nil
     }
 
     func closeDetailTab(_ tabID: UUID) {
@@ -777,6 +784,7 @@ struct QueryTab: Identifiable {
     var sql: String = ""
     var sourceURL: URL? = nil
     var executions: [ExecutionEntry] = []
+    var focusRequestID: UUID? = nil
 }
 
 // MARK: - Detail tab model
