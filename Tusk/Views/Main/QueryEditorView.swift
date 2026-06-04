@@ -138,7 +138,14 @@ struct QueryEditorView: View {
             Divider()
 
             ZStack(alignment: .topLeading) {
-                SQLTextEditor(text: $sql, selectedRange: $selectedRange, fontSize: contentFontSize)
+                SQLTextEditor(
+                    text: $sql,
+                    selectedRange: $selectedRange,
+                    fontSize: contentFontSize,
+                    focusRequestID: tab.focusRequestID
+                ) { requestID in
+                    appState.clearQueryTabFocusRequest(tabID: tab.id, requestID: requestID)
+                }
                 if sql.isEmpty {
                     Text("-- Write SQL here · ⌘↵ to run · ⌘⇧↵ for current")
                         .font(.system(size: contentFontSize, design: .monospaced))

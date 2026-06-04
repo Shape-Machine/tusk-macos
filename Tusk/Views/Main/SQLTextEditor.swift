@@ -7,18 +7,24 @@ struct SQLTextEditor: NSViewRepresentable {
     @Binding var selectedRange: NSRange
     var fontSize: Double = Double(NSFont.systemFontSize)
     var isEditable: Bool = true
+    var focusRequestID: UUID?
+    var onFocusRequestHandled: (@MainActor (UUID) -> Void)?
 
     /// Convenience init so existing call sites that don't need selectedRange compile unchanged.
     init(
         text: Binding<String>,
         selectedRange: Binding<NSRange> = .constant(NSRange()),
         fontSize: Double = Double(NSFont.systemFontSize),
-        isEditable: Bool = true
+        isEditable: Bool = true,
+        focusRequestID: UUID? = nil,
+        onFocusRequestHandled: (@MainActor (UUID) -> Void)? = nil
     ) {
         _text = text
         _selectedRange = selectedRange
         self.fontSize = fontSize
         self.isEditable = isEditable
+        self.focusRequestID = focusRequestID
+        self.onFocusRequestHandled = onFocusRequestHandled
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -56,6 +62,7 @@ struct SQLTextEditor: NSViewRepresentable {
             textView.textStorage?.delegate = context.coordinator
         }
         textView.typingAttributes = baseTypingAttributes
+        context.coordinator.focusIfNeeded(textView)
 
         return scrollView
     }
@@ -63,6 +70,7 @@ struct SQLTextEditor: NSViewRepresentable {
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         context.coordinator.parent = self
         guard let textView = nsView.documentView as? NSTextView else { return }
+        context.coordinator.focusIfNeeded(textView)
         // Re-apply font if it changed (e.g. user adjusted content font size setting)
         if textView.font != editorFont, let storage = textView.textStorage {
             textView.font = editorFont
@@ -86,8 +94,23 @@ struct SQLTextEditor: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate, @preconcurrency NSTextStorageDelegate {
         var parent: SQLTextEditor
+        private var handledFocusRequestID: UUID?
 
         init(_ parent: SQLTextEditor) { self.parent = parent }
+
+        func focusIfNeeded(_ textView: NSTextView) {
+            guard let requestID = parent.focusRequestID,
+                  handledFocusRequestID != requestID else { return }
+            Task { @MainActor [weak textView, weak self] in
+                guard let self,
+                      let textView,
+                      let window = textView.window,
+                      self.handledFocusRequestID != requestID else { return }
+                self.handledFocusRequestID = requestID
+                window.makeFirstResponder(textView)
+                self.parent.onFocusRequestHandled?(requestID)
+            }
+        }
 
         // MARK: - NSTextStorageDelegate
 
