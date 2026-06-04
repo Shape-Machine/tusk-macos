@@ -1,0 +1,93 @@
+rules:
+  - id: no-main-thread-blocking-work
+    severity: high
+    category: Performance
+    applies_to:
+      - "Tusk/**/*.swift"
+    description: "Flag newly introduced synchronous file, network, database, process, or expensive parsing work on the main actor or inside SwiftUI body/update paths. Prefer async work, Task.detached for CPU/file work, or existing actor APIs."
+    examples:
+      - "String(contentsOf:) directly in a View body or @MainActor method."
+      - "Running Process synchronously from a button action without async isolation."
+
+  - id: preserve-appkit-focus-lifecycle
+    severity: medium
+    category: Edge Case
+    applies_to:
+      - "Tusk/Views/**/*.swift"
+    description: "When changes bridge SwiftUI and AppKit focus or first responder state, verify focus requests are one-shot, occur only after the NSView has a window, and do not steal focus during ordinary tab switches or view updates."
+
+  - id: respect-task-cancellation
+    severity: medium
+    category: Logic
+    applies_to:
+      - "Tusk/**/*.swift"
+    description: "Flag new async tasks that can outlive their view, tab, or connection without cancellation checks, cleanup, or state guards before writing back to AppState or @State."
+
+  - id: avoid-stale-appstate-writes
+    severity: medium
+    category: Edge Case
+    applies_to:
+      - "Tusk/AppState.swift"
+      - "Tusk/Views/**/*.swift"
+    description: "Flag writes to AppState or tab state that do not re-check the target id still exists after an async boundary or delayed callback."
+
+  - id: protect-secret-material
+    severity: high
+    category: Security
+    applies_to:
+      - "Tusk/Database/**/*.swift"
+      - "Tusk/Views/Sidebar/**/*.swift"
+    description: "Flag logging, pasteboard copying, UI echoing, or persistent storage of passwords, SSH passphrases, Cloud SQL tokens, connection URLs with credentials, or keychain-derived values."
+
+  - id: parameterize-user-controlled-sql
+    severity: high
+    category: Security
+    applies_to:
+      - "Tusk/**/*.swift"
+    description: "Flag SQL built from user-controlled values without parameters or project quoting helpers. Identifier interpolation must use quoteIdentifier; literal interpolation must use parameters where available or explicit escaping where parameters are not supported."
+
+  - id: confirm-destructive-database-actions
+    severity: high
+    category: UX
+    applies_to:
+      - "Tusk/Views/**/*.swift"
+      - "Tusk/Database/**/*.swift"
+    description: "Flag newly introduced destructive database actions such as DROP, DELETE, TRUNCATE, ALTER destructive changes, role removal, or connection deletion when they can run without a clear confirmation or undo-safe workflow."
+
+  - id: preserve-postgres-binary-decoding
+    severity: high
+    category: Logic
+    applies_to:
+      - "Tusk/Database/DatabaseClient.swift"
+      - "Tusk/Models/QueryResult.swift"
+    description: "For changes to query result decoding or export, verify PostgreSQL binary formats are decoded explicitly for non-text types and that NULL, numeric scale, date/time precision, booleans, UUIDs, and binary data keep their intended display/export semantics."
+
+  - id: avoid-swiftui-state-reset-regressions
+    severity: medium
+    category: Logic
+    applies_to:
+      - "Tusk/Views/**/*.swift"
+    description: "Flag changes that may reset editor text, result selections, split positions, loading state, or table browsing state on ordinary SwiftUI re-render, tab switch, or connection picker updates."
+
+  - id: maintain-keyboard-first-workflows
+    severity: medium
+    category: UX
+    applies_to:
+      - "Tusk/Views/**/*.swift"
+    description: "Flag changes that break documented keyboard workflows, especially Cmd-T new query tab, Cmd-Return run, Cmd-Shift-Return run current query, Cmd-W close tab, Cmd-[ and Cmd-] tab navigation, Escape/cancel flows, and focus visibility."
+
+  - id: avoid-unbounded-result-work
+    severity: medium
+    category: Performance
+    applies_to:
+      - "Tusk/Database/**/*.swift"
+      - "Tusk/Views/Main/**/*.swift"
+      - "Tusk/Models/QueryResult.swift"
+    description: "Flag changes that materialize, copy, sort, stringify, or render unbounded query result data on the main actor without row limits, background work, or explicit user action."
+
+  - id: surface-user-facing-errors
+    severity: medium
+    category: Error Handling
+    applies_to:
+      - "Tusk/**/*.swift"
+    description: "Flag newly swallowed errors in user-triggered workflows when the user would be left without feedback, especially connection, query execution, import/export, keychain, Cloud SQL, and file operations."
