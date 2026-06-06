@@ -57,6 +57,7 @@ final class AppState {
     var editingConnection: Connection? = nil
     var connectingIDs: Set<UUID> = []
     var createTableTarget: CreateTableTarget? = nil
+    var isShowingChristmasEasterEgg = false
 
     init() {
         connections = ConnectionStore.shared.load()

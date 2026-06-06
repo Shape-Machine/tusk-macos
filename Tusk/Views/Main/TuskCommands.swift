@@ -43,6 +43,14 @@ struct TuskCommands: Commands {
                 openWindow(id: "help")
             }
             .keyboardShortcut("?", modifiers: .command)
+
+            Button("") {
+                appState.isShowingChristmasEasterEgg = true
+            }
+            .keyboardShortcut("j", modifiers: [.command, .shift])
+            .opacity(0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
 
         CommandGroup(after: .windowArrangement) {
